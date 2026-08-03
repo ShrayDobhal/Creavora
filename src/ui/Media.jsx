@@ -53,7 +53,7 @@ export function imageUrlFor(seed) {
   
   // Partial matches
   if (s.includes("ananya")) {
-    if (s.includes("hero")) return imageMap["ananya-hero"];
+    if (s.includes("hero") || s.includes("live")) return imageMap["ananya-hero"];
     if (s.includes("cover")) return imageMap["ananya-cover"];
     if (s.includes("cup")) return imageMap["ananya-cup"];
     if (s.includes("green")) return imageMap["ananya-green"];
@@ -61,19 +61,19 @@ export function imageUrlFor(seed) {
     return imageMap["ananya sharma"];
   }
   if (s.includes("rohit")) {
-    if (s.includes("stream") || s.includes("game")) return imageMap["rohit-stream"];
+    if (s.includes("stream") || s.includes("game") || s.includes("live")) return imageMap["rohit-stream"];
     return imageMap["rohit gamer"];
   }
   if (s.includes("meera")) {
-    if (s.includes("studio") || s.includes("art")) return imageMap["meera-studio"];
+    if (s.includes("studio") || s.includes("art") || s.includes("live")) return imageMap["meera-studio"];
     return imageMap["meera art"];
   }
   if (s.includes("karan") || s.includes("wander")) {
-    if (s.includes("himachal") || s.includes("travel")) return imageMap["karan-himachal"];
+    if (s.includes("himachal") || s.includes("travel") || s.includes("live")) return imageMap["karan-himachal"];
     return imageMap["wander with karan"];
   }
   if (s.includes("neha") || s.includes("fit")) {
-    if (s.includes("fit") || s.includes("shoot") || s.includes("gym")) return imageMap["neha-fit"];
+    if (s.includes("fit") || s.includes("shoot") || s.includes("gym") || s.includes("live")) return imageMap["neha-fit"];
     return imageMap["fit with neha"];
   }
   if (s.includes("arjun")) {

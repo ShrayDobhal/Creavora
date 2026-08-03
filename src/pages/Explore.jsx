@@ -182,14 +182,14 @@ export default function Explore() {
                   </div>
                 </Photo>
                 </Link>
-                <div className="flex items-center justify-between gap-1 px-3 py-3">
-                  <p className="text-[13px] font-extrabold shrink-0">
-                    ₹{c.price}
-                    <span className="text-[10.5px] font-semibold text-muted">/mo</span>
-                  </p>
+                <div className="flex flex-col gap-2 px-3 py-3 border-t border-line">
+                  <div className="flex items-center justify-between text-[12px]">
+                    <span className="font-semibold text-muted">Subscription</span>
+                    <p className="font-black text-ink">₹{c.price}/mo</p>
+                  </div>
                   <Link
                     to="/checkout"
-                    className="flex h-7.5 items-center rounded-lg bg-brand-600 px-2.5 text-[11.5px] font-bold text-white hover:bg-brand-700 shrink-0"
+                    className="flex h-8 w-full items-center justify-center rounded-xl bg-brand-600 text-[13px] font-bold text-white hover:bg-brand-700 transition-colors"
                   >
                     Subscribe
                   </Link>
@@ -295,10 +295,11 @@ export default function Explore() {
                 </div>
                 <div className="flex -space-x-1.5">
                   {[0, 1, 2].map((k) => (
-                    <Photo
+                    <Avatar
                       key={k}
-                      seed={h.tag + k}
-                      className="h-8 w-8 rounded-md border-2 border-white"
+                      name={k === 0 ? "Ananya Sharma" : k === 1 ? "Rohit Gamer" : "Meera Art"}
+                      size={24}
+                      ring="#fff"
                     />
                   ))}
                 </div>

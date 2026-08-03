@@ -232,10 +232,11 @@ export default function Feed() {
                 </div>
                 <div className="flex -space-x-1.5">
                   {[0, 1, 2].map((k) => (
-                    <Photo
+                    <Avatar
                       key={k}
-                      seed={h.tag + k}
-                      className="h-8 w-8 rounded-md border-2 border-white"
+                      name={k === 0 ? "Ananya Sharma" : k === 1 ? "Rohit Gamer" : "Meera Art"}
+                      size={24}
+                      ring="#fff"
                     />
                   ))}
                 </div>

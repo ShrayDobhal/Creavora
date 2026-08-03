@@ -148,26 +148,26 @@ export default function StudioEarnings() {
   return (
     <div className="flex gap-5 px-6 py-6">
       <div className="min-w-0 flex-1 space-y-5">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 xl:grid-cols-2 2xl:grid-cols-4">
           {kpis.map(({ icon: Icon, tint, label, value, delta, up, note }) => (
-            <Card key={label} className="p-4">
+            <Card key={label} className="p-4 overflow-hidden">
               <div className="flex items-center gap-2.5">
                 <span className={`grid h-9 w-9 place-items-center rounded-lg ${tint}`}>
                   <Icon size={17} />
                 </span>
-                <span className="text-[13.5px] font-semibold text-muted">{label}</span>
+                <span className="text-[13px] font-semibold text-muted truncate">{label}</span>
               </div>
-              <p className="mt-3 text-[25px] font-extrabold tracking-tight">{value}</p>
+              <p className="mt-3 text-[19px] sm:text-[21px] font-black tracking-tighter truncate" title={value}>{value}</p>
               {delta && (
-                <p className="mt-2 flex items-center gap-1.5 text-[12.5px]">
+                <p className="mt-2 flex items-center gap-1.5 text-[12.5px] truncate">
                   <span
-                    className={`flex items-center gap-0.5 font-bold ${
+                    className={`flex items-center gap-0.5 font-bold shrink-0 ${
                       up ? "text-emerald-600" : "text-rose-500"
                     }`}
                   >
                     {up ? <ArrowUp size={12} /> : <ArrowDown size={12} />} {delta}
                   </span>
-                  <span className="text-muted">{note}</span>
+                  <span className="text-muted truncate">{note}</span>
                 </p>
               )}
             </Card>
