@@ -1,0 +1,154 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  handle        String         @unique
+  avatar        String?
+  role          String         @default("FAN") // "FAN" or "CREATOR"
+  walletBalance Float          @default(0.0)
+  xp            Int            @default(0)
+  level         Int            @default(1)
+  bio           String?
+  coverImage    String?
+  roleTitle     String?        // e.g. "Fashion Creator"
+  verified      Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Relations
+  posts         Post[]         @relation("UserPosts")
+  likes         Like[]
+  comments      Comment[]
+  subscriptions Subscription[]  @relation("UserSubscriptions") // Subscriptions this user has purchased
+  creatorSubs   Subscription[]  @relation("CreatorSubscriptions") // Subscriptions from fans to this creator
+  transactions  Transaction[]
+  sentMessages  Message[]      @relation("SentMessages")
+  recMessages   Message[]      @relation("ReceivedMessages")
+  collections   Collection[]
+  notifications Notification[]
+}
+
+model Post {
+  id            String       @id @default(uuid())
+  creatorId     String
+  content       String
+  mediaUrl      String?
+  mediaType     String?      // "image" or "video"
+  isPremium     Boolean      @default(false)
+  price         Float        @default(0.0)
+  likesCount    Int          @default(0)
+  commentsCount Int          @default(0)
+  createdAt     DateTime     @default(now())
+
+  // Relations
+  creator       User         @relation("UserPosts", fields: [creatorId], references: [id], onDelete: Cascade)
+  likes         Like[]
+  comments      Comment[]
+  collections   Collection[] @relation("CollectionPosts")
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  userId    String
+  postId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id          String   @id @default(uuid())
+  userId      String   // Fan purchasing the subscription
+  creatorId   String   // Creator being subscribed to
+  tier        String   // "Premium Monthly", "Standard Monthly", etc.
+  price       Float
+  renewsOn    String   // Renewal date string e.g. "25 May, 2026"
+  method      String   // "UPI (paytm@upi)", "Card", etc.
+  status      String   @default("ACTIVE") // "ACTIVE" or "CANCELLED"
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation("UserSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  creator     User     @relation("CreatorSubscriptions", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, creatorId])
+}
+
+model Transaction {
+  id        String   @id @default(uuid())
+  userId    String
+  amount    Float
+  type      String   // "DEPOSIT", "SUBSCRIPTION", "TIP", "UNLOCK"
+  method    String?  // "UPI (Paytm)", "Credit Card", etc.
+  reference String?  // UPI reference number or transaction ID
+  status    String   @default("COMPLETED") // "COMPLETED", "FAILED"
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  content    String?
+  isAudio    Boolean  @default(false)
+  duration   String?  // e.g. "0:15"
+  createdAt  DateTime @default(now())
+
+  // Relations
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+}
+
+model Collection {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  postsCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts       Post[]   @relation("CollectionPosts")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // "LIKE", "COMMENT", "LIVE", "WALLET", "SYSTEM"
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

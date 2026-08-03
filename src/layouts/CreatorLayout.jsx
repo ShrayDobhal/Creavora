@@ -1,4 +1,7 @@
-import { Link, NavLink, useLocation } from "react-router-dom";
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Bell,
   ChevronDown,
@@ -21,28 +24,29 @@ import {
 import { Avatar, Verified } from "../ui/Media.jsx";
 import { Logo, UserMenu } from "./FanLayout.jsx";
 import { Home, User } from "lucide-react";
+import { slug } from "../data.js";
 
 const creatorMenu = [
-  { to: "/profile", label: "My Profile", icon: User },
-  { to: "/studio/content", label: "Content", icon: LayoutDashboard },
-  { to: "/studio/earnings", label: "Earnings", icon: DollarSign },
-  { to: "/studio/community", label: "Community", icon: Users },
-  { to: "/", label: "Switch to Fan View", icon: Home },
-  { to: "/landing", label: "Landing Page", icon: Crown },
+  { href: "/profile", label: "My Profile", icon: User },
+  { href: "/studio/content", label: "Content", icon: LayoutDashboard },
+  { href: "/studio/earnings", label: "Earnings", icon: DollarSign },
+  { href: "/studio/community", label: "Community", icon: Users },
+  { href: "/", label: "Switch to Fan View", icon: Home },
+  { href: "/landing", label: "Landing Page", icon: Crown },
 ];
 
 const nav = [
-  { to: "/studio", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/studio/content", label: "Content", icon: LayoutGrid },
-  { to: "/studio/live", label: "Live & Events", icon: Tv },
-  { to: "/studio/messages", label: "Messages", icon: MessageSquare, count: 23 },
-  { to: "/studio/subscribers", label: "Subscribers", icon: Users },
-  { to: "/studio/earnings", label: "Earnings", icon: DollarSign },
-  { to: "/studio/analytics", label: "Analytics", icon: TrendingUp },
-  { to: "/studio/payouts", label: "Payouts", icon: Wallet },
-  { to: "/studio/promotions", label: "Promotions", icon: Megaphone },
-  { to: "/studio/community", label: "Community", icon: Users },
-  { to: "/studio/settings", label: "Settings", icon: Settings },
+  { href: "/studio/content", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { href: "/studio/content", label: "Content", icon: LayoutGrid },
+  { href: "/studio/live", label: "Live & Events", icon: Tv },
+  { href: "/studio/messages", label: "Messages", icon: MessageSquare, count: 23 },
+  { href: "/studio/subscribers", label: "Subscribers", icon: Users },
+  { href: "/studio/earnings", label: "Earnings", icon: DollarSign },
+  { href: "/studio/analytics", label: "Analytics", icon: TrendingUp },
+  { href: "/studio/payouts", label: "Payouts", icon: Wallet },
+  { href: "/studio/promotions", label: "Promotions", icon: Megaphone },
+  { href: "/studio/community", label: "Community", icon: Users },
+  { href: "/studio/settings", label: "Settings", icon: Settings },
 ];
 
 export function CreatorTopBar({
@@ -84,7 +88,7 @@ export function CreatorTopBar({
 
       <div className="flex shrink-0 items-center gap-3">
         {right ?? (
-          <button className="flex h-11 items-center gap-2 rounded-full bg-brand-600 px-5 text-[14px] font-bold text-white hover:bg-brand-700">
+          <button className="flex h-11 items-center gap-2 rounded-full bg-brand-600 px-5 text-[14px] font-bold text-white hover:bg-brand-700 cursor-pointer">
             <Plus size={17} /> {createLabel}
           </button>
         )}
@@ -94,7 +98,7 @@ export function CreatorTopBar({
             {coins}
           </span>
         )}
-        <button className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-canvas">
+        <button className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-canvas cursor-pointer">
           <Bell size={19} />
           <span className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
             3
@@ -113,7 +117,7 @@ export function CreatorTopBar({
 
 function ProfileCard() {
   return (
-    <Link to="/creator/ananya-sharma" className="block rounded-2xl bg-brand-50/70 p-3.5 hover:bg-brand-50">
+    <Link href="/creator/ananyasharma" className="block rounded-2xl bg-brand-50/70 p-3.5 hover:bg-brand-50">
       <div className="flex items-center gap-3">
         <Avatar name="Ananya Sharma" size={46} />
         <div className="min-w-0">
@@ -140,7 +144,7 @@ function PlanCard() {
         <br />
         25 May 2024
       </p>
-      <button className="mt-3.5 h-9 w-full rounded-lg border border-brand-200 bg-white text-[13px] font-bold text-brand-700 hover:bg-brand-50">
+      <button className="mt-3.5 h-9 w-full rounded-lg border border-brand-200 bg-white text-[13px] font-bold text-brand-700 hover:bg-brand-50 cursor-pointer">
         Manage Plan
       </button>
     </div>
@@ -148,22 +152,22 @@ function PlanCard() {
 }
 
 export default function CreatorLayout({ children, topbar }) {
-  const { pathname } = useLocation();
+  const pathname = usePathname();
   return (
-    <div className="min-h-full bg-white">
+    <div className="min-h-screen bg-white">
       <CreatorTopBar {...topbar} />
       <div className="flex">
         <aside className="sticky top-[76px] hidden h-[calc(100vh-76px)] w-[244px] shrink-0 flex-col overflow-y-auto border-r border-line px-4 py-4 lg:flex">
           <ProfileCard />
           <nav className="mt-4 space-y-1">
-            {nav.map(({ to, label, icon: Icon, count, end }) => {
-              const active = end ? pathname === to : pathname.startsWith(to);
+            {nav.map(({ href, label, icon: Icon, count, end }) => {
+              const active = end ? pathname === href : pathname.startsWith(href);
               return (
-                <NavLink
-                  key={to}
-                  to={to}
+                <Link
+                  key={href + label}
+                  href={href}
                   className={`flex h-11 items-center gap-3.5 rounded-xl px-3.5 text-[14.5px] font-semibold transition ${
-                    active ? "bg-brand-50 text-brand-700" : "text-ink/80 hover:bg-canvas"
+                    active ? "bg-brand-50 text-brand-700 font-bold" : "text-ink/80 hover:bg-canvas"
                   }`}
                 >
                   <Icon size={19} className={active ? "text-brand-600" : "text-ink/70"} />
@@ -173,7 +177,7 @@ export default function CreatorLayout({ children, topbar }) {
                       {count}
                     </span>
                   )}
-                </NavLink>
+                </Link>
               );
             })}
           </nav>

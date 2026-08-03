@@ -17,7 +17,7 @@ export function SectionHead({ title, action = "View All", onAction, right }) {
         (action ? (
           <button
             onClick={onAction}
-            className="text-[13px] font-semibold text-brand-600 hover:underline"
+            className="text-[13px] font-semibold text-brand-600 hover:underline cursor-pointer"
           >
             {action}
           </button>
@@ -29,7 +29,7 @@ export function SectionHead({ title, action = "View All", onAction, right }) {
 export function Chip({ active, children, className = "", ...rest }) {
   return (
     <button
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-semibold transition ${
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-semibold transition cursor-pointer ${
         active
           ? "bg-brand-600 text-white"
           : "border border-line bg-white text-ink hover:bg-neutral-50"
@@ -58,7 +58,7 @@ export function Tabs({ items, value, onChange, className = "" }) {
         <button
           key={it}
           onClick={() => onChange?.(it)}
-          className={`relative px-4 py-2.5 text-[14px] font-semibold transition ${
+          className={`relative px-4 py-2.5 text-[14px] font-semibold transition cursor-pointer ${
             value === it ? "text-brand-600" : "text-muted hover:text-ink"
           }`}
         >

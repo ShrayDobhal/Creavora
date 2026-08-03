@@ -1,5 +1,8 @@
+"use client";
+
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Bell,
   Bookmark,
@@ -28,24 +31,24 @@ import {
 import { Avatar } from "../ui/Media.jsx";
 
 const nav = [
-  { to: "/", label: "Home", icon: Home, end: true },
-  { to: "/feed", label: "Feed", icon: LayoutGrid },
-  { to: "/explore", label: "Explore", icon: Compass },
-  { to: "/live", label: "Live Now", icon: Radio, live: true },
-  { to: "/subscriptions", label: "Subscriptions", icon: Library },
-  { to: "/messages", label: "Messages", icon: MessageSquare, count: 2 },
-  { to: "/notifications", label: "Notifications", icon: Bell, count: 3 },
-  { to: "/collections", label: "Collections", icon: Library },
-  { to: "/wallet", label: "My Wallet", icon: Wallet },
-  { to: "/rewards", label: "Earn Rewards", icon: Gift },
-  { to: "/saved", label: "Saved Posts", icon: Bookmark },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { href: "/", label: "Home", icon: Home, end: true },
+  { href: "/feed", label: "Feed", icon: LayoutGrid },
+  { href: "/explore", label: "Explore", icon: Compass },
+  { href: "/live", label: "Live Now", icon: Radio, live: true },
+  { href: "/subscriptions", label: "Subscriptions", icon: Library },
+  { href: "/messages", label: "Messages", icon: MessageSquare, count: 2 },
+  { href: "/notifications", label: "Notifications", icon: Bell, count: 3 },
+  { href: "/collections", label: "Collections", icon: Library },
+  { href: "/wallet", label: "My Wallet", icon: Wallet },
+  { href: "/rewards", label: "Earn Rewards", icon: Gift },
+  { href: "/saved", label: "Saved Posts", icon: Bookmark },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Logo({ className = "" }) {
   return (
     <Link
-      to="/landing"
+      href="/landing"
       title="Go to the Crevora landing page"
       className={`flex w-fit items-center gap-2.5 ${className}`}
     >
@@ -55,7 +58,6 @@ export function Logo({ className = "" }) {
   );
 }
 
-/** Account menu — the only route into /profile, /checkout and the creator studio. */
 export function UserMenu({
   name = "Arjun Singh",
   label = "Hey, Arjun",
@@ -64,7 +66,7 @@ export function UserMenu({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const { pathname } = useLocation();
+  const pathname = usePathname();
 
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
@@ -75,19 +77,19 @@ export function UserMenu({
   }, [open]);
 
   const links = items ?? [
-    { to: "/profile", label: "My Profile", icon: User },
-    { to: "/creator/ananya-sharma", label: "Browse a Creator", icon: Sparkles },
-    { to: "/checkout", label: "Subscription & Billing", icon: CreditCard },
-    { to: "/wallet", label: "My Wallet", icon: Wallet },
-    { to: "/studio/content", label: "Creator Studio", icon: LayoutDashboard },
-    { to: "/landing", label: "Landing Page", icon: LogOut },
+    { href: "/profile", label: "My Profile", icon: User },
+    { href: "/creator/ananyasharma", label: "Browse a Creator", icon: Sparkles },
+    { href: "/checkout", label: "Subscription & Billing", icon: CreditCard },
+    { href: "/wallet", label: "My Wallet", icon: Wallet },
+    { href: "/studio/content", label: "Creator Studio", icon: LayoutDashboard },
+    { href: "/landing", label: "Landing Page", icon: LogOut },
   ];
 
   return (
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2.5 rounded-full pl-1 pr-1 hover:bg-canvas"
+        className="flex items-center gap-2.5 rounded-full pl-1 pr-1 hover:bg-canvas cursor-pointer"
       >
         <Avatar name={name} size={38} />
         {label && (
@@ -112,10 +114,10 @@ export function UserMenu({
             </div>
           </div>
           <div className="border-t border-line pt-1.5">
-            {links.map(({ to, label: l, icon: Icon }) => (
+            {links.map(({ href, label: l, icon: Icon }) => (
               <Link
-                key={to + l}
-                to={to}
+                key={href + l}
+                href={href}
                 className="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-semibold hover:bg-canvas"
               >
                 <Icon size={16} className="text-ink/60" />
@@ -129,7 +131,8 @@ export function UserMenu({
   );
 }
 
-export function TopBar({ placeholder = "Search creators, posts, topics...", coins = 120, greeting = true }) {
+export function TopBar({ placeholder = "Search creators, posts, topics...", coins = 120, greeting = true, user, unreadNotifications }) {
+  const displayCoins = user ? Math.round(user.walletBalance) : coins;
   return (
     <header className="sticky top-0 z-30 flex h-[72px] items-center gap-4 border-b border-line bg-white px-6">
       <div className="w-[196px] shrink-0">
@@ -150,62 +153,65 @@ export function TopBar({ placeholder = "Search creators, posts, topics...", coin
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
-        <button className="flex h-11 items-center gap-2 rounded-full bg-brand-600 px-5 text-[14px] font-bold text-white hover:bg-brand-700">
+        <button className="flex h-11 items-center gap-2 rounded-full bg-brand-600 px-5 text-[14px] font-bold text-white hover:bg-brand-700 cursor-pointer">
           <Plus size={17} /> Create
         </button>
 
-        {coins != null && (
+        {displayCoins != null && (
           <span className="flex h-10 items-center gap-1.5 rounded-full bg-brand-50 px-3.5 text-[13px] font-bold text-brand-700">
             <Sparkles size={14} className="fill-brand-500 text-brand-500" />
-            {coins}
+            {displayCoins}
           </span>
         )}
 
-        <button className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-canvas">
+        <Link href="/notifications" className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-canvas cursor-pointer text-ink">
           <Bell size={19} />
-          <span className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
-            3
-          </span>
-        </button>
-        <button className="grid h-10 w-10 place-items-center rounded-full hover:bg-canvas">
+          {unreadNotifications > 0 && (
+            <span className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+              {unreadNotifications}
+            </span>
+          )}
+        </Link>
+        <Link href="/messages" className="grid h-10 w-10 place-items-center rounded-full hover:bg-canvas cursor-pointer text-ink">
           <MessageCircle size={19} />
-        </button>
+        </Link>
 
-        <UserMenu label={greeting ? "Hey, Arjun" : ""} />
+        <UserMenu label={greeting ? `Hey, ${user?.name ? user.name.split(" ")[0] : "Arjun"}` : ""} name={user?.name || "Arjun Singh"} />
       </div>
     </header>
   );
 }
 
-function SideNav() {
-  const { pathname } = useLocation();
+function SideNav({ unreadNotifications }) {
+  const pathname = usePathname();
   return (
     <nav className="space-y-1">
-      {nav.map(({ to, label, icon: Icon, count, live, end }) => {
-        const active = end ? pathname === to : pathname.startsWith(to);
+      {nav.map(({ href, label, icon: Icon, count, live, end }) => {
+        const active = end ? pathname === href : pathname.startsWith(href);
+        const displayCount = label === "Notifications" ? unreadNotifications : count;
         return (
-          <NavLink
-            key={to}
-            to={to}
+          <Link
+            key={href}
+            href={href}
             className={`flex h-11 items-center gap-3.5 rounded-xl px-3.5 text-[14.5px] font-semibold transition ${
               active
-                ? "bg-brand-50 text-brand-700"
+                ? "bg-brand-50 text-brand-700 font-bold"
                 : "text-ink/80 hover:bg-canvas"
             }`}
           >
             <Icon size={19} className={active ? "text-brand-600" : "text-ink/70"} />
             <span className="flex-1">{label}</span>
-            {count != null && (
+            {displayCount != null && displayCount > 0 && (
               <span className="grid h-5 min-w-5 place-items-center rounded-full bg-brand-600 px-1.5 text-[11px] font-bold text-white">
-                {count}
+                {displayCount}
               </span>
             )}
             {live && (
-              <span className="rounded-md bg-rose-500 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide text-white">
+              <span className="rounded-md bg-rose-500 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide text-white animate-pulse">
                 LIVE
               </span>
             )}
-          </NavLink>
+          </Link>
         );
       })}
     </nav>
@@ -225,7 +231,7 @@ export function PremiumCard() {
         </div>
       </div>
       <Link
-        to="/checkout"
+        href="/checkout"
         className="mt-3.5 flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-brand-600 text-[13px] font-bold hover:bg-brand-500"
       >
         Upgrade Now <ArrowRight size={14} />
@@ -234,17 +240,19 @@ export function PremiumCard() {
   );
 }
 
-export function WalletCard() {
+export function WalletCard({ user }) {
   return (
     <div className="rounded-2xl border border-line bg-white p-4">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-[12.5px] font-semibold text-muted">Wallet Balance</p>
-          <p className="mt-1 text-[24px] font-extrabold tracking-tight">₹1,250.00</p>
+          <p className="mt-1 text-[24px] font-extrabold tracking-tight">
+            ₹{user ? user.walletBalance.toFixed(2) : "120.00"}
+          </p>
         </div>
-        <button className="grid h-7 w-7 place-items-center rounded-full bg-brand-600 text-white">
+        <Link href="/wallet" className="grid h-7 w-7 place-items-center rounded-full bg-brand-600 text-white cursor-pointer hover:bg-brand-700">
           <Plus size={15} />
-        </button>
+        </Link>
       </div>
       <div className="mt-3.5 grid grid-cols-2 border-t border-line pt-3 text-[13px]">
         <div>
@@ -261,15 +269,47 @@ export function WalletCard() {
 }
 
 export default function FanLayout({ children, topbar }) {
+  const [user, setUser] = useState(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(3);
+
+  const fetchUser = () => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => setUser(data))
+      .catch((err) => console.error("Error loading user layout state:", err));
+  };
+
+  const fetchNotifications = () => {
+    fetch("/api/notifications")
+      .then((res) => res.json())
+      .then((data) => {
+        const count = data.filter((n) => !n.read).length;
+        setUnreadNotifications(count);
+      })
+      .catch((err) => console.error("Error loading notifications:", err));
+  };
+
+  useEffect(() => {
+    fetchUser();
+    fetchNotifications();
+
+    window.addEventListener("user-update", fetchUser);
+    window.addEventListener("notifications-update", fetchNotifications);
+    return () => {
+      window.removeEventListener("user-update", fetchUser);
+      window.removeEventListener("notifications-update", fetchNotifications);
+    };
+  }, []);
+
   return (
-    <div className="min-h-full bg-white">
-      <TopBar {...topbar} />
+    <div className="min-h-screen bg-white">
+      <TopBar {...topbar} user={user} unreadNotifications={unreadNotifications} />
       <div className="flex">
         <aside className="sticky top-[72px] hidden h-[calc(100vh-72px)] w-[244px] shrink-0 overflow-y-auto border-r border-line px-4 py-4 lg:block">
-          <SideNav />
+          <SideNav unreadNotifications={unreadNotifications} />
           <div className="mt-5 space-y-4 pb-6">
             <PremiumCard />
-            <WalletCard />
+            <WalletCard user={user} />
           </div>
         </aside>
         <main className="min-w-0 flex-1 bg-canvas">{children}</main>
