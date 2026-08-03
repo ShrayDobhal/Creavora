@@ -70,7 +70,7 @@ export default function Subscriptions() {
         <div className="mt-5 space-y-4">
           {filter === "active" && subs.length > 0 ? (
             subs.map((s) => (
-              <Card key={s.name} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <Card key={s.name} className="p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
                 <div className="flex items-center gap-4">
                   <Photo seed={s.seed} className="h-16 w-16 shrink-0 rounded-xl" />
                   <div className="leading-tight">
@@ -89,7 +89,7 @@ export default function Subscriptions() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:flex md:items-center gap-4 md:gap-8 border-t md:border-t-0 border-line pt-4 md:pt-0">
+                <div className="grid grid-cols-3 gap-4 xl:gap-8 border-t border-b xl:border-t-0 xl:border-b-0 border-line py-4 xl:py-0 w-full xl:w-auto">
                   <div className="leading-tight">
                     <p className="text-[11.5px] text-muted font-medium">Price</p>
                     <p className="mt-0.5 text-[15px] font-black text-ink">{inr(s.price)}/mo</p>
@@ -100,20 +100,20 @@ export default function Subscriptions() {
                   </div>
                   <div className="leading-tight">
                     <p className="text-[11.5px] text-muted font-medium">Payment Mode</p>
-                    <p className="mt-0.5 text-[13.5px] font-bold text-ink">{s.method}</p>
+                    <p className="mt-0.5 text-[13.5px] font-bold text-ink truncate">{s.method}</p>
                   </div>
                 </div>
 
-                <div className="flex gap-2.5 mt-2 md:mt-0">
+                <div className="flex gap-2.5 w-full xl:w-auto mt-1 xl:mt-0">
                   <button
                     onClick={() => handleCancelSub(s.name)}
-                    className="flex-1 md:flex-none flex h-9 items-center justify-center gap-1.5 rounded-xl border border-rose-200 px-4 text-[12.5px] font-bold text-rose-600 hover:bg-rose-50"
+                    className="flex-1 xl:flex-none flex h-9 items-center justify-center gap-1.5 rounded-xl border border-rose-200 px-4 text-[12.5px] font-bold text-rose-600 hover:bg-rose-50"
                   >
                     <XCircle size={14} /> Cancel
                   </button>
                   <Link
                     to={`/creator/${slug(s.name)}`}
-                    className="flex-1 md:flex-none flex h-9 items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 text-[12.5px] font-bold text-white hover:bg-brand-700"
+                    className="flex-1 xl:flex-none flex h-9 items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 text-[12.5px] font-bold text-white hover:bg-brand-700"
                   >
                     View Exclusive
                   </Link>

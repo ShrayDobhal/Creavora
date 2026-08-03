@@ -152,7 +152,7 @@ export default function Home() {
         </Card>
 
         <Carousel title="Recommended For You">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
             {creators.map((c, i) => (
               <Card key={c.name} className="overflow-hidden">
                 <Link to={`/creator/${slug(c.name)}`} className="block">
@@ -178,14 +178,14 @@ export default function Home() {
                   </div>
                 </Photo>
                 </Link>
-                <div className="flex items-center justify-between px-3 py-3">
-                  <p className="text-[13.5px] font-extrabold">
+                <div className="flex items-center justify-between gap-1 px-3 py-3">
+                  <p className="text-[13px] font-extrabold shrink-0">
                     ₹{c.price}
-                    <span className="text-[11.5px] font-medium text-muted"> / month</span>
+                    <span className="text-[10.5px] font-semibold text-muted">/mo</span>
                   </p>
                   <Link
                     to="/checkout"
-                    className="flex h-8 items-center rounded-lg bg-brand-600 px-3.5 text-[12.5px] font-bold text-white hover:bg-brand-700"
+                    className="flex h-7.5 items-center rounded-lg bg-brand-600 px-2.5 text-[11.5px] font-bold text-white hover:bg-brand-700 shrink-0"
                   >
                     Subscribe
                   </Link>
@@ -196,7 +196,7 @@ export default function Home() {
         </Carousel>
 
         <Carousel title="Live Right Now">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
             {[
               { seed: "live-ananya", views: "1.2K", live: true },
               { seed: "live-rohit", views: "890", live: true },
