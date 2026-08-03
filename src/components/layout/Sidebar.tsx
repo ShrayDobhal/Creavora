@@ -7,6 +7,9 @@ import {
   Bookmark, 
   MessageSquare, 
   Bell, 
+  FolderHeart, 
+  Wallet, 
+  Gift, 
   Heart, 
   Settings, 
   Crown, 
@@ -42,28 +45,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCreatorMode = false 
 }) => {
   const fanNavItems: NavItem[] = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'feed', label: 'Feed', icon: Rss },
-    { id: 'explore', label: 'Explore', icon: Compass },
-    { id: 'live', label: 'Live Now', icon: Radio, badge: 'LIVE' },
-    { id: 'subscriptions', label: 'Subscriptions', icon: Bookmark },
-    { id: 'messages', label: 'Messages', icon: MessageSquare, count: 2 },
-    { id: 'notifications', label: 'Notifications', icon: Bell, count: 3 },
-    { id: 'saved', label: 'Saved Posts', icon: Heart },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'home', label: 'Home', icon: Home, screen: 'home' },
+    { id: 'feed', label: 'Feed', icon: Rss, screen: 'feed' },
+    { id: 'explore', label: 'Explore', icon: Compass, screen: 'explore' },
+    { id: 'subscriptions', label: 'Subscriptions', icon: Bookmark, screen: 'subscriptions' },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, count: 2, screen: 'messages' },
+    { id: 'notifications', label: 'Notifications', icon: Bell, count: 3, screen: 'notifications' },
+    { id: 'live', label: 'Live Now', icon: Radio, badge: 'LIVE', screen: 'live' },
+    { id: 'collections', label: 'Collections', icon: FolderHeart, screen: 'collections' },
+    { id: 'wallet', label: 'My Wallet', icon: Wallet, screen: 'wallet' },
+    { id: 'rewards', label: 'Earn Rewards', icon: Gift, screen: 'rewards' },
+    { id: 'saved', label: 'Saved Posts', icon: Heart, screen: 'saved' },
+    { id: 'settings', label: 'Settings', icon: Settings, screen: 'settings' },
   ];
 
   const creatorNavItems: NavItem[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, screen: 'dashboard' },
     { id: 'content', label: 'Content', icon: FileText, screen: 'dashboard' },
-    { id: 'live', label: 'Live & Events', icon: Radio },
-    { id: 'messages', label: 'Messages', icon: MessageSquare, count: 23 },
-    { id: 'subscribers', label: 'Subscribers', icon: Users, screen: 'influencer' },
+    { id: 'live', label: 'Live & Events', icon: Radio, screen: 'live' },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, count: 23, screen: 'messages' },
+    { id: 'subscribers', label: 'Subscribers', icon: Users, screen: 'subscriptions' },
     { id: 'earnings', label: 'Earnings', icon: DollarSign, screen: 'earnings' },
     { id: 'analytics', label: 'Analytics', icon: PieChart, screen: 'earnings' },
     { id: 'promotions', label: 'Promotions', icon: Megaphone, screen: 'dashboard' },
     { id: 'community', label: 'Community', icon: Users, screen: 'community' },
-    { id: 'settings', label: 'Settings', icon: Settings, screen: 'profile' },
+    { id: 'settings', label: 'Settings', icon: Settings, screen: 'settings' },
   ];
 
   return (
@@ -94,13 +100,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <nav className="space-y-1">
           {(isCreatorMode ? creatorNavItems : fanNavItems).map((item) => {
             const Icon = item.icon;
-            const targetScreen = (item as any).screen || item.id;
+            const targetScreen = item.screen || (item.id as ScreenId);
             const isActive = currentScreen === targetScreen;
 
             return (
               <button
                 key={item.id}
-                onClick={() => onSelectScreen(targetScreen as ScreenId)}
+                onClick={() => onSelectScreen(targetScreen)}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-semibold text-xs transition-all ${
                   isActive
                     ? 'bg-purple-50 text-purple-700 font-bold shadow-2xs'
@@ -160,7 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-sm font-extrabold text-slate-900">₹1,250.00</span>
             </div>
             <button 
-              onClick={() => onSelectScreen('payment')}
+              onClick={() => onSelectScreen('wallet')}
               className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition-colors shadow-2xs"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -183,17 +189,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onChange={(e) => onSelectScreen(e.target.value as ScreenId)}
             className="w-full bg-slate-50 border border-slate-200 text-[11px] font-bold text-slate-600 rounded-lg px-2 py-1.5 focus:outline-none focus:border-purple-400 cursor-pointer"
           >
-            <option value="home">Home</option>
-            <option value="feed">Feed</option>
-            <option value="explore">Explore</option>
-            <option value="dashboard">Creator Dashboard</option>
-            <option value="community">Community</option>
-            <option value="earnings">Earnings</option>
-            <option value="influencer">Influencer Profile</option>
-            <option value="messages">Messages</option>
-            <option value="onboarding">Onboarding</option>
-            <option value="payment">Payment</option>
-            <option value="profile">Profile</option>
+            <option value="home">1. Home Screen</option>
+            <option value="feed">2. Feed Screen</option>
+            <option value="explore">3. Explore Screen</option>
+            <option value="subscriptions">4. Subscriptions</option>
+            <option value="messages">5. Messages Screen</option>
+            <option value="notifications">6. Notifications</option>
+            <option value="live">7. Live Now Hub</option>
+            <option value="collections">8. Collections</option>
+            <option value="wallet">9. My Wallet</option>
+            <option value="rewards">10. Earn Rewards</option>
+            <option value="saved">11. Saved Posts</option>
+            <option value="dashboard">12. Creator Dashboard</option>
+            <option value="community">13. Creator Community</option>
+            <option value="earnings">14. Creator Earnings</option>
+            <option value="influencer">15. Influencer Profile</option>
+            <option value="onboarding">16. Onboarding Landing</option>
+            <option value="payment">17. Payment Checkout</option>
+            <option value="profile">18. User Profile</option>
+            <option value="settings">19. Settings</option>
           </select>
         </div>
       </div>

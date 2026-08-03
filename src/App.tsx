@@ -12,6 +12,14 @@ import { MessageScreen } from './screens/MessageScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { PaymentScreen } from './screens/PaymentScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
+import { LiveNowScreen } from './screens/LiveNowScreen';
+import { SubscriptionsScreen } from './screens/SubscriptionsScreen';
+import { NotificationsScreen } from './screens/NotificationsScreen';
+import { CollectionsScreen } from './screens/CollectionsScreen';
+import { WalletScreen } from './screens/WalletScreen';
+import { RewardsScreen } from './screens/RewardsScreen';
+import { SavedPostsScreen } from './screens/SavedPostsScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
 import { X, Image, Video, Radio, BarChart2 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -29,6 +37,22 @@ export const App: React.FC = () => {
         return <FeedScreen onSelectScreen={setCurrentScreen} />;
       case 'explore':
         return <ExploreScreen onSelectScreen={setCurrentScreen} />;
+      case 'subscriptions':
+        return <SubscriptionsScreen onSelectScreen={setCurrentScreen} />;
+      case 'messages':
+        return <MessageScreen onSelectScreen={setCurrentScreen} />;
+      case 'notifications':
+        return <NotificationsScreen onSelectScreen={setCurrentScreen} />;
+      case 'live':
+        return <LiveNowScreen onSelectScreen={setCurrentScreen} />;
+      case 'collections':
+        return <CollectionsScreen onSelectScreen={setCurrentScreen} />;
+      case 'wallet':
+        return <WalletScreen onSelectScreen={setCurrentScreen} />;
+      case 'rewards':
+        return <RewardsScreen onSelectScreen={setCurrentScreen} />;
+      case 'saved':
+        return <SavedPostsScreen onSelectScreen={setCurrentScreen} />;
       case 'dashboard':
         return <CreatorDashboardScreen onSelectScreen={setCurrentScreen} />;
       case 'community':
@@ -37,14 +61,14 @@ export const App: React.FC = () => {
         return <CreatorEarningScreen onSelectScreen={setCurrentScreen} />;
       case 'influencer':
         return <InfluencerScreen onSelectScreen={setCurrentScreen} />;
-      case 'messages':
-        return <MessageScreen onSelectScreen={setCurrentScreen} />;
       case 'onboarding':
         return <OnboardingScreen onSelectScreen={setCurrentScreen} />;
       case 'payment':
         return <PaymentScreen onSelectScreen={setCurrentScreen} />;
       case 'profile':
         return <ProfileScreen onSelectScreen={setCurrentScreen} />;
+      case 'settings':
+        return <SettingsScreen onSelectScreen={setCurrentScreen} />;
       default:
         return <HomeScreen onSelectScreen={setCurrentScreen} />;
     }
@@ -69,14 +93,22 @@ export const App: React.FC = () => {
               <option value="home">1. Home Screen</option>
               <option value="feed">2. Feed Screen</option>
               <option value="explore">3. Explore Screen</option>
-              <option value="dashboard">4. Creator Dashboard</option>
-              <option value="community">5. Creator Community</option>
-              <option value="earnings">6. Creator Earnings</option>
-              <option value="influencer">7. Influencer Profile</option>
-              <option value="messages">8. Messages Screen</option>
-              <option value="onboarding">9. Onboarding / Landing</option>
-              <option value="payment">10. Payment & Checkout</option>
-              <option value="profile">11. User Profile</option>
+              <option value="subscriptions">4. Subscriptions</option>
+              <option value="messages">5. Messages Screen</option>
+              <option value="notifications">6. Notifications</option>
+              <option value="live">7. Live Now Hub</option>
+              <option value="collections">8. Collections</option>
+              <option value="wallet">9. My Wallet</option>
+              <option value="rewards">10. Earn Rewards</option>
+              <option value="saved">11. Saved Posts</option>
+              <option value="dashboard">12. Creator Dashboard</option>
+              <option value="community">13. Creator Community</option>
+              <option value="earnings">14. Creator Earnings</option>
+              <option value="influencer">15. Influencer Profile</option>
+              <option value="onboarding">16. Onboarding Landing</option>
+              <option value="payment">17. Payment Checkout</option>
+              <option value="profile">18. User Profile</option>
+              <option value="settings">19. Settings</option>
             </select>
           </div>
         </div>

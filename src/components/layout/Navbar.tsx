@@ -13,14 +13,22 @@ export type ScreenId =
   | 'home'
   | 'feed'
   | 'explore'
+  | 'subscriptions'
+  | 'messages'
+  | 'notifications'
+  | 'live'
+  | 'collections'
+  | 'wallet'
+  | 'rewards'
+  | 'saved'
   | 'dashboard'
   | 'community'
   | 'earnings'
   | 'influencer'
-  | 'messages'
   | 'onboarding'
   | 'payment'
-  | 'profile';
+  | 'profile'
+  | 'settings';
 
 interface NavbarProps {
   currentScreen: ScreenId;
