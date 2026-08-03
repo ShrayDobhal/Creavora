@@ -214,6 +214,109 @@ export const CreatorCommunityScreen: React.FC<CreatorCommunityScreenProps> = ({ 
               ))}
               <span className="text-[10px] text-slate-400 font-semibold block pt-1">120 votes</span>
             </div>
+
+            <div className="flex items-center gap-6 text-xs font-bold text-slate-500 pt-2 border-t border-slate-100">
+              <button className="flex items-center gap-1.5 hover:text-pink-600">
+                <Heart className="w-4 h-4" />
+                <span>38</span>
+              </button>
+              <button className="flex items-center gap-1.5 hover:text-purple-600">
+                <MessageSquare className="w-4 h-4" />
+                <span>27</span>
+              </button>
+              <button className="flex items-center gap-1.5 hover:text-purple-600">
+                <Share2 className="w-4 h-4" />
+                <span>Share</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Community Thread 3 (Kavya Intro) */}
+          <div className="card p-5 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img src={SAMPLE_IMAGES.kavya} alt="Kavya" className="w-10 h-10 rounded-full object-cover" />
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900">Kavya Singh</span>
+                    <span className="bg-blue-100 text-blue-700 text-[9px] font-extrabold px-1.5 py-0.2 rounded">New Member</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400">5h ago</span>
+                </div>
+              </div>
+              <button className="text-slate-400 hover:text-slate-600"><MoreVertical className="w-4 h-4" /></button>
+            </div>
+
+            <p className="text-xs text-slate-800 leading-relaxed font-medium">
+              Hey everyone! I'm Kavya, a lifestyle creator from Jaipur. Excited to be here and learn from all of you! ✨
+            </p>
+
+            <div className="flex items-center gap-6 text-xs font-bold text-slate-500 pt-2 border-t border-slate-100">
+              <button className="flex items-center gap-1.5 hover:text-pink-600">
+                <Heart className="w-4 h-4" />
+                <span>22</span>
+              </button>
+              <button className="flex items-center gap-1.5 hover:text-purple-600">
+                <MessageSquare className="w-4 h-4" />
+                <span>18</span>
+              </button>
+              <button className="flex items-center gap-1.5 hover:text-purple-600">
+                <Share2 className="w-4 h-4" />
+                <span>Share</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Community Thread 4 (Ananya Live Session Promo) */}
+          <div className="card p-5 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img src={SAMPLE_IMAGES.ananya} alt="Ananya" className="w-10 h-10 rounded-full object-cover ring-2 ring-purple-200" />
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900">Ananya Sharma</span>
+                    <span className="bg-purple-100 text-purple-700 text-[9px] font-extrabold px-1.5 py-0.2 rounded">Creator</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400">1d ago</span>
+                </div>
+              </div>
+              <button className="text-slate-400 hover:text-slate-600"><MoreVertical className="w-4 h-4" /></button>
+            </div>
+
+            <p className="text-xs text-slate-800 leading-relaxed font-medium">
+              We're going LIVE this Saturday at 7 PM IST 🎥 Topic: How I plan my content & stay productive. Don't miss it! 💜
+            </p>
+
+            {/* Event Promo Box matching Page 1 PDF */}
+            <div className="rounded-2xl overflow-hidden bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-4 flex items-center justify-between shadow-lg">
+              <div className="space-y-1">
+                <span className="bg-purple-600/80 text-purple-200 text-[9px] font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                  Live Session
+                </span>
+                <h4 className="text-sm font-bold text-white leading-tight">How I plan my content & stay productive</h4>
+                <span className="text-[10px] text-slate-300 font-medium block">25 May, 7:00 PM IST</span>
+              </div>
+
+              <button className="btn-primary py-1.5 px-3 text-[10px] font-extrabold rounded-xl shrink-0 shadow-md">
+                🔔 Remind Me
+              </button>
+            </div>
+
+            <div className="flex items-center gap-6 text-xs font-bold text-slate-500 pt-2 border-t border-slate-100">
+              <button className="flex items-center gap-1.5 hover:text-pink-600">
+                <Heart className="w-4 h-4 fill-pink-500 text-pink-500" />
+                <span>89</span>
+              </button>
+              <button className="flex items-center gap-1.5 hover:text-purple-600">
+                <MessageSquare className="w-4 h-4" />
+                <span>61</span>
+              </button>
+              <button className="flex items-center gap-1.5 hover:text-purple-600">
+                <Share2 className="w-4 h-4" />
+                <span>Share</span>
+              </button>
+            </div>
           </div>
         </div>
 

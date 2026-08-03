@@ -79,6 +79,31 @@ export const CreatorDashboardScreen: React.FC<CreatorDashboardScreenProps> = ({ 
       comments: '156',
       image: SAMPLE_IMAGES.post3
     },
+    {
+      id: '4',
+      title: 'My Sunday playlist 🎵',
+      type: 'Audio',
+      typeBadge: 'bg-amber-100 text-amber-700',
+      duration: '12:36',
+      date: 'May 13, 2024 • 11:20 AM',
+      status: 'Published',
+      visibility: 'Visible to Subscribers',
+      likes: '842',
+      comments: '72',
+      image: SAMPLE_IMAGES.ananyaCover
+    },
+    {
+      id: '5',
+      title: 'What content do you want next?',
+      type: 'Poll',
+      typeBadge: 'bg-emerald-100 text-emerald-700',
+      date: 'May 12, 2024 • 09:00 PM',
+      status: 'Published',
+      visibility: 'Visible to Subscribers',
+      likes: '1.8K votes',
+      comments: '0',
+      image: SAMPLE_IMAGES.artStudio
+    },
   ];
 
   return (
