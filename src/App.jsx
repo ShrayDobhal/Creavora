@@ -13,6 +13,15 @@ import StudioContent from "./pages/StudioContent.jsx";
 import StudioEarnings from "./pages/StudioEarnings.jsx";
 import StudioCommunity from "./pages/StudioCommunity.jsx";
 import Placeholder from "./pages/Placeholder.jsx";
+import LiveNow from "./pages/LiveNow.jsx";
+import Subscriptions from "./pages/Subscriptions.jsx";
+import Notifications from "./pages/Notifications.jsx";
+import Collections from "./pages/Collections.jsx";
+import Wallet from "./pages/Wallet.jsx";
+import Rewards from "./pages/Rewards.jsx";
+import SavedPosts from "./pages/SavedPosts.jsx";
+import Settings from "./pages/Settings.jsx";
+
 
 const fan = (element, topbar) => <FanLayout topbar={topbar}>{element}</FanLayout>;
 const studio = (element, topbar) => (
@@ -65,19 +74,15 @@ export default function App() {
         })}
       />
 
-      {/* sidebar entries with no mockup of their own */}
-      {[
-        "/live",
-        "/subscriptions",
-        "/notifications",
-        "/collections",
-        "/wallet",
-        "/rewards",
-        "/saved",
-        "/settings",
-      ].map((path) => (
-        <Route key={path} path={path} element={fan(<Placeholder />)} />
-      ))}
+      {/* sidebar entries with their own custom pages */}
+      <Route path="/live" element={fan(<LiveNow />)} />
+      <Route path="/subscriptions" element={fan(<Subscriptions />)} />
+      <Route path="/notifications" element={fan(<Notifications />)} />
+      <Route path="/collections" element={fan(<Collections />)} />
+      <Route path="/wallet" element={fan(<Wallet />)} />
+      <Route path="/rewards" element={fan(<Rewards />)} />
+      <Route path="/saved" element={fan(<SavedPosts />)} />
+      <Route path="/settings" element={fan(<Settings />)} />
       {[
         "/studio/live",
         "/studio/messages",

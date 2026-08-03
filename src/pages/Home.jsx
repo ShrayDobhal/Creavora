@@ -85,9 +85,9 @@ export default function Home() {
         </div>
 
         {/* hero banner */}
-        <div className="relative mt-5 overflow-hidden rounded-2xl bg-[#141419] p-9">
-          <div className="relative z-10 max-w-[420px]">
-            <h2 className="text-[38px] font-extrabold leading-[1.12] tracking-tight text-white">
+        <div className="mt-5 overflow-hidden rounded-2xl bg-[#141419] p-8 md:p-9 flex flex-col md:flex-row md:items-center justify-between gap-8 relative">
+          <div className="max-w-[420px] shrink-0">
+            <h2 className="text-[34px] md:text-[38px] font-extrabold leading-[1.12] tracking-tight text-white">
               Where creators
               <br />
               <span className="bg-gradient-to-r from-[#f0399a] to-[#a97bff] bg-clip-text text-transparent">
@@ -107,31 +107,30 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[520px] items-center justify-end gap-3 pr-6 md:flex">
+          <div className="pointer-events-none hidden items-center justify-end gap-3 md:flex shrink-0 pr-2">
             <div className="flex flex-col gap-3">
-              <Photo seed="rohit-stream" dark className="h-[115px] w-[110px] rounded-xl">
+              <Photo seed="rohit-stream" className="h-[105px] w-[100px] rounded-xl">
                 <MiniLabel name="Rohit Gamer" role="Gaming Creator" />
               </Photo>
-              <Photo seed="meera-studio" dark className="h-[150px] w-[110px] rounded-xl">
+              <Photo seed="meera-studio" className="h-[140px] w-[100px] rounded-xl">
                 <MiniLabel name="Meera Art" role="Digital Artist" />
               </Photo>
             </div>
-            <Photo seed="ananya-hero" className="h-[290px] w-[200px] rounded-2xl">
+            <Photo seed="ananya-hero" className="h-[260px] w-[180px] rounded-2xl relative">
               <MiniLabel name="Ananya Sharma" role="Fashion Creator" big />
+              <span className="absolute -right-1.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-white shadow-lg z-20 pointer-events-auto">
+                <Crown size={14} className="fill-brand-500 text-brand-500" />
+              </span>
             </Photo>
             <div className="flex flex-col gap-3">
-              <Photo seed="karan-himachal" dark className="h-[115px] w-[110px] rounded-xl">
+              <Photo seed="karan-himachal" className="h-[105px] w-[100px] rounded-xl">
                 <MiniLabel name="Wander With Karan" role="Travel Creator" />
               </Photo>
-              <Photo seed="neha-fit" dark className="h-[150px] w-[110px] rounded-xl">
+              <Photo seed="neha-fit" className="h-[140px] w-[100px] rounded-xl">
                 <MiniLabel name="Fit With Neha" role="Fitness Coach" />
               </Photo>
             </div>
           </div>
-
-          <span className="absolute right-[248px] top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white shadow-lg">
-            <Crown size={16} className="fill-brand-500 text-brand-500" />
-          </span>
         </div>
 
         {/* quick links strip */}

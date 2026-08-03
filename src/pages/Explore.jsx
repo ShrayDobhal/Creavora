@@ -94,8 +94,8 @@ export default function Explore() {
         </div>
 
         {/* banner */}
-        <div className="relative mt-5 overflow-hidden rounded-2xl bg-[#141419] p-8">
-          <div className="relative z-10 max-w-[330px]">
+        <div className="relative mt-5 overflow-hidden rounded-2xl bg-[#141419] p-8 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="max-w-[330px] shrink-0">
             <h2 className="text-[34px] font-extrabold leading-[1.15] tracking-tight text-white">
               Discover.
               <br />
@@ -120,7 +120,7 @@ export default function Explore() {
             </Link>
           </div>
 
-          <div className="pointer-events-none absolute inset-y-6 right-8 hidden items-center gap-3 md:flex">
+          <div className="pointer-events-none hidden items-center gap-3 md:flex shrink-0 pr-2">
             {[
               { seed: "ananya-hero", name: "Ananya Sharma", role: "Fashion Creator", ring: "ring-amber-400" },
               { seed: "rohit-stream", name: "Rohit Gamer", role: "Gaming Creator", ring: "ring-amber-400" },
@@ -129,8 +129,7 @@ export default function Explore() {
               <Photo
                 key={c.seed}
                 seed={c.seed}
-                dark
-                className={`h-[200px] w-[150px] rounded-2xl ring-2 ${c.ring}`}
+                className={`h-[180px] w-[130px] rounded-2xl ring-2 ${c.ring}`}
               >
                 <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-gradient-to-t from-black/85 to-transparent p-2.5 pt-8">
                   <Avatar name={c.name} size={20} />
