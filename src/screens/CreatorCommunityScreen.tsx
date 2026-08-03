@@ -13,7 +13,8 @@ import {
   Share2, 
   CheckCircle2, 
   Pin, 
-  Plus 
+  Plus,
+  Filter
 } from 'lucide-react';
 import { COMMUNITY_THREADS, SAMPLE_IMAGES } from '../data/mockData';
 import { ScreenId } from '../components/layout/Navbar';
@@ -128,6 +129,20 @@ export const CreatorCommunityScreen: React.FC<CreatorCommunityScreenProps> = ({ 
                 <span className="text-[11px] text-slate-700 ml-1">128</span>
               </div>
               <span className="text-purple-700 font-bold hover:underline cursor-pointer">56 Comments</span>
+            </div>
+          </div>
+
+          {/* All Posts Header */}
+          <div className="flex items-center justify-between text-xs pt-2">
+            <span className="text-sm font-black text-slate-900">All Posts</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-xl cursor-pointer flex items-center gap-1.5 shadow-2xs">
+                <span>Latest</span>
+                <span className="text-[10px]">▾</span>
+              </span>
+              <button className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-2xs">
+                <Filter className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 

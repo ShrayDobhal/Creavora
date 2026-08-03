@@ -279,10 +279,51 @@ export const CreatorEarningScreen: React.FC<CreatorEarningScreenProps> = ({ onSe
                 <strong className="text-slate-900">₹9,820.00 (12.5%)</strong>
               </div>
               <div className="flex justify-between items-center">
-                <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>Live Streams</span>
-                <strong className="text-slate-900">₹6,120.00 (7.7%)</strong>
+                <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>Others</span>
+                <strong className="text-slate-900">₹1,500.00 (1.9%)</strong>
               </div>
             </div>
+          </div>
+
+          {/* Quick Links Widget matching Page 3 PDF */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3 text-xs">
+            <h3 className="text-sm font-bold text-slate-900">Quick Links</h3>
+            <div className="space-y-2">
+              {[
+                { title: 'Payout Settings', desc: 'Manage your payout methods', icon: DollarSign },
+                { title: 'Earnings Analytics', desc: 'Detailed earnings insights', icon: TrendingUp },
+                { title: 'Tax Documents', desc: 'Download tax reports', icon: Download },
+                { title: 'Help & Support', desc: 'Get help with payouts', icon: HelpCircle },
+              ].map((link, idx) => {
+                const Icon = link.icon;
+                return (
+                  <div key={idx} className="flex items-center gap-3 p-2 rounded-xl hover:bg-purple-50 cursor-pointer transition-colors">
+                    <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                      <Icon className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-900 block leading-tight">{link.title}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">{link.desc}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Grow Your Earnings Banner matching Page 3 PDF */}
+          <div className="rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800 text-white p-4 space-y-2 relative overflow-hidden shadow-md">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-200" />
+              <span className="text-xs font-bold">Grow Your Earnings</span>
+            </div>
+            <p className="text-xs text-purple-100 leading-snug">
+              Engage more with your audience and unlock new opportunities.
+            </p>
+            <button className="py-1.5 px-3 bg-white text-purple-700 font-extrabold text-[11px] rounded-xl hover:bg-purple-50 transition-colors flex items-center gap-1 shadow-sm">
+              <span>Explore Tips to Grow</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>

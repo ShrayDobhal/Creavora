@@ -284,6 +284,7 @@ export const CreatorDashboardScreen: React.FC<CreatorDashboardScreenProps> = ({ 
                 { label: 'Schedule Post', desc: 'Plan your content', icon: Calendar },
                 { label: 'Create Collection', desc: 'Organize your content', icon: FolderPlus },
                 { label: 'Go Live', desc: 'Connect with fans', icon: Radio },
+                { label: 'Post a Story', desc: 'Share a quick update', icon: Clock },
               ].map((act, i) => {
                 const Icon = act.icon;
                 return (
@@ -307,15 +308,41 @@ export const CreatorDashboardScreen: React.FC<CreatorDashboardScreenProps> = ({ 
               <Sparkles className="w-4 h-4 text-purple-600" />
               <h3 className="text-sm font-bold text-slate-900">Tips to Grow</h3>
             </div>
-            <div className="space-y-2 text-xs font-semibold text-slate-700">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>Post regularly to keep engagement high</span>
+            <div className="space-y-2.5 text-xs font-semibold text-slate-700">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Post regularly</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-normal">Keep your audience engaged</span>
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>Host weekly Live Streams</span>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Go live more often</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-normal">Live sessions get more love</span>
               </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Use polls & stories</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-normal">Increase interaction</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Engage in DMs</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-normal">Build stronger relationships</span>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-purple-100">
+              <button className="text-xs font-bold text-purple-600 hover:underline flex items-center gap-1">
+                <span>View All Tips</span>
+                <span>→</span>
+              </button>
             </div>
           </div>
         </div>

@@ -31,6 +31,11 @@ export const InfluencerScreen: React.FC<InfluencerScreenProps> = ({ onSelectScre
         {/* Cover Photo */}
         <div className="relative h-64 sm:h-80 w-full overflow-hidden">
           <img src={SAMPLE_IMAGES.ananyaCover} alt="Cover" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
+            <span className="font-serif italic text-3xl sm:text-5xl text-white/90 drop-shadow-lg tracking-wide font-extrabold">
+              Believe in yourself
+            </span>
+          </div>
           <button 
             onClick={() => onSelectScreen('explore')}
             className="absolute top-4 left-4 w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/80 transition-colors"
