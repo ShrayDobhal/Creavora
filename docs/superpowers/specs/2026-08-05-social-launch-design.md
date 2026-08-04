@@ -28,6 +28,12 @@ Profile setup is a resumable form available after registration and in Settings. 
 
 The Feed includes a real post composer for eligible authenticated accounts. It supports text and one optional uploaded image, previews the image before publishing, validates limits, creates the post via the API, and prepends the returned view model only after success. Owners can edit or soft-delete their own posts; other users can like, comment, bookmark, and follow through existing authenticated APIs. Follow and unfollow returns real count/state data atomically.
 
+## Development content density
+
+The development seed creates a believable, clearly development-only social graph so local and review environments feel populated. It includes creators, users, follows, comments, likes, and image-led posts across Fitness, Sports, Technology, Fashion, Food, Travel, Education, Music, Art, Comedy, Gaming, and Lifestyle. Every seeded card, profile, post, count, and category is represented by the same PostgreSQL relations and APIs used by real users.
+
+Seed images come from stable editorial or stock-photo sources selected for the category; they are not generated portraits. Production responses never fabricate this content. In production, feeds show actual uploaded posts and honest empty states until the platform has real activity. Real user publishing and upload flows remain available regardless of whether seed data exists.
+
 ## Navigation and responsive design
 
 The supplied reference defines desktop hierarchy: a left rail, compact top bar, central feed/discovery area, and optional desktop-only contextual rail. The production implementation follows this hierarchy while keeping only working destinations visible. Desktop supports the full social navigation; tablet collapses the side rail; mobile uses a fixed bottom navigation and an account menu. All cards use responsive grids, min-width safeguards, line clamping, safe horizontal scroll only where intentional, and no content escapes the viewport.
