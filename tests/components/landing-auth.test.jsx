@@ -12,6 +12,9 @@ describe("Landing auth entry points", () => {
   it("renders separate normal-user and creator login entry points", () => {
     render(<Landing />);
 
+    const userLoginLinks = screen.getAllByRole("link", { name: /user login/i });
+    expect(userLoginLinks.length).toBeGreaterThan(0);
+    userLoginLinks.forEach((link) => expect(link).toHaveAttribute("href", "/login"));
     expect(screen.getByRole("link", { name: /join creavora/i })).toHaveAttribute(
       "href",
       "/register",
@@ -30,6 +33,29 @@ describe("Landing auth entry points", () => {
     expect(screen.getByRole("link", { name: /browse active creator profiles/i })).toHaveAttribute(
       "href",
       "/explore",
+    );
+  });
+
+  it("grounds community proof in product routes visitors can inspect", () => {
+    render(<Landing />);
+
+    expect(
+      screen.getByRole("heading", { name: /community proof you can inspect/i }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/no anonymous testimonials or inflated totals/i),
+    ).toBeVisible();
+    expect(screen.getByRole("link", { name: /browse live discovery/i })).toHaveAttribute(
+      "href",
+      "/explore",
+    );
+    expect(screen.getByRole("link", { name: /open the following feed/i })).toHaveAttribute(
+      "href",
+      "/feed",
+    );
+    expect(screen.getByRole("link", { name: /review saved posts/i })).toHaveAttribute(
+      "href",
+      "/saved",
     );
   });
 });

@@ -5,15 +5,12 @@ import {
   Dumbbell,
   Gamepad2,
   GraduationCap,
-  Heart,
   Lock,
   Music,
   Palette,
   Plane,
   Shirt,
   Sparkles,
-  Star,
-  Users,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -202,27 +199,43 @@ export default function Landing() {
         </section>
 
         <section id="community" className="scroll-mt-24 px-5 pb-16 sm:px-8 lg:pb-24">
-          <div className="mx-auto grid max-w-[1500px] gap-10 overflow-hidden rounded-[2rem] bg-[#15131d] p-7 text-white sm:p-10 lg:grid-cols-[.85fr_1.15fr] lg:p-14">
+          <div className="mx-auto grid max-w-[1500px] gap-10 overflow-hidden rounded-[2rem] bg-[#15131d] p-7 text-white sm:p-10 lg:grid-cols-[.8fr_1.2fr] lg:p-14">
             <div>
-              <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-300">Community by design</p>
-              <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Choose how you take part.</h2>
+              <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-300">Grounded community evidence</p>
+              <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Community proof you can inspect.</h2>
               <p className="mt-4 max-w-lg text-sm leading-7 text-white/65">
-                Fans get a focused discovery and following experience. Creators get a dedicated studio entry and profile tools.
+                No anonymous testimonials or inflated totals. The evidence is in product paths you can open and verify.
               </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                { icon: Star, title: "Discover", body: "Find creators across interests and disciplines." },
-                { icon: Heart, title: "Follow", body: "Build a feed around the work you value." },
-                { icon: Users, title: "Connect", body: "Find public communities and creator profiles." },
-              ].map(({ icon: Icon, title, body }) => (
-                <div key={title} className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                  <Icon size={20} className="text-brand-300" aria-hidden="true" />
-                  <h3 className="mt-8 font-extrabold">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-white/60">{body}</p>
+            <ol className="divide-y divide-white/10 border-y border-white/10">
+              <li className="grid gap-4 py-6 sm:grid-cols-[1fr_auto] sm:items-center">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-300">Public discovery</p>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-white/65">Creator profiles and public community results come from the application discovery service, not a fixed landing-page catalogue.</p>
                 </div>
-              ))}
-            </div>
+                <Link href="/explore" className="flex items-center gap-2 text-sm font-bold text-white hover:text-brand-300">
+                  Browse live discovery <ArrowRight size={15} />
+                </Link>
+              </li>
+              <li className="grid gap-4 py-6 sm:grid-cols-[1fr_auto] sm:items-center">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-300">Following state</p>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-white/65">Following is stored through the social API and has a dedicated feed mode for the creators a member chooses.</p>
+                </div>
+                <Link href="/feed" className="flex items-center gap-2 text-sm font-bold text-white hover:text-brand-300">
+                  Open the following feed <ArrowRight size={15} />
+                </Link>
+              </li>
+              <li className="grid gap-4 py-6 sm:grid-cols-[1fr_auto] sm:items-center">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-300">Saved work</p>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-white/65">Bookmarks persist through the post API and have a dedicated route for returning to saved posts.</p>
+                </div>
+                <Link href="/saved" className="flex items-center gap-2 text-sm font-bold text-white hover:text-brand-300">
+                  Review saved posts <ArrowRight size={15} />
+                </Link>
+              </li>
+            </ol>
           </div>
         </section>
 
