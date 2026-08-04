@@ -140,7 +140,10 @@ export const updateProfileSchema = z.object({
   avatar: z.string().url().nullable().optional(),
   coverImage: z.string().url().nullable().optional(),
   roleTitle: z.string().max(50).nullable().optional(),
-});
+  location: z.string().max(80).nullable().optional(),
+  website: z.string().url().max(2048).nullable().optional(),
+  profileVisibility: z.enum(["PUBLIC", "FOLLOWERS"]).optional(),
+}).strict();
 
 // ─── Community Schemas ──────────────────────────────────────────────────────
 
