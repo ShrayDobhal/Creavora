@@ -60,3 +60,28 @@ No code was pushed or deployed. No database, payment, or other production resour
 2. Next.js warns that multiple lockfiles make the inferred Turbopack workspace root ambiguous (`C:/tmp/creavora-audit/package-lock.json` and this worktree's `package-lock.json`). The build still completes successfully.
 3. Existing deferred static pages and APIs remain in the repository and are directly addressable by authenticated users, but FanLayout and landing no longer advertise them. They were not deleted because this review requirement was to constrain the release UI, not remove unrelated implementation.
 4. Creator tooling can still mark a post as premium for future use; consumer responses suppress its content/media and present it only as unavailable in the current release. No membership purchase or entitlement behavior is exposed by the reviewed consumer flow.
+
+## Round 2 corrective verification
+
+Correction commit: `3101e46cd7a4804b9f6e77dbbfc043bde17a8222` (`fix: neutralize unavailable content claims`)
+
+The follow-up review removed the remaining paid/future-paid card labels and replaced the unavailable state with the single neutral sentence, “This post is not available in the current release.” Follower notifications emitted by both post-creation paths now use neutral publication copy. Rendered consumer tests reject `premium`, `subscribe`, `unlock`, `upgrade`, and `₹` release claims.
+
+`FanLayout` again listens for `user-update` and `notifications-update`. Identity and notification loads now have independent request, cancellation, success, and failure paths, so one failed request cannot discard the other request's successful state. Each event refreshes only its corresponding resource.
+
+### Round 2 red evidence
+
+- `npm run test -- tests/components/feed-card.test.jsx tests/components/landing-auth.test.jsx` — 4 expected failures and 16 passes: one stale card-copy failure and three identity/notification isolation or refresh failures.
+- `npm run test -- tests/api/consumer-routes.test.js -t "paid-release claims"` — 1 expected failure and 17 passes because the follower notification still contained a paid-release claim.
+
+### Round 2 green evidence
+
+| Command | Result |
+| --- | --- |
+| `npm run test -- tests/components/feed-card.test.jsx tests/components/landing-auth.test.jsx tests/api/consumer-routes.test.js` | PASS — 3 files, 38 tests passed. |
+| `npm run test` | PASS — 12 files, 93 tests passed. |
+| `npm run lint` | PASS — 0 errors; the same 2 pre-existing warnings remain. |
+| `npm run build` | PASS — production compilation, TypeScript, page-data collection, and all 54 static pages completed. |
+| `git diff --check` | PASS; only repository line-ending conversion notices were emitted before staging. |
+
+No code was pushed or deployed, and no production resource was mutated during round 2.
