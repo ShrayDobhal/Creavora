@@ -44,8 +44,11 @@ const creators = [
 }));
 
 function databaseUrlFor(env) {
-  if (env.NODE_ENV === "production") {
-    throw new Error("Seed data is disabled in production");
+  if (env.NODE_ENV !== "development") {
+    if (env.NODE_ENV === "production") {
+      throw new Error("Seed data is disabled in production");
+    }
+    throw new Error("Seed data is only enabled when NODE_ENV=development");
   }
 
   if (!env.SEED_DATABASE_URL) {
@@ -56,11 +59,32 @@ function databaseUrlFor(env) {
     throw new Error("Set SEED_DEVELOPMENT_CONFIRMATION=local-development before seeding");
   }
 
+  if (!env.DATABASE_URL) {
+    throw new Error("DATABASE_URL must be configured separately before seeding");
+  }
+
   let parsed;
   try {
     parsed = new URL(env.SEED_DATABASE_URL);
   } catch {
     throw new Error("DATABASE_URL must be a valid local PostgreSQL URL before seeding");
+  }
+
+  let applicationDatabase;
+  try {
+    applicationDatabase = new URL(env.DATABASE_URL);
+  } catch {
+    throw new Error("DATABASE_URL must be a valid application database URL before seeding");
+  }
+
+  const seedPort = parsed.port || "5432";
+  const applicationPort = applicationDatabase.port || "5432";
+  if (
+    parsed.hostname === applicationDatabase.hostname
+    && seedPort === applicationPort
+    && parsed.pathname === applicationDatabase.pathname
+  ) {
+    throw new Error("SEED_DATABASE_URL must differ from DATABASE_URL before seeding");
   }
 
   if (!parsed.protocol.startsWith("postgres") || !LOCAL_DATABASE_HOSTS.has(parsed.hostname)) {
@@ -90,6 +114,16 @@ async function upsertUser(db, user, passwordHash) {
     },
     create: { ...user, passwordHash },
   });
+}
+
+async function syncPostEngagement(db, posts) {
+  for (const post of posts) {
+    const [likesCount, commentsCount] = await Promise.all([
+      db.like.count({ where: { postId: post.id } }),
+      db.comment.count({ where: { postId: post.id } }),
+    ]);
+    await db.post.update({ where: { id: post.id }, data: { likesCount, commentsCount } });
+  }
 }
 
 export async function runSeed(env = process.env) {
@@ -135,15 +169,8 @@ export async function runSeed(env = process.env) {
       seededCreators.push({ ...creator, user });
       await db.creatorProfile.upsert({
         where: { userId: user.id },
-        update: { category: creator.category, subscriberCount: 2500, monthlyRevenue: 18000 },
-        create: {
-          userId: user.id,
-          category: creator.category,
-          subscriberCount: 2500,
-          totalEarnings: 72000,
-          availableBalance: 18000,
-          monthlyRevenue: 18000,
-        },
+        update: { category: creator.category },
+        create: { userId: user.id, category: creator.category },
       });
     }
 
@@ -160,9 +187,9 @@ export async function runSeed(env = process.env) {
           mediaType: "image",
           isPremium: creator.category === "Education" || creator.category === "Fitness",
           price: creator.category === "Education" || creator.category === "Fitness" ? 149 : 0,
-          likesCount: 24,
-          commentsCount: 2,
-          viewsCount: 180,
+          likesCount: 0,
+          commentsCount: 0,
+          viewsCount: 0,
           publishedAt: new Date("2026-08-01T09:00:00.000Z"),
         },
       }));
@@ -193,6 +220,7 @@ export async function runSeed(env = process.env) {
         { userId: fans[1].id, postId: posts[3].id, content: "Saving these gaming tips for the next squad night." },
       ],
     });
+    await syncPostEngagement(db, posts);
 
     const communities = [
       [seededCreators[0], "India Food Trails", "Recipes, regional finds, and respectful food conversations."],
