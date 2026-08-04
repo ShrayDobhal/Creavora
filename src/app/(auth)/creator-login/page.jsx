@@ -58,7 +58,7 @@ function CreatorLoginForm() {
             href="/login"
             className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-white/10 transition"
           >
-            <ArrowLeft size={14} /> Normal Login
+            <ArrowLeft size={14} /> User Login
           </Link>
         </div>
 
@@ -69,7 +69,7 @@ function CreatorLoginForm() {
           </div>
           <h1 className="text-[32px] font-extrabold tracking-tight">Creator Login</h1>
           <p className="mt-2 text-[15px] text-muted-foreground text-neutral-400">
-            Access your creator studio dashboard, analytics, content manager, and earnings.
+            Sign in to manage your creator profile and studio.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -135,7 +135,7 @@ function CreatorLoginForm() {
 
         {/* Bottom */}
         <p className="text-center text-[12px] text-neutral-500">
-          © {new Date().getFullYear()} Creavora. Creator Portal Security Enforced.
+          Copyright {new Date().getFullYear()} Creavora.
         </p>
       </div>
 
@@ -147,27 +147,13 @@ function CreatorLoginForm() {
             <Sparkles size={36} className="text-brand-400" />
           </div>
           <h2 className="mt-6 text-[36px] font-extrabold tracking-tight leading-tight">
-            Turn your passion
+            Build your creator
             <br />
-            into recurring revenue.
+            presence.
           </h2>
           <p className="mt-4 max-w-[320px] text-[15px] leading-relaxed text-neutral-400">
-            Manage memberships, upload premium reels/vids, interact in real-time, and run campaigns seamlessly.
+            Keep your profile, content workspace, and community tools in one place.
           </p>
-          <div className="mt-10 grid grid-cols-3 gap-6 border-t border-white/5 pt-8 w-full max-w-[360px]">
-            <div>
-              <p className="text-[20px] font-black text-white">85%</p>
-              <p className="text-[11px] text-neutral-500 uppercase font-semibold mt-1">Payout Share</p>
-            </div>
-            <div className="border-l border-white/5">
-              <p className="text-[20px] font-black text-white">Instant</p>
-              <p className="text-[11px] text-neutral-500 uppercase font-semibold mt-1">Withdrawals</p>
-            </div>
-            <div className="border-l border-white/5">
-              <p className="text-[20px] font-black text-white">0%</p>
-              <p className="text-[11px] text-neutral-500 uppercase font-semibold mt-1">Hosting Fees</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

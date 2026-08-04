@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import {
   Bell,
   Bookmark,
-  Command,
   Crown,
   Gift,
   Home,
@@ -16,7 +15,6 @@ import {
   MessageSquare,
   Plus,
   Radio,
-  Search,
   Settings,
   Sparkles,
   Compass,
@@ -129,7 +127,7 @@ export function UserMenu({
   );
 }
 
-export function TopBar({ placeholder = "Search creators, posts, topics...", coins = 120, greeting = true, user, unreadNotifications }) {
+export function TopBar({ coins = 120, greeting = true, user, unreadNotifications }) {
   const displayCoins = user ? Math.round(user.walletBalance) : coins;
   return (
     <header className="sticky top-0 z-30 flex h-[72px] items-center gap-4 border-b border-line bg-white px-6">
@@ -138,23 +136,16 @@ export function TopBar({ placeholder = "Search creators, posts, topics...", coin
       </div>
 
       <div className="flex flex-1 justify-center">
-        <label className="relative flex w-full max-w-[560px] items-center">
-          <Search size={17} className="absolute left-4 text-muted" />
-          <input
-            placeholder={placeholder}
-            className="h-11 w-full rounded-full border border-line bg-canvas pl-11 pr-16 text-[14px] outline-none placeholder:text-muted focus:border-brand-300 focus:bg-white"
-          />
-          <span className="absolute right-4 flex items-center gap-0.5 text-[12px] font-semibold text-muted">
-            <Command size={12} /> K
-          </span>
-        </label>
+        <Link
+          href="/explore"
+          className="flex h-11 w-full max-w-[560px] items-center gap-3 rounded-full border border-line bg-canvas px-4 text-sm font-semibold text-muted hover:border-brand-300 hover:bg-white hover:text-ink"
+        >
+          <Compass size={17} aria-hidden="true" />
+          Explore Creavora
+        </Link>
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
-        <button className="flex h-11 items-center gap-2 rounded-full bg-brand-600 px-5 text-[14px] font-bold text-white hover:bg-brand-700 cursor-pointer">
-          <Plus size={17} /> Create
-        </button>
-
         {displayCoins != null && (
           <span className="flex h-10 items-center gap-1.5 rounded-full bg-brand-50 px-3.5 text-[13px] font-bold text-brand-700">
             <Sparkles size={14} className="fill-brand-500 text-brand-500" />

@@ -58,15 +58,15 @@ function LoginForm() {
             href="/creator-login"
             className="flex items-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-[13px] font-bold text-brand-700 hover:bg-brand-100 transition"
           >
-            Login as Creator <ArrowRight size={14} />
+            Creator Login <ArrowRight size={14} />
           </Link>
         </div>
 
         {/* Form */}
         <div className="mx-auto w-full max-w-[420px]">
-          <h1 className="text-[32px] font-extrabold tracking-tight">Welcome back</h1>
+          <h1 className="text-[32px] font-extrabold tracking-tight">User Login</h1>
           <p className="mt-2 text-[15px] text-muted">
-            Sign in to discover creators, exclusive content, and more
+            Sign in to discover creators and return to your following feed.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -125,14 +125,14 @@ function LoginForm() {
           <p className="mt-6 text-center text-[13.5px] text-muted">
             Don&apos;t have an account?{" "}
             <Link href="/register" className="font-bold text-brand-600 hover:underline">
-              Create Account
+              Join Creavora
             </Link>
           </p>
         </div>
 
         {/* Bottom */}
         <p className="text-center text-[12px] text-muted">
-          © {new Date().getFullYear()} Creavora. All rights reserved.
+          Copyright {new Date().getFullYear()} Creavora.
         </p>
       </div>
 
@@ -142,20 +142,13 @@ function LoginForm() {
         <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-white">
           <Sparkles size={48} className="fill-white/30 text-white/60" />
           <h2 className="mt-6 text-[36px] font-extrabold tracking-tight leading-tight">
-            Where creators
+            Keep up with
             <br />
-            come closer.
+            work you value.
           </h2>
           <p className="mt-4 max-w-[320px] text-[15px] leading-relaxed text-white/70">
-            Exclusive content, real connections, unforgettable experiences with your favorite creators.
+            Follow creators, save posts, and find new communities from one account.
           </p>
-          <div className="mt-10 flex items-center gap-6 text-[13px] font-semibold text-white/60">
-            <span>21K+ Creators</span>
-            <span className="h-1 w-1 rounded-full bg-white/40" />
-            <span>500K+ Fans</span>
-            <span className="h-1 w-1 rounded-full bg-white/40" />
-            <span>₹5Cr+ Earned</span>
-          </div>
         </div>
       </div>
     </div>

@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Creavora
 
-## Getting Started
+Creavora is a Next.js creator-discovery product with separate fan and creator authentication paths, a consumer feed, discovery, creator profiles, and social actions.
 
-First, run the development server:
+## Requirements
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 24
+- npm
+- PostgreSQL
+
+## Local setup
+
+1. Install dependencies and create a local environment file:
+
+   ```powershell
+   npm ci
+   Copy-Item .env.example .env
+   ```
+
+2. Fill in the required values described below. Use a local PostgreSQL database for development.
+
+3. Generate the Prisma client and create the development schema:
+
+   ```powershell
+   npx prisma generate
+   npx prisma db push
+   ```
+
+4. Start the application:
+
+   ```powershell
+   npm run dev
+   ```
+
+5. Open [http://localhost:3000/landing](http://localhost:3000/landing).
+
+## Environment variables
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | PostgreSQL connection used by the application. |
+| `JWT_ACCESS_SECRET` | Yes | Secret for access tokens. Use a unique random value of at least 32 bytes. |
+| `JWT_REFRESH_SECRET` | Yes | Separate secret for refresh tokens, also at least 32 bytes. |
+| `NEXT_PUBLIC_APP_URL` | Yes | Public application origin, such as `http://localhost:3000` locally. |
+| `SEED_DATABASE_URL` | Seed only | Separate local PostgreSQL database that may receive development fixtures. |
+| `SEED_DEVELOPMENT_CONFIRMATION` | Seed only | Must be `local-development` before the seed command will run. |
+| `SEED_PASSWORD` | No | Password for seeded accounts; defaults to `Test1234`. |
+| `RAZORPAY_KEY_ID` | No | Reserved for payment integration. |
+| `RAZORPAY_KEY_SECRET` | No | Reserved for payment integration. |
+
+Do not reuse access and refresh secrets. Do not commit `.env` or copy production database credentials into seed configuration.
+
+## Development seed data
+
+Seeding is deliberately restricted to a separate local PostgreSQL database. Create the schema in that database first, restore the application database variable, then run the guarded seed command:
+
+```powershell
+$creavoraAppDatabase = $env:DATABASE_URL
+$env:DATABASE_URL = $env:SEED_DATABASE_URL
+npx prisma db push
+$env:DATABASE_URL = $creavoraAppDatabase
+$env:NODE_ENV = "development"
+$env:SEED_DEVELOPMENT_CONFIRMATION = "local-development"
+npm run db:seed
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The command rejects production mode, remote seed hosts, missing confirmation, and a seed URL that matches `DATABASE_URL`. To inspect the fixtures after the seed completes, start the local app with `DATABASE_URL` pointed at that seeded database. Never run `npm run db:seed` in Vercel or against production data.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Verification
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Run the same checks expected before release:
 
-## Learn More
+```powershell
+npm run test
+npm run lint
+npx prisma validate
+npm run build
+git diff --check
+```
 
-To learn more about Next.js, take a look at the following resources:
+To run only the landing and navigation smoke test:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```powershell
+npm run test -- tests/components/landing-auth.test.jsx
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Vercel configuration
 
-## Deploy on Vercel
+Create a Vercel project from this repository with these settings:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Framework preset: Next.js
+- Node.js version: 24.x
+- Install command: `npm ci`
+- Build command: `npm run build`
+- Output directory: Next.js default
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Configure `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, and `NEXT_PUBLIC_APP_URL` for Production and Preview as appropriate. Use a managed PostgreSQL connection for deployed environments. Keep all `SEED_*` variables unset in production. Apply the Prisma schema through the project’s controlled database release process before sending traffic to a new database.
+
+After deployment is ready, verify the public landing route directly:
+
+```powershell
+curl.exe -fsS -o NUL -w "%{http_code}" https://creavora.vercel.app/landing
+```
+
+The expected response is `200`. A non-zero curl exit code or any other status blocks the release.
+
+## Continuous integration
+
+The consumer smoke workflow runs on pull requests and pushes to `main`. It installs from the lockfile, validates the Prisma schema, runs all tests, lints the project, and performs a production build.
