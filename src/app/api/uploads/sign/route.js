@@ -71,6 +71,7 @@ export function createUploadSignPost({ storage = r2Storage, database = db } = {}
         || intent.key !== key
         || intent.publicUrl !== publicUrl
         || intent.headers?.["content-type"] !== data.mimeType
+        || intent.headers?.["if-none-match"] !== "*"
         || typeof intent.uploadUrl !== "string"
       ) {
         throw new Error("Signed upload intent did not match the persisted asset");
@@ -80,7 +81,7 @@ export function createUploadSignPost({ storage = r2Storage, database = db } = {}
         key,
         uploadUrl: intent.uploadUrl,
         publicUrl,
-        headers: { "content-type": data.mimeType },
+        headers: { "content-type": data.mimeType, "if-none-match": "*" },
       }, { status: 201 });
     } catch (error) {
       if (persisted && database.mediaAsset.update) {

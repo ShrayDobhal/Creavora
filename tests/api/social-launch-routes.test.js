@@ -9,6 +9,7 @@ import {
 } from "@/app/api/profile/route";
 import { createUploadSignPost } from "@/app/api/uploads/sign/route";
 import { createUploadCompletePost } from "@/app/api/uploads/complete/route";
+import { createUploadIntent } from "@/lib/storage/r2";
 
 const jsonRequest = (method, body) =>
   new Request("http://localhost/api/profile", {
@@ -57,7 +58,7 @@ const configuredStorage = {
       key,
       uploadUrl: "https://uploads.example.test/signed",
       publicUrl: `https://cdn.example.test/${key}`,
-      headers: { "content-type": mimeType },
+      headers: { "content-type": mimeType, "if-none-match": "*" },
     };
   }),
 };
@@ -237,6 +238,71 @@ describe("Blindly social launch upload signing API", () => {
     expect(update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ deletedAt: expect.any(Date) }),
     }));
+  });
+
+  it("soft-deletes an asset when the signer omits the create-only condition", async () => {
+    const update = vi.fn();
+    const database = {
+      mediaAsset: {
+        create: vi.fn(async ({ data }) => ({ id: data.id, ...data })),
+        update,
+      },
+    };
+    const missingCreateOnlyStorage = {
+      ...configuredStorage,
+      createUploadIntent: vi.fn(async ({ assetId, ownerId, extension, mimeType }) => {
+        const key = `users/${ownerId}/${assetId}.${extension}`;
+        return {
+          assetId,
+          key,
+          uploadUrl: "https://uploads.example.test/signed",
+          publicUrl: `https://cdn.example.test/${key}`,
+          headers: { "content-type": mimeType },
+        };
+      }),
+    };
+
+    const response = await createUploadSignPost({ storage: missingCreateOnlyStorage, database })(
+      jsonRequest("POST", imageInput), { user: { id: "user-1" } },
+    );
+
+    expect(response.status).toBe(500);
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ deletedAt: expect.any(Date) }),
+    }));
+  });
+
+  it("binds a storage upload intent to a create-only signed PUT", async () => {
+    let command;
+    const intent = await createUploadIntent({
+      ownerId: "user-1",
+      assetId: "asset-1",
+      extension: "webp",
+      mimeType: "image/webp",
+      env: {
+        R2_ACCOUNT_ID: "account",
+        R2_ACCESS_KEY_ID: "access",
+        R2_SECRET_ACCESS_KEY: "secret",
+        R2_BUCKET: "uploads",
+        R2_PUBLIC_BASE_URL: "https://cdn.example.test/",
+      },
+      client: {},
+      presign: vi.fn(async (_client, receivedCommand) => {
+        command = receivedCommand;
+        return "https://uploads.example.test/signed";
+      }),
+    });
+
+    expect(command.input).toMatchObject({
+      Bucket: "uploads",
+      Key: "users/user-1/asset-1.webp",
+      ContentType: "image/webp",
+      IfNoneMatch: "*",
+    });
+    expect(intent.headers).toEqual({
+      "content-type": "image/webp",
+      "if-none-match": "*",
+    });
   });
 
   it("rejects an image larger than 5 MiB before persisting an asset", async () => {

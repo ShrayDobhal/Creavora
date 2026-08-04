@@ -33,7 +33,12 @@ export async function createUploadIntent({ ownerId, assetId, extension, mimeType
   const key = buildObjectKey({ ownerId, assetId, extension });
   const uploadUrl = await presign(
     client ?? createR2Client(env),
-    new PutObjectCommand({ Bucket: env.R2_BUCKET, Key: key, ContentType: mimeType }),
+    new PutObjectCommand({
+      Bucket: env.R2_BUCKET,
+      Key: key,
+      ContentType: mimeType,
+      IfNoneMatch: "*",
+    }),
     { expiresIn: 300 },
   );
 
@@ -42,7 +47,7 @@ export async function createUploadIntent({ ownerId, assetId, extension, mimeType
     key,
     uploadUrl,
     publicUrl: buildPublicUrl(key, env),
-    headers: { "content-type": mimeType },
+    headers: { "content-type": mimeType, "if-none-match": "*" },
   };
 }
 
