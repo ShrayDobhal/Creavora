@@ -1,76 +1,47 @@
 import {
   ArrowRight,
-  Briefcase,
   Coffee,
+  Cpu,
   Dumbbell,
   Gamepad2,
   GraduationCap,
+  Laugh,
   Lock,
   Music,
   Palette,
   Plane,
   Shirt,
   Sparkles,
+  UtensilsCrossed,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Avatar, Photo, Verified } from "@/ui/Media.jsx";
+import { CATEGORY_OPTIONS } from "@/lib/consumer/constants";
 
 const navLinks = [
   { label: "Purpose", href: "#purpose" },
   { label: "Categories", href: "#categories" },
-  { label: "Creator stories", href: "#stories" },
   { label: "Community", href: "#community" },
 ];
 
-const categories = [
-  { label: "Fitness", icon: Dumbbell },
-  { label: "Fashion", icon: Shirt },
-  { label: "Gaming", icon: Gamepad2 },
-  { label: "Travel", icon: Plane },
-  { label: "Music", icon: Music },
-  { label: "Art", icon: Palette },
-  { label: "Education", icon: GraduationCap },
-  { label: "Business", icon: Briefcase },
-  { label: "Lifestyle", icon: Coffee },
-];
+const categoryIcons = {
+  Art: Palette,
+  Comedy: Laugh,
+  Education: GraduationCap,
+  Fashion: Shirt,
+  Fitness: Dumbbell,
+  Food: UtensilsCrossed,
+  Gaming: Gamepad2,
+  Lifestyle: Coffee,
+  Music,
+  Technology: Cpu,
+  Travel: Plane,
+};
 
-const creatorStories = [
-  {
-    name: "Aisha Khan",
-    role: "Food creator",
-    seed: "aisha-bites",
-    story: "Regional recipes and street-food stories from Mumbai.",
-  },
-  {
-    name: "Meher Iyer",
-    role: "Fashion creator",
-    seed: "meher-drapes",
-    story: "Handloom, styling, and thoughtful Indian fashion.",
-  },
-  {
-    name: "Kabir Mehta",
-    role: "Fitness creator",
-    seed: "coach-kabir",
-    story: "Strength training, yoga, and sustainable routines.",
-  },
-];
-
-function CreatorPhoto({ name, role, seed, className = "" }) {
-  return (
-    <Photo seed={seed} dark className={`overflow-hidden rounded-3xl ${className}`}>
-      <div className="absolute inset-x-0 bottom-0 flex items-center gap-2.5 bg-gradient-to-t from-black/85 to-transparent p-4 pt-16">
-        <Avatar name={name} size={30} />
-        <div className="min-w-0 leading-tight">
-          <p className="flex items-center gap-1 truncate text-sm font-bold text-white">
-            {name} <Verified size={13} />
-          </p>
-          <p className="truncate text-xs text-white/70">{role}</p>
-        </div>
-      </div>
-    </Photo>
-  );
-}
+const categories = CATEGORY_OPTIONS.map((label) => ({
+  label,
+  icon: categoryIcons[label],
+}));
 
 export default function Landing() {
   return (
@@ -148,7 +119,7 @@ export default function Landing() {
               <div className="absolute inset-0 bg-gradient-to-t from-[#110b1d]/75 via-transparent to-[#12091f]/15" />
               <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-white/15 bg-black/35 p-5 text-white backdrop-blur-md sm:left-8 sm:right-auto sm:max-w-sm">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/65">One shared space</p>
-                <p className="mt-2 text-xl font-extrabold">Discover, follow, save, and return.</p>
+                <p className="mt-2 text-xl font-extrabold">Discover, follow, and return.</p>
               </div>
             </div>
           </div>
@@ -162,10 +133,10 @@ export default function Landing() {
                 <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Start with what moves you.</h2>
               </div>
               <Link href="/explore" className="flex items-center gap-2 text-sm font-bold text-brand-700 hover:underline">
-                Browse discovery <ArrowRight size={15} />
+                Browse active creator profiles <ArrowRight size={15} />
               </Link>
             </div>
-            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-9">
+            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-11">
               {categories.map(({ label, icon: Icon }) => (
                 <div key={label} className="flex min-h-28 flex-col justify-between rounded-2xl border border-line bg-white p-4">
                   <Icon size={22} className="text-brand-600" aria-hidden="true" />
@@ -173,28 +144,6 @@ export default function Landing() {
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-
-        <section id="stories" className="scroll-mt-24 px-5 py-16 sm:px-8 lg:py-24">
-          <div className="mx-auto max-w-[1500px]">
-            <div className="max-w-2xl">
-              <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-700">Creator stories</p>
-              <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">A closer look at the people behind the work.</h2>
-            </div>
-            <div className="mt-9 grid gap-6 md:grid-cols-3">
-              {creatorStories.map((creator) => (
-                <article key={creator.name} className="overflow-hidden rounded-3xl border border-line bg-white shadow-[0_18px_50px_-35px_rgba(15,15,20,.45)]">
-                  <CreatorPhoto {...creator} className="h-72 w-full rounded-none" />
-                  <div className="p-5">
-                    <p className="min-h-12 text-sm leading-6 text-muted">{creator.story}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-            <Link href="/explore" className="mt-8 flex w-fit items-center gap-2 text-sm font-bold text-brand-700 hover:underline">
-              Browse active creator profiles <ArrowRight size={15} />
-            </Link>
           </div>
         </section>
 
@@ -214,7 +163,7 @@ export default function Landing() {
                   <p className="mt-2 max-w-xl text-sm leading-6 text-white/65">Creator profiles and public community results come from the application discovery service, not a fixed landing-page catalogue.</p>
                 </div>
                 <Link href="/explore" className="flex items-center gap-2 text-sm font-bold text-white hover:text-brand-300">
-                  Browse live discovery <ArrowRight size={15} />
+                  Browse discovery <ArrowRight size={15} />
                 </Link>
               </li>
               <li className="grid gap-4 py-6 sm:grid-cols-[1fr_auto] sm:items-center">
@@ -224,15 +173,6 @@ export default function Landing() {
                 </div>
                 <Link href="/feed" className="flex items-center gap-2 text-sm font-bold text-white hover:text-brand-300">
                   Open the following feed <ArrowRight size={15} />
-                </Link>
-              </li>
-              <li className="grid gap-4 py-6 sm:grid-cols-[1fr_auto] sm:items-center">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-300">Saved work</p>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-white/65">Bookmarks persist through the post API and have a dedicated route for returning to saved posts.</p>
-                </div>
-                <Link href="/saved" className="flex items-center gap-2 text-sm font-bold text-white hover:text-brand-300">
-                  Review saved posts <ArrowRight size={15} />
                 </Link>
               </li>
             </ol>

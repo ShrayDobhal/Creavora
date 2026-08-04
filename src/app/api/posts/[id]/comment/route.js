@@ -19,7 +19,11 @@ export function createCommentsGet(database = db) {
       if (!post) throw new Error("Post not found");
 
       const comments = await database.comment.findMany({
-        where: { postId: id, deletedAt: null },
+        where: {
+          postId: id,
+          deletedAt: null,
+          user: { is: { deletedAt: null } },
+        },
         orderBy: { createdAt: "desc" },
         include: {
           user: {

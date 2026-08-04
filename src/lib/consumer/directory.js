@@ -12,6 +12,7 @@ const creatorQuerySchema = z.object({
 const creatorInclude = (viewerId) => ({
   creatorProfile: true,
   followers: { where: { followerId: viewerId } },
+  _count: { select: { followers: true } },
 });
 
 const presentDirectoryCreator = (row, viewerId) => ({
@@ -85,19 +86,12 @@ export async function getCreatorProfile(database, viewerId, handle) {
   });
   if (!creator) throw new Error("Creator not found");
 
-  const subscriptions = await database.subscription.findMany({
-    where: { userId: viewerId, status: "ACTIVE" },
-    select: { creatorId: true },
-  });
-  const entitlements = new Set(subscriptions.map(({ creatorId }) => creatorId));
-
   return {
     creator: presentDirectoryCreator(creator, viewerId),
     posts: creator.posts.map((post) =>
       presentPost(
         { ...post, creatorFollowers: post.creator?.followers ?? [] },
         viewerId,
-        entitlements,
       ),
     ),
   };
@@ -109,23 +103,13 @@ export async function getDiscovery(database, viewerId) {
     take: 8,
     include: creatorInclude(viewerId),
   };
-  const [recommended, trending] = await Promise.all([
-    database.user.findMany({
-      ...baseQuery,
-      orderBy: [{ verified: "desc" }, { createdAt: "desc" }],
-    }),
-    database.user.findMany({
-      ...baseQuery,
-      orderBy: [
-        { creatorProfile: { subscriberCount: "desc" } },
-        { createdAt: "desc" },
-      ],
-    }),
-  ]);
+  const creators = await database.user.findMany({
+    ...baseQuery,
+    orderBy: [{ verified: "desc" }, { createdAt: "desc" }],
+  });
 
   return {
     categories: CATEGORY_OPTIONS,
-    recommended: recommended.map((row) => presentDirectoryCreator(row, viewerId)),
-    trending: trending.map((row) => presentDirectoryCreator(row, viewerId)),
+    creators: creators.map((row) => presentDirectoryCreator(row, viewerId)),
   };
 }

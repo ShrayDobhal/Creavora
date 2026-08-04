@@ -102,9 +102,9 @@ export function CreatorCard({ creator, onFollow }) {
           <p className="mt-2 text-sm text-ink/75">{creator.roleTitle || creator.category}</p>
         ) : null}
         {creator.bio ? <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted">{creator.bio}</p> : null}
-        {typeof creator.subscriberCount === "number" ? (
+        {typeof creator.followerCount === "number" ? (
           <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-muted">
-            <Users size={14} /> {creator.subscriberCount.toLocaleString("en-IN")} subscribers
+            <Users size={14} /> {creator.followerCount.toLocaleString("en-IN")} followers
           </p>
         ) : null}
         {error ? <p className="mt-2 text-xs font-semibold text-rose-600" role="alert">{error}</p> : null}

@@ -99,6 +99,82 @@ describe("FeedCard", () => {
     expect(screen.queryByLabelText(/comments/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/shares/i)).not.toBeInTheDocument();
   });
+
+  it("shows premium work as neutrally unavailable without subscribe or upgrade claims", () => {
+    render(
+      <FeedCard
+        post={{
+          ...post,
+          content: null,
+          mediaUrl: null,
+          isPremium: true,
+          availability: "coming_soon",
+        }}
+        onLike={vi.fn()}
+        onBookmark={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Premium access coming later")).toBeVisible();
+    expect(screen.queryAllByText(/subscribe|upgrade|paid|unlock/i)).toHaveLength(0);
+  });
+
+  it("loads and creates comments through explicit callbacks", async () => {
+    const user = userEvent.setup();
+    const onLoadComments = vi.fn().mockResolvedValue([
+      {
+        id: "comment-1",
+        content: "Beautiful work",
+        user: { id: "user-2", name: "Riya", handle: "riya", avatar: null },
+      },
+    ]);
+    const onCreateComment = vi.fn().mockResolvedValue({
+      comment: {
+        id: "comment-2",
+        content: "Thanks for sharing",
+        user: { id: "viewer-1", name: "Viewer", handle: "viewer", avatar: null },
+      },
+      commentsCount: 3,
+    });
+
+    render(
+      <FeedCard
+        post={post}
+        onLike={vi.fn()}
+        onBookmark={vi.fn()}
+        onLoadComments={onLoadComments}
+        onCreateComment={onCreateComment}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "View 2 comments" }));
+    expect(await screen.findByText("Beautiful work")).toBeVisible();
+    await user.type(screen.getByRole("textbox", { name: "Add a comment" }), "Thanks for sharing");
+    await user.click(screen.getByRole("button", { name: "Post comment" }));
+
+    expect(onLoadComments).toHaveBeenCalledWith("post-1");
+    expect(onCreateComment).toHaveBeenCalledWith("post-1", "Thanks for sharing");
+    expect(await screen.findByText("Thanks for sharing")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Hide 3 comments" })).toBeVisible();
+  });
+
+  it("shows a comment read failure without hiding the post", async () => {
+    const user = userEvent.setup();
+    render(
+      <FeedCard
+        post={post}
+        onLike={vi.fn()}
+        onBookmark={vi.fn()}
+        onLoadComments={vi.fn().mockRejectedValue(new Error("Comments are unavailable"))}
+        onCreateComment={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "View 2 comments" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Comments are unavailable");
+    expect(screen.getByText(post.content)).toBeVisible();
+  });
 });
 
 describe("Feed page", () => {
@@ -156,5 +232,23 @@ describe("Feed page", () => {
 
     expect(await screen.findByText("Following-only post.")).toBeVisible();
     expect(screen.getByRole("button", { name: "Load more" })).toBeEnabled();
+  });
+
+  it("offers only defensible latest and following feed modes", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ items: [], nextCursor: null }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+
+    render(<FeedPage />);
+
+    expect(screen.getByRole("button", { name: "Latest" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Following" })).toBeVisible();
+    expect(screen.queryAllByText(/trending/i)).toHaveLength(0);
   });
 });

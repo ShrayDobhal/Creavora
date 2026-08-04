@@ -6,7 +6,16 @@ import { AsyncState } from "@/components/consumer/AsyncState";
 import { CreatorCard } from "@/components/consumer/CreatorCard";
 import { FeedCard } from "@/components/consumer/FeedCard";
 import { SearchPanel } from "@/components/consumer/SearchPanel";
-import { getDiscovery, search, toggleBookmark, toggleFollow, toggleLike } from "@/services/consumer-api";
+import {
+  createComment,
+  getComments,
+  getDiscovery,
+  saveSearchHistory,
+  search,
+  toggleBookmark,
+  toggleFollow,
+  toggleLike,
+} from "@/services/consumer-api";
 
 const emptySearch = { creators: [], posts: [], communities: [] };
 
@@ -41,13 +50,14 @@ export default function ExplorePage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [searchRequest, setSearchRequest] = useState(null);
   const [searchState, setSearchState] = useState({ status: "idle", results: emptySearch, error: "" });
+  const [historyError, setHistoryError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
     getDiscovery({ signal: controller.signal })
       .then((result) => {
         setDiscovery(result);
-        setStatus(result.recommended.length || result.trending.length ? "success" : "empty");
+        setStatus(result.creators.length ? "success" : "empty");
       })
       .catch((loadError) => {
         if (loadError.name === "AbortError") return;
@@ -70,10 +80,17 @@ export default function ExplorePage() {
     return () => controller.abort();
   }, [searchRequest]);
 
-  const handleSearch = useCallback((query) => {
+  const runSearch = useCallback((query) => {
     setSearchState((current) => ({ ...current, status: "loading", error: "" }));
     setSearchRequest((current) => ({ query, sequence: (current?.sequence || 0) + 1 }));
   }, []);
+  const handleSearchSubmit = useCallback((query) => {
+    setHistoryError("");
+    runSearch(query);
+    saveSearchHistory({ query }).catch((saveError) => {
+      setHistoryError(saveError.message || "Search history could not be saved");
+    });
+  }, [runSearch]);
   const clearSearch = useCallback(() => {
     setSearchRequest(null);
     setSearchState({ status: "idle", results: emptySearch, error: "" });
@@ -86,8 +103,7 @@ export default function ExplorePage() {
   }, []);
   const discoveredCreators = useMemo(() => {
     if (!discovery) return [];
-    const unique = new Map([...discovery.recommended, ...discovery.trending].map((creator) => [creator.id, creator]));
-    const creators = [...unique.values()];
+    const creators = discovery.creators;
     return category === "All" ? creators : creators.filter((creator) => creator.category === category);
   }, [category, discovery]);
   const hasSearchResults = Object.values(searchState.results).some((items) => items.length);
@@ -100,7 +116,14 @@ export default function ExplorePage() {
           <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Explore</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">Search creators, posts, and communities.</p>
         </div>
-        <SearchPanel onSearch={handleSearch} busy={searchState.status === "loading"} />
+        <div>
+          <SearchPanel
+            onQueryChange={runSearch}
+            onSubmit={handleSearchSubmit}
+            busy={searchState.status === "loading"}
+          />
+          {historyError ? <p className="mt-2 text-xs font-semibold text-amber-200" role="alert">{historyError}</p> : null}
+        </div>
       </header>
 
       {searchQuery ? (
@@ -122,7 +145,16 @@ export default function ExplorePage() {
                 <div><h3 className="mb-3 text-lg font-black">Creators</h3><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{searchState.results.creators.map((creator) => <CreatorCard key={creator.id} creator={creator} />)}</div></div>
               ) : null}
               {searchState.results.posts.length ? (
-                <div><h3 className="mb-3 text-lg font-black">Posts</h3><div className="grid gap-5 lg:grid-cols-2">{searchState.results.posts.map((post) => <FeedCard key={post.id} post={post} onLike={toggleLike} onBookmark={toggleBookmark} />)}</div></div>
+                <div><h3 className="mb-3 text-lg font-black">Posts</h3><div className="grid gap-5 lg:grid-cols-2">{searchState.results.posts.map((post) => (
+                  <FeedCard
+                    key={post.id}
+                    post={post}
+                    onLike={toggleLike}
+                    onBookmark={toggleBookmark}
+                    onLoadComments={getComments}
+                    onCreateComment={createComment}
+                  />
+                ))}</div></div>
               ) : null}
               {searchState.results.communities.length ? (
                 <div><h3 className="mb-3 text-lg font-black">Communities</h3><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{searchState.results.communities.map((community) => <CommunityCard key={community.id} community={community} />)}</div></div>

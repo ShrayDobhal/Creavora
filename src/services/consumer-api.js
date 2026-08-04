@@ -1,9 +1,13 @@
-async function request(path, { signal, method = "GET" } = {}) {
+async function request(path, { signal, method = "GET", body } = {}) {
   const response = await fetch(path, {
     method,
     signal,
     credentials: "same-origin",
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
   });
 
   const payload = await response.json().catch(() => null);
@@ -28,6 +32,15 @@ export function search({ query, type = "all", signal }) {
   return request(`/api/search?${params}`, { signal });
 }
 
+export function saveSearchHistory({ query, type, signal }) {
+  const normalized = query.trim();
+  return request("/api/search/history", {
+    method: "POST",
+    signal,
+    body: { query: normalized, ...(type ? { type } : {}) },
+  });
+}
+
 export function getCreator({ handle, signal }) {
   return request(`/api/creators/${encodeURIComponent(handle)}`, { signal });
 }
@@ -50,5 +63,17 @@ export function toggleFollow(handle, { signal } = {}) {
   return request(`/api/creators/${encodeURIComponent(handle)}/follow`, {
     method: "POST",
     signal,
+  });
+}
+
+export function getComments(postId, { signal } = {}) {
+  return request(`/api/posts/${encodeURIComponent(postId)}/comment`, { signal });
+}
+
+export function createComment(postId, content, { signal } = {}) {
+  return request(`/api/posts/${encodeURIComponent(postId)}/comment`, {
+    method: "POST",
+    signal,
+    body: { content: content.trim() },
   });
 }

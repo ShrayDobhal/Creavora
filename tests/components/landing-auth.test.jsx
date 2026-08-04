@@ -2,12 +2,19 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("next/navigation", () => ({ usePathname: () => "/feed" }));
+
 import Landing from "@/app/landing/page";
-import { TopBar } from "@/layouts/FanLayout";
+import FanLayout, { TopBar } from "@/layouts/FanLayout";
+import { CATEGORY_OPTIONS } from "@/lib/consumer/constants";
 
 describe("Landing auth entry points", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   it("renders separate normal-user and creator login entry points", () => {
     render(<Landing />);
@@ -45,7 +52,7 @@ describe("Landing auth entry points", () => {
     expect(
       screen.getByText(/no anonymous testimonials or inflated totals/i),
     ).toBeVisible();
-    expect(screen.getByRole("link", { name: /browse live discovery/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /browse discovery/i })).toHaveAttribute(
       "href",
       "/explore",
     );
@@ -53,15 +60,24 @@ describe("Landing auth entry points", () => {
       "href",
       "/feed",
     );
-    expect(screen.getByRole("link", { name: /review saved posts/i })).toHaveAttribute(
-      "href",
-      "/saved",
-    );
+    expect(screen.queryByRole("link", { name: /saved|collection/i })).not.toBeInTheDocument();
+  });
+
+  it("renders the shared release taxonomy instead of a landing-only category list", () => {
+    render(<Landing />);
+
+    CATEGORY_OPTIONS.forEach((category) => {
+      expect(screen.getByText(category)).toBeVisible();
+    });
+    expect(screen.queryByText("Business")).not.toBeInTheDocument();
   });
 });
 
 describe("Fan navigation", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   it("offers a real Explore destination without inert search or create controls", () => {
     render(<TopBar />);
@@ -76,5 +92,45 @@ describe("Fan navigation", () => {
       "href",
       "/landing",
     );
+    expect(screen.queryAllByText(/Arjun|premium fan|wallet balance/i)).toHaveLength(0);
+    expect(screen.queryByText("120")).not.toBeInTheDocument();
+  });
+
+  it("renders only the loaded account identity with a neutral initials avatar", () => {
+    render(<TopBar user={{ name: "Leela Menon", handle: "leela" }} />);
+
+    expect(screen.getByLabelText("Leela Menon avatar")).toHaveTextContent("LM");
+    expect(screen.getByText("Leela Menon")).toBeVisible();
+    expect(screen.getByText("@leela")).toBeVisible();
+  });
+
+  it("advertises only database-backed release routes in consumer navigation", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+    render(<FanLayout><p>Release content</p></FanLayout>);
+
+    expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute("href", "/feed");
+    expect(screen.getByRole("link", { name: "Explore" })).toHaveAttribute("href", "/explore");
+    screen.getAllByRole("link", { name: "Notifications" }).forEach((link) =>
+      expect(link).toHaveAttribute("href", "/notifications"),
+    );
+    [
+      "Live Now",
+      "Subscriptions",
+      "Messages",
+      "Collections",
+      "My Wallet",
+      "Earn Rewards",
+      "Saved Posts",
+      "Go Premium",
+      "Upgrade Now",
+    ].forEach((label) => expect(screen.queryByText(label)).not.toBeInTheDocument());
   });
 });

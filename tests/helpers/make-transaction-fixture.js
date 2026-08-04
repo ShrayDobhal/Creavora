@@ -48,6 +48,10 @@ export function makeTransactionFixture({
   bookmarks = [],
   subscriptions = [],
   comments: initialComments = [],
+  likeCreateConflict = false,
+  bookmarkCreateConflict = false,
+  followCreateConflict = false,
+  notificationCreateError = null,
 } = {}) {
   const notifications = [];
   const comments = [...initialComments];
@@ -91,6 +95,11 @@ export function makeTransactionFixture({
           }),
         ) ?? null,
       create: async ({ data }) => {
+        if (likeCreateConflict) {
+          likes.push({ id: `like-${likes.length + 1}`, ...data });
+          posts.find((post) => post.id === data.postId).likesCount += 1;
+          throw Object.assign(new Error("Unique constraint"), { code: "P2002" });
+        }
         const like = { id: `like-${likes.length + 1}`, ...data };
         likes.push(like);
         return like;
@@ -109,6 +118,10 @@ export function makeTransactionFixture({
           }),
         ) ?? null,
       create: async ({ data }) => {
+        if (bookmarkCreateConflict) {
+          bookmarks.push({ id: `bookmark-${bookmarks.length + 1}`, ...data });
+          throw Object.assign(new Error("Unique constraint"), { code: "P2002" });
+        }
         const bookmark = { id: `bookmark-${bookmarks.length + 1}`, ...data };
         bookmarks.push(bookmark);
         return bookmark;
@@ -129,6 +142,10 @@ export function makeTransactionFixture({
           }),
         ) ?? null,
       create: async ({ data }) => {
+        if (followCreateConflict) {
+          follows.push({ id: `follow-${follows.length + 1}`, ...data });
+          throw Object.assign(new Error("Unique constraint"), { code: "P2002" });
+        }
         const follow = { id: `follow-${follows.length + 1}`, ...data };
         follows.push(follow);
         return follow;
@@ -156,6 +173,7 @@ export function makeTransactionFixture({
     },
     notification: {
       create: async ({ data }) => {
+        if (notificationCreateError) throw notificationCreateError;
         notifications.push(data);
         return data;
       },

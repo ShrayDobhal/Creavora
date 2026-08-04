@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { presentPost } from "@/lib/consumer/presenters";
+import { presentCreator, presentPost } from "@/lib/consumer/presenters";
 
 describe("presentPost", () => {
-  it("locks premium media for an unsubscribed viewer without changing aggregate counts", () => {
+  it("marks premium work as unavailable in this release without paid gating", () => {
     const post = {
       id: "p1",
       creatorId: "c1",
@@ -30,10 +30,35 @@ describe("presentPost", () => {
       creatorFollowers: [],
     };
 
-    expect(presentPost(post, "u1", new Set())).toMatchObject({
+    const presented = presentPost(post, "u1");
+
+    expect(presented).toMatchObject({
+      content: null,
       mediaUrl: null,
-      isLocked: true,
+      availability: "coming_soon",
       counts: { likes: 8, comments: 2, views: 20, shares: 1 },
     });
+    expect(presented).not.toHaveProperty("price");
+    expect(presented).not.toHaveProperty("isLocked");
+  });
+
+  it("presents a creator follower count from the live follow relation aggregate", () => {
+    const creator = presentCreator(
+      {
+        id: "creator-1",
+        name: "Asha",
+        handle: "asha",
+        avatar: null,
+        roleTitle: "Fashion",
+        verified: true,
+        creatorProfile: { subscriberCount: 999 },
+        _count: { followers: 17 },
+        creatorFollowers: [],
+      },
+      "viewer-1",
+    );
+
+    expect(creator.followerCount).toBe(17);
+    expect(creator).not.toHaveProperty("subscriberCount");
   });
 });

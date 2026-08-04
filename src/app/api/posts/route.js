@@ -20,53 +20,63 @@ export function createPostsGet({
   };
 }
 
-export const GET = withAuth(createPostsGet());
+export function createPostPost({ database = db, logError = console.error } = {}) {
+  return async (req, { user: creator }) => {
+    try {
+      const body = await req.json();
+      const { error, data } = validateBody(createPostSchema, body);
 
-export const POST = withCreatorAuth(async (req, { user: creator }) => {
-  try {
-    const body = await req.json();
-    const { error, data } = validateBody(createPostSchema, body);
+      if (error) {
+        return NextResponse.json(
+          { error: "Validation failed", details: error },
+          { status: 400 },
+        );
+      }
 
-    if (error) {
-      return NextResponse.json(
-        { error: "Validation failed", details: error },
-        { status: 400 },
-      );
-    }
-
-    const postPrice = data.isPremium ? data.price : 0;
-    const post = await db.post.create({
-      data: {
-        creatorId: creator.id,
-        content: data.content,
-        mediaUrl: data.mediaUrl || null,
-        mediaType: data.mediaType || null,
-        isPremium: data.isPremium || false,
-        price: postPrice,
-        publishedAt: new Date(),
-      },
-    });
-    const follows = await db.follow.findMany({
-      where: { followingId: creator.id },
-      select: { followerId: true },
-    });
-
-    if (follows.length > 0) {
-      await db.notification.createMany({
-        data: follows.map((follow) => ({
-          userId: follow.followerId,
-          title: `New Post by ${creator.name}!`,
-          message: data.isPremium
-            ? `${creator.name} posted new premium content for INR ${postPrice.toFixed(0)}.`
-            : `${creator.name} uploaded a new post: "${data.content.substring(0, 30)}..."`,
-          type: "SYSTEM",
-          read: false,
-        })),
+      const post = await database.post.create({
+        data: {
+          creatorId: creator.id,
+          content: data.content,
+          mediaUrl: data.mediaUrl || null,
+          mediaType: data.mediaType || null,
+          isPremium: data.isPremium || false,
+          price: 0,
+          publishedAt: new Date(),
+        },
       });
-    }
 
-    return NextResponse.json(post);
-  } catch (error) {
-    return consumerErrorResponse(error, "Failed to upload post");
-  }
-});
+      try {
+        const follows = await database.follow.findMany({
+          where: { followingId: creator.id },
+          select: { followerId: true },
+        });
+        if (follows.length > 0) {
+          await database.notification.createMany({
+            data: follows.map((follow) => ({
+              userId: follow.followerId,
+              title: `New Post by ${creator.name}`,
+              message: data.isPremium
+                ? `${creator.name} published work marked for future premium access.`
+                : `${creator.name} published: "${data.content.substring(0, 30)}..."`,
+              type: "SYSTEM",
+              read: false,
+            })),
+          });
+        }
+      } catch (notificationError) {
+        logError("Post created but follower notification delivery failed", {
+          creatorId: creator.id,
+          postId: post.id,
+          message: notificationError?.message || "Unknown notification error",
+        });
+      }
+
+      return NextResponse.json(post);
+    } catch (error) {
+      return consumerErrorResponse(error, "Failed to upload post");
+    }
+  };
+}
+
+export const GET = withAuth(createPostsGet());
+export const POST = withCreatorAuth(createPostPost());

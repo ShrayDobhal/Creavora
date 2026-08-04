@@ -8,8 +8,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata = {
-  title: "Crevora – Premium Creator Platform",
-  description: "Unlock exclusive creator content, tips, messages, and live sessions.",
+  title: "Creavora – Creator Communities",
+  description: "Discover creators, follow their work, and join the conversation.",
 };
 
 export default function RootLayout({ children }) {

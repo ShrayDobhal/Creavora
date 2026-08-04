@@ -21,8 +21,8 @@ const validateUser = (user) => {
   requireNonEmptyString(user.name, ERRORS.invalidUser);
 };
 
-const findPost = (tx, postId) =>
-  tx.post.findFirst({
+const findPost = (database, postId) =>
+  database.post.findFirst({
     where: { id: postId, deletedAt: null, creator: { is: { deletedAt: null } } },
   });
 
@@ -30,82 +30,162 @@ const postMissing = () => {
   throw new Error(ERRORS.postNotFound);
 };
 
+const isUniqueConflict = (error) => error?.code === "P2002";
+
+async function notifySafely(database, data) {
+  if (!data) return;
+  try {
+    await database.notification.create({ data });
+  } catch (error) {
+    console.error("Consumer notification delivery failed", {
+      type: data.type,
+      userId: data.userId,
+      message: error?.message || "Unknown notification error",
+    });
+  }
+}
+
 export async function toggleLike(db, user, postId) {
   validateUser(user);
   requireNonEmptyString(postId, ERRORS.invalidPostId);
 
-  return db.$transaction(async (tx) => {
-    const post = await findPost(tx, postId);
-    if (!post) postMissing();
+  try {
+    const outcome = await db.$transaction(async (tx) => {
+      const post = await findPost(tx, postId);
+      if (!post) postMissing();
 
-    const existing = await tx.like.findUnique({
-      where: { userId_postId: { userId: user.id, postId: post.id } },
-    });
+      const existing = await tx.like.findUnique({
+        where: { userId_postId: { userId: user.id, postId: post.id } },
+      });
 
-    if (existing) {
-      await tx.like.delete({ where: { id: existing.id } });
+      if (existing) {
+        await tx.like.delete({ where: { id: existing.id } });
+        const updated = await tx.post.update({
+          where: { id: post.id },
+          data: { likesCount: { decrement: 1 } },
+        });
+        return { result: { isLiked: false, likesCount: updated.likesCount } };
+      }
+
+      await tx.like.create({ data: { userId: user.id, postId: post.id } });
       const updated = await tx.post.update({
         where: { id: post.id },
-        data: { likesCount: { decrement: 1 } },
+        data: { likesCount: { increment: 1 } },
       });
-      return { isLiked: false, likesCount: updated.likesCount };
-    }
-
-    await tx.like.create({ data: { userId: user.id, postId: post.id } });
-    const updated = await tx.post.update({
-      where: { id: post.id },
-      data: { likesCount: { increment: 1 } },
+      return {
+        result: { isLiked: true, likesCount: updated.likesCount },
+        notification:
+          post.creatorId === user.id
+            ? null
+            : {
+                userId: post.creatorId,
+                title: "New Like",
+                message: `${user.name} liked your post.`,
+                type: "LIKE",
+                read: false,
+              },
+      };
     });
 
-    if (post.creatorId !== user.id) {
-      await tx.notification.create({
-        data: {
-          userId: post.creatorId,
-          title: "New Like",
-          message: `${user.name} liked your post.`,
-          type: "LIKE",
-          read: false,
-        },
-      });
-    }
-
-    return { isLiked: true, likesCount: updated.likesCount };
-  });
+    await notifySafely(db, outcome.notification);
+    return outcome.result;
+  } catch (error) {
+    if (!isUniqueConflict(error)) throw error;
+    const [existing, post] = await Promise.all([
+      db.like.findUnique({
+        where: { userId_postId: { userId: user.id, postId } },
+      }),
+      findPost(db, postId),
+    ]);
+    if (!post) postMissing();
+    if (existing) return { isLiked: true, likesCount: post.likesCount };
+    throw error;
+  }
 }
 
 export async function toggleBookmark(db, userId, postId) {
   requireNonEmptyString(userId, ERRORS.invalidUserId);
   requireNonEmptyString(postId, ERRORS.invalidPostId);
 
-  return db.$transaction(async (tx) => {
-    const post = await findPost(tx, postId);
-    if (!post) postMissing();
+  try {
+    return await db.$transaction(async (tx) => {
+      const post = await findPost(tx, postId);
+      if (!post) postMissing();
 
-    const existing = await tx.bookmark.findUnique({
-      where: { userId_postId: { userId, postId: post.id } },
+      const existing = await tx.bookmark.findUnique({
+        where: { userId_postId: { userId, postId: post.id } },
+      });
+
+      if (existing) {
+        await tx.bookmark.delete({ where: { id: existing.id } });
+        return { isBookmarked: false };
+      }
+
+      await tx.bookmark.create({ data: { userId, postId: post.id } });
+      return { isBookmarked: true };
     });
-
-    if (existing) {
-      await tx.bookmark.delete({ where: { id: existing.id } });
-      return { isBookmarked: false };
-    }
-
-    await tx.bookmark.create({ data: { userId, postId: post.id } });
-    return { isBookmarked: true };
-  });
+  } catch (error) {
+    if (!isUniqueConflict(error)) throw error;
+    const existing = await db.bookmark.findUnique({
+      where: { userId_postId: { userId, postId } },
+    });
+    if (existing) return { isBookmarked: true };
+    throw error;
+  }
 }
 
 export async function toggleFollow(db, user, handle) {
   validateUser(user);
   requireNonEmptyString(handle, ERRORS.invalidHandle);
 
-  return db.$transaction(async (tx) => {
-    const creator = await tx.user.findFirst({
+  try {
+    const outcome = await db.$transaction(async (tx) => {
+      const creator = await tx.user.findFirst({
+        where: { handle, role: "CREATOR", deletedAt: null },
+      });
+      if (!creator) throw new Error(ERRORS.creatorNotFound);
+
+      const existing = await tx.follow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: user.id,
+            followingId: creator.id,
+          },
+        },
+      });
+
+      if (existing) {
+        await tx.follow.delete({ where: { id: existing.id } });
+        return { result: { isFollowing: false } };
+      }
+
+      await tx.follow.create({
+        data: { followerId: user.id, followingId: creator.id },
+      });
+      return {
+        result: { isFollowing: true },
+        notification:
+          creator.id === user.id
+            ? null
+            : {
+                userId: creator.id,
+                title: "New Follower",
+                message: `${user.name} started following you.`,
+                type: "FOLLOW",
+                read: false,
+              },
+      };
+    });
+
+    await notifySafely(db, outcome.notification);
+    return outcome.result;
+  } catch (error) {
+    if (!isUniqueConflict(error)) throw error;
+    const creator = await db.user.findFirst({
       where: { handle, role: "CREATOR", deletedAt: null },
     });
     if (!creator) throw new Error(ERRORS.creatorNotFound);
-
-    const existing = await tx.follow.findUnique({
+    const existing = await db.follow.findUnique({
       where: {
         followerId_followingId: {
           followerId: user.id,
@@ -113,30 +193,9 @@ export async function toggleFollow(db, user, handle) {
         },
       },
     });
-
-    if (existing) {
-      await tx.follow.delete({ where: { id: existing.id } });
-      return { isFollowing: false };
-    }
-
-    await tx.follow.create({
-      data: { followerId: user.id, followingId: creator.id },
-    });
-
-    if (creator.id !== user.id) {
-      await tx.notification.create({
-        data: {
-          userId: creator.id,
-          title: "New Follower",
-          message: `${user.name} started following you.`,
-          type: "FOLLOW",
-          read: false,
-        },
-      });
-    }
-
-    return { isFollowing: true };
-  });
+    if (existing) return { isFollowing: true };
+    throw error;
+  }
 }
 
 export async function createComment(db, user, postId, input) {
@@ -144,7 +203,7 @@ export async function createComment(db, user, postId, input) {
   requireNonEmptyString(postId, ERRORS.invalidPostId);
   const data = createCommentSchema.parse(input);
 
-  return db.$transaction(async (tx) => {
+  const outcome = await db.$transaction(async (tx) => {
     const post = await findPost(tx, postId);
     if (!post) postMissing();
 
@@ -178,19 +237,21 @@ export async function createComment(db, user, postId, input) {
       where: { id: post.id },
       data: { commentsCount: { increment: 1 } },
     });
-
-    if (post.creatorId !== user.id) {
-      await tx.notification.create({
-        data: {
-          userId: post.creatorId,
-          title: "New Comment",
-          message: `${user.name} commented: "${data.content.slice(0, 30)}..."`,
-          type: "COMMENT",
-          read: false,
-        },
-      });
-    }
-
-    return { comment, commentsCount: updated.commentsCount };
+    return {
+      result: { comment, commentsCount: updated.commentsCount },
+      notification:
+        post.creatorId === user.id
+          ? null
+          : {
+              userId: post.creatorId,
+              title: "New Comment",
+              message: `${user.name} commented: "${data.content.slice(0, 30)}..."`,
+              type: "COMMENT",
+              read: false,
+            },
+    };
   });
+
+  await notifySafely(db, outcome.notification);
+  return outcome.result;
 }

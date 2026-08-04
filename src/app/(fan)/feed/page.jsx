@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Clock3, Flame, Users } from "lucide-react";
+import { Clock3, Users } from "lucide-react";
 import { AsyncState } from "@/components/consumer/AsyncState";
 import { FeedCard } from "@/components/consumer/FeedCard";
-import { getFeed, toggleBookmark, toggleLike } from "@/services/consumer-api";
+import {
+  createComment,
+  getComments,
+  getFeed,
+  toggleBookmark,
+  toggleLike,
+} from "@/services/consumer-api";
 
 const filters = [
   { label: "Latest", mode: "latest", icon: Clock3 },
   { label: "Following", mode: "following", icon: Users },
-  { label: "Trending", mode: "trending", icon: Flame },
 ];
 
 export default function FeedPage() {
@@ -124,7 +129,14 @@ export default function FeedPage() {
           ) : (
             <div className="space-y-5">
               {posts.map((post) => (
-                <FeedCard key={`${mode}:${post.id}`} post={post} onLike={toggleLike} onBookmark={toggleBookmark} />
+                <FeedCard
+                  key={`${mode}:${post.id}`}
+                  post={post}
+                  onLike={toggleLike}
+                  onBookmark={toggleBookmark}
+                  onLoadComments={getComments}
+                  onCreateComment={createComment}
+                />
               ))}
               {error ? <p className="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700" role="alert">{error}</p> : null}
               {nextCursor ? (
@@ -145,7 +157,7 @@ export default function FeedPage() {
           <div className="sticky top-5 rounded-2xl bg-[#17121f] p-6 text-white">
             <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-300">Feed filters</p>
             <h2 className="mt-3 text-xl font-black">Choose what to view</h2>
-            <p className="mt-3 text-sm leading-6 text-white/70">Latest sorts by publication time. Following shows creators you follow. Trending uses recent engagement.</p>
+            <p className="mt-3 text-sm leading-6 text-white/70">Latest sorts by publication time. Following shows creators you follow.</p>
           </div>
         </aside>
       </div>

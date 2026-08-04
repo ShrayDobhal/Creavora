@@ -12,22 +12,21 @@ export const presentCreator = (row, viewerId) => ({
   avatar: row.avatar,
   roleTitle: row.roleTitle,
   verified: row.verified,
-  subscriberCount: row.creatorProfile?.subscriberCount ?? 0,
+  followerCount:
+    typeof row._count?.followers === "number" ? row._count.followers : undefined,
   isFollowing: includesViewer(row.creatorFollowers, viewerId),
 });
 
-export const presentPost = (row, viewerId, entitlementSet) => {
-  const isEntitled =
-    row.creatorId === viewerId || entitlementSet.has(row.creatorId);
-  const isLocked = row.isPremium && !isEntitled;
+export const presentPost = (row, viewerId) => {
+  const isUnavailable = Boolean(row.isPremium);
 
   return {
     id: row.id,
-    content: isLocked ? null : row.content,
-    mediaUrl: isLocked ? null : row.mediaUrl,
-    mediaType: isLocked ? null : row.mediaType,
+    content: isUnavailable ? null : row.content,
+    mediaUrl: isUnavailable ? null : row.mediaUrl,
+    mediaType: isUnavailable ? null : row.mediaType,
     isPremium: row.isPremium,
-    price: row.price,
+    availability: isUnavailable ? "coming_soon" : "available",
     publishedAt: row.publishedAt,
     counts: {
       likes: row.likesCount,
@@ -41,6 +40,5 @@ export const presentPost = (row, viewerId, entitlementSet) => {
       isBookmarked: includesViewer(row.bookmarks, viewerId),
       isFollowing: includesViewer(row.creatorFollowers, viewerId),
     },
-    isLocked,
   };
 };

@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, Bookmark, Heart, Lock, MessageCircle, Play, Share2 } from "lucide-react";
+import {
+  BadgeCheck,
+  Bookmark,
+  Clock3,
+  Heart,
+  MessageCircle,
+  Play,
+  Share2,
+} from "lucide-react";
 import Link from "next/link";
 import { ConsumerAvatar } from "./CreatorCard";
 
@@ -14,13 +22,26 @@ const formatDate = (value) => {
 const numericCount = (value) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
-export function FeedCard({ post, onLike, onBookmark }) {
+export function FeedCard({
+  post,
+  onLike,
+  onBookmark,
+  onLoadComments,
+  onCreateComment,
+}) {
   const [isLiked, setIsLiked] = useState(Boolean(post.viewer?.isLiked));
   const [likes, setLikes] = useState(numericCount(post.counts?.likes));
   const [isBookmarked, setIsBookmarked] = useState(Boolean(post.viewer?.isBookmarked));
   const [pendingAction, setPendingAction] = useState(null);
   const [error, setError] = useState("");
   const [mediaFailed, setMediaFailed] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [commentCount, setCommentCount] = useState(numericCount(post.counts?.comments));
+  const [commentStatus, setCommentStatus] = useState("idle");
+  const [commentError, setCommentError] = useState("");
+  const [commentDraft, setCommentDraft] = useState("");
+  const [commentPending, setCommentPending] = useState(false);
 
   async function handleLike() {
     if (!onLike || pendingAction) return;
@@ -59,9 +80,55 @@ export function FeedCard({ post, onLike, onBookmark }) {
     }
   }
 
+  async function handleCommentsToggle() {
+    if (commentsOpen) {
+      setCommentsOpen(false);
+      return;
+    }
+
+    setCommentsOpen(true);
+    if (commentStatus === "success" || !onLoadComments) return;
+    setCommentStatus("loading");
+    setCommentError("");
+    try {
+      const result = await onLoadComments(post.id);
+      setComments(Array.isArray(result) ? result : []);
+      setCommentStatus("success");
+    } catch (loadError) {
+      setCommentError(loadError.message || "Unable to load comments");
+      setCommentStatus("error");
+    }
+  }
+
+  async function handleCommentSubmit(event) {
+    event.preventDefault();
+    const content = commentDraft.trim();
+    if (!content || !onCreateComment || commentPending) return;
+
+    setCommentPending(true);
+    setCommentError("");
+    try {
+      const result = await onCreateComment(post.id, content);
+      setComments((current) => [result.comment, ...current]);
+      setCommentCount(
+        numericCount(result.commentsCount) ??
+          (commentCount === null ? null : commentCount + 1),
+      );
+      setCommentDraft("");
+      setCommentStatus("success");
+    } catch (createError) {
+      setCommentError(createError.message || "Unable to add comment");
+    } finally {
+      setCommentPending(false);
+    }
+  }
+
   const mediaAlt = post.content || `Post by ${post.creator.name}`;
-  const comments = numericCount(post.counts?.comments);
   const shares = numericCount(post.counts?.shares);
+  const unavailable = post.isPremium && post.availability === "coming_soon";
+  const commentButtonLabel = commentsOpen
+    ? `Hide ${commentCount ?? ""} comments`.replace(/\s+/g, " ")
+    : `View ${commentCount ?? ""} comments`.replace(/\s+/g, " ");
 
   return (
     <article className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
@@ -77,18 +144,18 @@ export function FeedCard({ post, onLike, onBookmark }) {
           <p className="text-xs text-muted">{post.creator.roleTitle || `@${post.creator.handle}`} · {formatDate(post.publishedAt)}</p>
         </div>
         {post.isPremium ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800">
-            <Lock size={12} /> Premium
+          <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-bold text-ink/70">
+            <Clock3 size={12} /> Premium flag
           </span>
         ) : null}
       </header>
 
-      {post.isLocked ? (
-        <div className="mx-4 grid min-h-52 place-items-center rounded-xl bg-[#17121f] p-8 text-center text-white sm:mx-5">
+      {unavailable ? (
+        <div className="mx-4 grid min-h-44 place-items-center rounded-xl bg-neutral-100 p-8 text-center sm:mx-5">
           <div>
-            <Lock className="mx-auto text-brand-300" size={28} />
-            <p className="mt-3 font-bold">Subscriber post</p>
-            <p className="mt-1 text-sm text-white/65">Subscribe to this creator to unlock the post.</p>
+            <Clock3 className="mx-auto text-brand-600" size={28} />
+            <p className="mt-3 font-bold">Premium access coming later</p>
+            <p className="mt-1 text-sm text-muted">This post is unavailable in the current release.</p>
           </div>
         </div>
       ) : (
@@ -131,9 +198,19 @@ export function FeedCard({ post, onLike, onBookmark }) {
         >
           <Heart size={19} className={isLiked ? "fill-current" : ""} /> {likes === null ? null : likes.toLocaleString("en-IN")}
         </button>
-        {comments === null ? null : (
-          <span className="inline-flex items-center gap-1.5 text-sm text-muted" aria-label={`${comments} comments`}>
-            <MessageCircle size={18} /> {comments.toLocaleString("en-IN")}
+        {onLoadComments ? (
+          <button
+            type="button"
+            aria-expanded={commentsOpen}
+            aria-label={commentButtonLabel}
+            onClick={handleCommentsToggle}
+            className="inline-flex min-h-10 items-center gap-1.5 text-sm text-muted"
+          >
+            <MessageCircle size={18} /> {commentCount === null ? null : commentCount.toLocaleString("en-IN")}
+          </button>
+        ) : commentCount === null ? null : (
+          <span className="inline-flex items-center gap-1.5 text-sm text-muted" aria-label={`${commentCount} comments`}>
+            <MessageCircle size={18} /> {commentCount.toLocaleString("en-IN")}
           </span>
         )}
         {shares === null ? null : (
@@ -152,6 +229,39 @@ export function FeedCard({ post, onLike, onBookmark }) {
           <Bookmark size={19} className={isBookmarked ? "fill-current" : ""} />
         </button>
       </footer>
+
+      {commentsOpen ? (
+        <section className="mx-4 mb-4 border-t border-line pt-4 sm:mx-5" aria-label="Comments">
+          {commentStatus === "loading" ? <p className="text-sm text-muted" role="status">Loading comments</p> : null}
+          {commentError ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700" role="alert">{commentError}</p> : null}
+          {commentStatus === "success" ? (
+            <>
+              <form onSubmit={handleCommentSubmit} className="flex gap-2">
+                <label htmlFor={`comment-${post.id}`} className="sr-only">Add a comment</label>
+                <input
+                  id={`comment-${post.id}`}
+                  value={commentDraft}
+                  onChange={(event) => setCommentDraft(event.target.value)}
+                  maxLength={2000}
+                  placeholder="Add a comment"
+                  className="h-10 min-w-0 flex-1 rounded-xl border border-line px-3 text-sm outline-none focus:border-brand-300"
+                />
+                <button type="submit" disabled={commentPending || !commentDraft.trim()} className="h-10 rounded-xl bg-brand-600 px-4 text-sm font-bold text-white disabled:opacity-60">
+                  {commentPending ? "Posting" : "Post comment"}
+                </button>
+              </form>
+              <div className="mt-4 space-y-3">
+                {comments.length ? comments.map((comment) => (
+                  <article key={comment.id} className="rounded-xl bg-canvas p-3">
+                    <p className="text-xs font-bold">{comment.user?.name || `@${comment.user?.handle}`}</p>
+                    <p className="mt-1 text-sm leading-6 text-ink/80">{comment.content}</p>
+                  </article>
+                )) : <p className="text-sm text-muted">No comments yet.</p>}
+              </div>
+            </>
+          ) : null}
+        </section>
+      ) : null}
       {error ? <p className="mx-4 mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 sm:mx-5" role="alert">{error}</p> : null}
     </article>
   );

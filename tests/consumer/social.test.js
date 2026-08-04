@@ -57,6 +57,62 @@ describe("social services", () => {
     expect(tx.calls.transactions).toBe(1);
   });
 
+  it("returns the existing liked state when a concurrent like wins the unique race", async () => {
+    const tx = makeTransactionFixture({ likeCreateConflict: true });
+
+    await expect(
+      toggleLike(tx.db, { id: "viewer-1", name: "Viewer" }, "post-1"),
+    ).resolves.toEqual({ isLiked: true, likesCount: 1 });
+    expect(tx.likes).toHaveLength(1);
+  });
+
+  it("returns the existing bookmark state when a concurrent bookmark wins the unique race", async () => {
+    const tx = makeTransactionFixture({ bookmarkCreateConflict: true });
+
+    await expect(toggleBookmark(tx.db, "viewer-1", "post-1")).resolves.toEqual({
+      isBookmarked: true,
+    });
+    expect(tx.bookmarks).toHaveLength(1);
+  });
+
+  it("returns the existing follow state when a concurrent follow wins the unique race", async () => {
+    const tx = makeTransactionFixture({ followCreateConflict: true });
+
+    await expect(
+      toggleFollow(tx.db, { id: "viewer-1", name: "Viewer" }, "asha"),
+    ).resolves.toEqual({ isFollowing: true });
+    expect(tx.follows).toHaveLength(1);
+  });
+
+  it("keeps a successful like when notification delivery fails", async () => {
+    const tx = makeTransactionFixture({
+      notificationCreateError: new Error("Notification unavailable"),
+    });
+
+    await expect(
+      toggleLike(tx.db, { id: "viewer-1", name: "Viewer" }, "post-1"),
+    ).resolves.toEqual({ isLiked: true, likesCount: 1 });
+    expect(tx.likes).toHaveLength(1);
+    expect(tx.posts[0].likesCount).toBe(1);
+  });
+
+  it("keeps a successful comment when notification delivery fails", async () => {
+    const tx = makeTransactionFixture({
+      notificationCreateError: new Error("Notification unavailable"),
+    });
+
+    await expect(
+      createComment(
+        tx.db,
+        { id: "viewer-1", name: "Viewer" },
+        "post-1",
+        { content: "Useful post" },
+      ),
+    ).resolves.toMatchObject({ commentsCount: 1 });
+    expect(tx.comments).toHaveLength(1);
+    expect(tx.posts[0].commentsCount).toBe(1);
+  });
+
   it("creates a validated comment, increments the post count, and notifies the owner", async () => {
     const tx = makeTransactionFixture();
 

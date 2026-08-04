@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { presentPost } from "./presenters";
+import { presentCreator, presentPost } from "./presenters";
 
 const SEARCH_TYPES = ["all", "creators", "posts", "communities"];
 
@@ -27,7 +27,7 @@ export async function searchConsumer(database, viewerId, query) {
 
   const contains = { contains: query.q, mode: "insensitive" };
   const searchesPosts = query.type === "all" || query.type === "posts";
-  const [creators, posts, communities, subscriptions] = await Promise.all([
+  const [creators, posts, communities] = await Promise.all([
     query.type === "all" || query.type === "creators"
       ? database.user.findMany({
           where: {
@@ -36,13 +36,10 @@ export async function searchConsumer(database, viewerId, query) {
             OR: [{ name: contains }, { handle: contains }, { bio: contains }],
           },
           take: 10,
-          select: {
-            id: true,
-            name: true,
-            handle: true,
-            avatar: true,
-            roleTitle: true,
-            verified: true,
+          include: {
+            creatorProfile: true,
+            followers: { where: { followerId: viewerId } },
+            _count: { select: { followers: true } },
           },
         })
       : [],
@@ -61,6 +58,7 @@ export async function searchConsumer(database, viewerId, query) {
               include: {
                 creatorProfile: true,
                 followers: { where: { followerId: viewerId } },
+                _count: { select: { followers: true } },
               },
             },
             likes: { where: { userId: viewerId } },
@@ -78,22 +76,19 @@ export async function searchConsumer(database, viewerId, query) {
           orderBy: { createdAt: "desc" },
         })
       : [],
-    searchesPosts
-      ? database.subscription.findMany({
-          where: { userId: viewerId, status: "ACTIVE" },
-          select: { creatorId: true },
-        })
-      : [],
   ]);
 
-  const entitlements = new Set(subscriptions.map(({ creatorId }) => creatorId));
   return {
-    creators,
+    creators: creators.map((creator) =>
+      presentCreator(
+        { ...creator, creatorFollowers: creator.followers ?? [] },
+        viewerId,
+      ),
+    ),
     posts: posts.map((post) =>
       presentPost(
         { ...post, creatorFollowers: post.creator?.followers ?? [] },
         viewerId,
-        entitlements,
       ),
     ),
     communities,

@@ -6,7 +6,11 @@ vi.mock("@/lib/middleware", () => ({
   withCreatorAuth: (handler) => handler,
 }));
 
-import { createPostsGet, POST as createPost } from "@/app/api/posts/route";
+import {
+  createPostPost,
+  createPostsGet,
+  POST as createPost,
+} from "@/app/api/posts/route";
 import { createLikePost } from "@/app/api/posts/[id]/like/route";
 import { createBookmarkPost } from "@/app/api/posts/[id]/bookmark/route";
 import {
@@ -63,6 +67,7 @@ const creatorRow = (overrides = {}) => ({
     updatedAt: new Date("2026-08-01T00:00:00.000Z"),
   },
   followers: [{ id: "follow-1", followerId: "viewer-1", followingId: "creator-1" }],
+  _count: { followers: 7 },
   posts: [],
   ...overrides,
 });
@@ -147,6 +152,28 @@ describe("consumer API contracts", () => {
     expect(findMany).not.toHaveBeenCalled();
   });
 
+  it("filters comment reads by both comment and author soft-deletion", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const response = await createCommentsGet({
+      post: { findFirst: vi.fn().mockResolvedValue({ id: "post-1" }) },
+      comment: { findMany },
+    })(new Request("http://localhost/api/posts/post-1/comment"), {
+      user: viewer,
+      params: Promise.resolve({ id: "post-1" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          postId: "post-1",
+          deletedAt: null,
+          user: { is: { deletedAt: null } },
+        },
+      }),
+    );
+  });
+
   it("returns 400 for malformed JSON in creator post creation", async () => {
     const response = await createPost(
       new Request("http://localhost/api/posts", {
@@ -159,6 +186,32 @@ describe("consumer API contracts", () => {
 
     expect(response.status).toBe(400);
     expect(await json(response)).toEqual({ error: "Invalid JSON body" });
+  });
+
+  it("returns a created post even when follower notification delivery fails", async () => {
+    const logError = vi.fn();
+    const post = { id: "post-1", content: "New work" };
+    const response = await createPostPost({
+      database: {
+        post: { create: vi.fn().mockResolvedValue(post) },
+        follow: { findMany: vi.fn().mockResolvedValue([{ followerId: "user-2" }]) },
+        notification: {
+          createMany: vi.fn().mockRejectedValue(new Error("Notification unavailable")),
+        },
+      },
+      logError,
+    })(
+      new Request("http://localhost/api/posts", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: "New work", isPremium: false }),
+      }),
+      { user: { ...viewer, role: "CREATOR" } },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await json(response)).toEqual(post);
+    expect(logError).toHaveBeenCalledOnce();
   });
 
   it("validates creator directory filters and returns a cursor page", async () => {
@@ -205,17 +258,16 @@ describe("consumer API contracts", () => {
   it("builds discovery category and creator rails from database rows", async () => {
     const response = await createDiscoveryGet({
       user: {
-        findMany: vi
-          .fn()
-          .mockResolvedValueOnce([creatorRow()])
-          .mockResolvedValueOnce([creatorRow({ followers: [] })]),
+        findMany: vi.fn().mockResolvedValue([creatorRow()]),
       },
     })(new Request("http://localhost/api/discovery"), authContext);
     const body = await json(response);
 
     expect(body.categories).toContain("Fashion");
-    expect(body.recommended).toMatchObject([{ id: "creator-1", isFollowing: true }]);
-    expect(body.trending).toMatchObject([{ id: "creator-1", subscriberCount: 42 }]);
+    expect(body.creators).toMatchObject([
+      { id: "creator-1", isFollowing: true, followerCount: 7 },
+    ]);
+    expect(body).not.toHaveProperty("trending");
   });
 
   it("does not write search history while the user is typing an empty query", async () => {
@@ -250,7 +302,7 @@ describe("consumer API contracts", () => {
     expect(mockDb.user.findMany).not.toHaveBeenCalled();
   });
 
-  it("does not expose premium search-result content without entitlement", async () => {
+  it("marks premium search-result content as unavailable without entitlement lookup", async () => {
     const premiumPost = {
       id: "post-premium",
       creatorId: "creator-1",
@@ -270,11 +322,10 @@ describe("consumer API contracts", () => {
     };
     const response = await createSearchGet({
       post: { findMany: vi.fn().mockResolvedValue([premiumPost]) },
-      subscription: { findMany: vi.fn().mockResolvedValue([]) },
     })(new Request("http://localhost/api/search?q=lesson&type=posts"), authContext);
 
     expect(await json(response)).toMatchObject({
-      posts: [{ id: "post-premium", content: null, mediaUrl: null, isLocked: true }],
+      posts: [{ id: "post-premium", content: null, mediaUrl: null, availability: "coming_soon" }],
     });
   });
 
@@ -302,7 +353,6 @@ describe("consumer API contracts", () => {
           where.creator?.is?.role === "CREATOR" ? [] : [nonCreatorPost],
         ),
       },
-      subscription: { findMany: vi.fn().mockResolvedValue([]) },
     })(new Request("http://localhost/api/search?q=lesson&type=posts"), authContext);
 
     expect(await json(response)).toMatchObject({ posts: [] });

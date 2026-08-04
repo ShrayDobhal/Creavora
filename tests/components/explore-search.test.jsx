@@ -6,7 +6,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SearchPanel } from "@/components/consumer/SearchPanel";
 import { CreatorCard } from "@/components/consumer/CreatorCard";
-import { getFeed, search } from "@/services/consumer-api";
+import {
+  createComment,
+  getComments,
+  getFeed,
+  saveSearchHistory,
+  search,
+} from "@/services/consumer-api";
 import ExplorePage from "@/app/(fan)/explore/page";
 
 afterEach(() => {
@@ -18,46 +24,52 @@ afterEach(() => {
 describe("SearchPanel", () => {
   it("debounces typed searches and sends only the latest trimmed query", async () => {
     vi.useFakeTimers();
-    const onSearch = vi.fn();
-    render(<SearchPanel onSearch={onSearch} />);
+    const onQueryChange = vi.fn();
+    const onSubmit = vi.fn();
+    render(<SearchPanel onQueryChange={onQueryChange} onSubmit={onSubmit} />);
 
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "  Asha" } });
-    expect(onSearch).not.toHaveBeenCalled();
+    expect(onQueryChange).not.toHaveBeenCalled();
 
     await act(() => vi.advanceTimersByTimeAsync(350));
 
-    expect(onSearch).toHaveBeenCalledTimes(1);
-    expect(onSearch).toHaveBeenCalledWith("Asha");
+    expect(onQueryChange).toHaveBeenCalledTimes(1);
+    expect(onQueryChange).toHaveBeenCalledWith("Asha");
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("submits a non-empty search immediately and ignores whitespace", async () => {
+  it("submits a non-empty search explicitly and ignores whitespace", async () => {
     const user = userEvent.setup();
-    const onSearch = vi.fn();
-    render(<SearchPanel onSearch={onSearch} />);
+    const onQueryChange = vi.fn();
+    const onSubmit = vi.fn();
+    render(<SearchPanel onQueryChange={onQueryChange} onSubmit={onSubmit} />);
 
     const input = screen.getByRole("searchbox");
     await user.type(input, "   ");
     await user.click(screen.getByRole("button", { name: /search/i }));
-    expect(onSearch).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
 
     await user.clear(input);
     await user.type(input, "  Jaipur craft  ");
     await user.click(screen.getByRole("button", { name: /search/i }));
 
-    expect(onSearch).toHaveBeenCalledWith("Jaipur craft");
+    expect(onSubmit).toHaveBeenCalledWith("Jaipur craft");
+    expect(onQueryChange).not.toHaveBeenCalled();
   });
 
   it("cancels the pending debounce when a search is submitted quickly", async () => {
     vi.useFakeTimers();
-    const onSearch = vi.fn();
-    render(<SearchPanel onSearch={onSearch} />);
+    const onQueryChange = vi.fn();
+    const onSubmit = vi.fn();
+    render(<SearchPanel onQueryChange={onQueryChange} onSubmit={onSubmit} />);
 
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Asha" } });
     fireEvent.submit(screen.getByRole("search"));
     await act(() => vi.advanceTimersByTimeAsync(350));
 
-    expect(onSearch).toHaveBeenCalledTimes(1);
-    expect(onSearch).toHaveBeenCalledWith("Asha");
+    expect(onQueryChange).not.toHaveBeenCalled();
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledWith("Asha");
   });
 });
 
@@ -92,10 +104,52 @@ describe("consumer API client", () => {
 
     await expect(search({ query: "Asha" })).rejects.toThrow("Search is unavailable");
   });
+
+  it("persists search history only through the explicit client mutation", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: "history-1", query: "Asha" }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await saveSearchHistory({ query: " Asha ", type: "creators" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/search/history",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ query: "Asha", type: "creators" }),
+      }),
+    );
+  });
+
+  it("uses the real comment read and create endpoints", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getComments("post/1");
+    await createComment("post/1", " A useful note ");
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/posts/post%2F1/comment");
+    expect(fetchMock.mock.calls[1]).toEqual([
+      "/api/posts/post%2F1/comment",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ content: "A useful note" }),
+      }),
+    ]);
+  });
 });
 
 describe("Explore page", () => {
-  it("does not invent missing subscriber counts in search creator cards", () => {
+  it("does not invent missing follower counts in search creator cards", () => {
     render(
       <CreatorCard
         creator={{
@@ -109,7 +163,7 @@ describe("Explore page", () => {
       />,
     );
 
-    expect(screen.queryByText(/subscribers/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/followers/i)).not.toBeInTheDocument();
   });
 
   it("renders database discovery results instead of a local creator catalogue", async () => {
@@ -119,7 +173,7 @@ describe("Explore page", () => {
         new Response(
           JSON.stringify({
             categories: ["Art"],
-            recommended: [
+            creators: [
               {
                 id: "creator-api",
                 name: "Leela Menon",
@@ -129,12 +183,11 @@ describe("Explore page", () => {
                 roleTitle: "Mural artist",
                 bio: "Public art from Kochi",
                 verified: true,
-                subscriberCount: 18,
+                followerCount: 18,
                 isFollowing: false,
                 category: "Art",
               },
             ],
-            trending: [],
           }),
           { status: 200, headers: { "content-type": "application/json" } },
         ),
@@ -144,6 +197,7 @@ describe("Explore page", () => {
     render(<ExplorePage />);
 
     expect(await screen.findByText("Leela Menon")).toBeVisible();
+    expect(screen.getByText("18 followers")).toBeVisible();
     expect(screen.getByRole("button", { name: "Art" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Explore" })).toBeVisible();
   });
@@ -155,8 +209,16 @@ describe("Explore page", () => {
       vi.fn((url) => {
         if (String(url).startsWith("/api/discovery")) {
           return Promise.resolve(
-            new Response(JSON.stringify({ categories: [], recommended: [], trending: [] }), {
+            new Response(JSON.stringify({ categories: [], creators: [] }), {
               status: 200,
+              headers: { "content-type": "application/json" },
+            }),
+          );
+        }
+        if (String(url) === "/api/search/history") {
+          return Promise.resolve(
+            new Response(JSON.stringify({ id: "history-1", query: "Asha" }), {
+              status: 201,
               headers: { "content-type": "application/json" },
             }),
           );
@@ -205,6 +267,39 @@ describe("Explore page", () => {
     expect(searchCalls).toBe(2);
   });
 
+  it("does not persist debounced reads and saves history after explicit submit", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((url) =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify(
+            String(url) === "/api/discovery"
+              ? { categories: [], creators: [] }
+              : String(url) === "/api/search/history"
+                ? { id: "history-1", query: "Asha" }
+                : { creators: [], posts: [], communities: [] },
+          ),
+          {
+            status: String(url) === "/api/search/history" ? 201 : 200,
+            headers: { "content-type": "application/json" },
+          },
+        ),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ExplorePage />);
+
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Asha" } });
+    await act(() => vi.advanceTimersByTimeAsync(350));
+
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === "/api/search/history")).toHaveLength(0);
+
+    fireEvent.submit(screen.getByRole("search"));
+    await act(() => Promise.resolve());
+
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === "/api/search/history")).toHaveLength(1);
+  });
+
   it("does not display an unknown community member count as zero", async () => {
     vi.stubGlobal(
       "fetch",
@@ -212,7 +307,7 @@ describe("Explore page", () => {
         new Response(
           JSON.stringify(
             String(url).startsWith("/api/discovery")
-              ? { categories: [], recommended: [], trending: [] }
+              ? { categories: [], creators: [] }
               : {
                   creators: [],
                   posts: [],

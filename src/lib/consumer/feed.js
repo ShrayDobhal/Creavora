@@ -37,6 +37,7 @@ const postInclude = (viewerId) => ({
     include: {
       creatorProfile: true,
       followers: { where: { followerId: viewerId } },
+      _count: { select: { followers: true } },
     },
   },
   likes: { where: { userId: viewerId } },
@@ -70,27 +71,19 @@ export async function getFeedPage(db, viewerId, query) {
     ];
   }
 
-  const [posts, subscriptions] = await Promise.all([
-    db.post.findMany({
-      where,
-      orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
-      take: query.limit + 1,
-      include: postInclude(viewerId),
-    }),
-    db.subscription.findMany({
-      where: { userId: viewerId, status: "ACTIVE" },
-      select: { creatorId: true },
-    }),
-  ]);
+  const posts = await db.post.findMany({
+    where,
+    orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+    take: query.limit + 1,
+    include: postInclude(viewerId),
+  });
   const page = posts.slice(0, query.limit);
-  const entitlements = new Set(subscriptions.map((subscription) => subscription.creatorId));
 
   return {
     items: page.map((post) =>
       presentPost(
         { ...post, creatorFollowers: post.creator?.followers ?? [] },
         viewerId,
-        entitlements,
       ),
     ),
     nextCursor: posts.length > query.limit ? encodeCursor(page.at(-1)) : null,

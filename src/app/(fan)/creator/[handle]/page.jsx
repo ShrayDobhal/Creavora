@@ -7,7 +7,14 @@ import { useParams } from "next/navigation";
 import { AsyncState } from "@/components/consumer/AsyncState";
 import { ConsumerAvatar } from "@/components/consumer/CreatorCard";
 import { FeedCard } from "@/components/consumer/FeedCard";
-import { getCreator, toggleBookmark, toggleFollow, toggleLike } from "@/services/consumer-api";
+import {
+  createComment,
+  getComments,
+  getCreator,
+  toggleBookmark,
+  toggleFollow,
+  toggleLike,
+} from "@/services/consumer-api";
 
 export default function CreatorProfilePage() {
   const params = useParams();
@@ -113,8 +120,8 @@ export default function CreatorProfilePage() {
             </div>
             <dl className="flex gap-6 rounded-2xl bg-canvas px-5 py-3">
               <div><dt className="text-xs text-muted">Recent posts</dt><dd className="mt-0.5 text-lg font-black">{posts.length.toLocaleString("en-IN")}</dd></div>
-              {typeof creator.subscriberCount === "number" ? (
-                <div><dt className="flex items-center gap-1 text-xs text-muted"><Users size={12} /> Subscribers</dt><dd className="mt-0.5 text-lg font-black">{creator.subscriberCount.toLocaleString("en-IN")}</dd></div>
+              {typeof creator.followerCount === "number" ? (
+                <div><dt className="flex items-center gap-1 text-xs text-muted"><Users size={12} /> Followers</dt><dd className="mt-0.5 text-lg font-black">{creator.followerCount.toLocaleString("en-IN")}</dd></div>
               ) : null}
             </dl>
           </div>
@@ -128,7 +135,16 @@ export default function CreatorProfilePage() {
         </div>
         {posts.length ? (
           <div className="grid gap-5 lg:grid-cols-2">
-            {posts.map((post) => <FeedCard key={post.id} post={post} onLike={toggleLike} onBookmark={toggleBookmark} />)}
+            {posts.map((post) => (
+              <FeedCard
+                key={post.id}
+                post={post}
+                onLike={toggleLike}
+                onBookmark={toggleBookmark}
+                onLoadComments={getComments}
+                onCreateComment={createComment}
+              />
+            ))}
           </div>
         ) : (
           <AsyncState status="empty" emptyTitle="No published work yet" emptyMessage={`${creator.name} has not published a post.`} />

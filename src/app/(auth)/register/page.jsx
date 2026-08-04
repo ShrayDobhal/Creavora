@@ -76,7 +76,7 @@ function RegisterForm() {
         {/* Form */}
         <div className="mx-auto w-full max-w-[420px] my-auto">
           <h1 className="text-[32px] font-extrabold tracking-tight">Create your account</h1>
-          <p className="mt-2 text-[15px] text-muted">Join the premium community of creators and fans.</p>
+          <p className="mt-2 text-[15px] text-muted">Join creators and the people who follow their work.</p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             {error && (

@@ -34,7 +34,7 @@ describe("Creator profile", () => {
     expect(screen.queryByText("Loading")).not.toBeInTheDocument();
   });
 
-  it("does not display an unknown subscriber count as zero", async () => {
+  it("displays the follower count returned by the creator API", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -50,6 +50,7 @@ describe("Creator profile", () => {
               bio: null,
               verified: true,
               isFollowing: false,
+              followerCount: 23,
             },
             posts: [],
           }),
@@ -61,6 +62,8 @@ describe("Creator profile", () => {
     render(<CreatorProfilePage />);
 
     expect(await screen.findByRole("heading", { name: /Leela Menon/i })).toBeVisible();
+    expect(screen.getByText("Followers")).toBeVisible();
+    expect(screen.getByText("23")).toBeVisible();
     expect(screen.queryByText("Subscribers")).not.toBeInTheDocument();
   });
 });
