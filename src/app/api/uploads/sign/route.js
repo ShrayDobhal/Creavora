@@ -66,7 +66,22 @@ export function createUploadSignPost({ storage = r2Storage, database = db } = {}
         extension,
         mimeType: data.mimeType,
       });
-      return NextResponse.json(intent, { status: 201 });
+      if (
+        intent?.assetId !== assetId
+        || intent.key !== key
+        || intent.publicUrl !== publicUrl
+        || intent.headers?.["content-type"] !== data.mimeType
+        || typeof intent.uploadUrl !== "string"
+      ) {
+        throw new Error("Signed upload intent did not match the persisted asset");
+      }
+      return NextResponse.json({
+        assetId,
+        key,
+        uploadUrl: intent.uploadUrl,
+        publicUrl,
+        headers: { "content-type": data.mimeType },
+      }, { status: 201 });
     } catch (error) {
       if (persisted && database.mediaAsset.update) {
         try {

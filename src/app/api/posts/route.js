@@ -33,6 +33,21 @@ export function createPostPost({ database = db, logError = console.error } = {})
         );
       }
 
+      if (data.mediaUrl) {
+        const asset = await database.mediaAsset.findFirst({
+          where: {
+            ownerId: creator.id,
+            publicUrl: data.mediaUrl,
+            deletedAt: null,
+            verifiedAt: { not: null },
+          },
+          select: { id: true },
+        });
+        if (!asset) {
+          return NextResponse.json({ error: "Invalid post media" }, { status: 400 });
+        }
+      }
+
       const post = await database.post.create({
         data: {
           creatorId: creator.id,

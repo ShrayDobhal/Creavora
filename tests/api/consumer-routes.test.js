@@ -188,6 +188,41 @@ describe("consumer API contracts", () => {
     expect(await json(response)).toEqual({ error: "Invalid JSON body" });
   });
 
+  it("rejects a post image that is not an owned verified active asset", async () => {
+    const create = vi.fn();
+    const findFirst = vi.fn().mockResolvedValue(null);
+    const response = await createPostPost({
+      database: {
+        mediaAsset: { findFirst },
+        post: { create },
+        follow: { findMany: vi.fn().mockResolvedValue([]) },
+      },
+    })(
+      new Request("http://localhost/api/posts", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          content: "New work",
+          mediaUrl: "https://cdn.example.test/users/creator-1/asset.webp",
+          mediaType: "image",
+        }),
+      }),
+      { user: { ...viewer, id: "creator-1", role: "CREATOR" } },
+    );
+
+    expect(response.status).toBe(400);
+    expect(create).not.toHaveBeenCalled();
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        ownerId: "creator-1",
+        publicUrl: "https://cdn.example.test/users/creator-1/asset.webp",
+        deletedAt: null,
+        verifiedAt: { not: null },
+      },
+      select: { id: true },
+    });
+  });
+
   it("returns a created post even when follower notification delivery fails", async () => {
     const logError = vi.fn();
     const post = { id: "post-1", content: "New work" };

@@ -154,6 +154,10 @@ export const uploadSignSchema = z.object({
   kind: z.enum(["avatar", "cover", "post"]),
 }).strict();
 
+export const uploadCompleteSchema = z.object({
+  assetId: z.string().uuid(),
+}).strict();
+
 // ─── Community Schemas ──────────────────────────────────────────────────────
 
 export const createCommunitySchema = z.object({

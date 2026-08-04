@@ -8,6 +8,7 @@ import {
   createProfilePatch,
 } from "@/app/api/profile/route";
 import { createUploadSignPost } from "@/app/api/uploads/sign/route";
+import { createUploadCompletePost } from "@/app/api/uploads/complete/route";
 
 const jsonRequest = (method, body) =>
   new Request("http://localhost/api/profile", {
@@ -133,7 +134,12 @@ describe("Blindly social launch profile API", () => {
     expect(response.status).toBe(400);
     expect(updateMany).not.toHaveBeenCalled();
     expect(findFirst).toHaveBeenCalledWith({
-      where: { ownerId: "user-1", publicUrl: "https://cdn.example.test/other-avatar.jpg", deletedAt: null },
+      where: {
+        ownerId: "user-1",
+        publicUrl: "https://cdn.example.test/other-avatar.jpg",
+        deletedAt: null,
+        verifiedAt: { not: null },
+      },
       select: { id: true },
     });
   });
@@ -204,6 +210,35 @@ describe("Blindly social launch upload signing API", () => {
     }));
   });
 
+  it("soft-deletes an asset when the signer returns a divergent upload intent", async () => {
+    const update = vi.fn();
+    const database = {
+      mediaAsset: {
+        create: vi.fn(async ({ data }) => ({ id: data.id, ...data })),
+        update,
+      },
+    };
+    const divergentStorage = {
+      ...configuredStorage,
+      createUploadIntent: vi.fn(async () => ({
+        assetId: "another-asset",
+        key: "users/user-1/another-asset.webp",
+        uploadUrl: "https://uploads.example.test/signed",
+        publicUrl: "https://cdn.example.test/users/user-1/another-asset.webp",
+        headers: { "content-type": "image/png" },
+      })),
+    };
+
+    const response = await createUploadSignPost({ storage: divergentStorage, database })(
+      jsonRequest("POST", imageInput), { user: { id: "user-1" } },
+    );
+
+    expect(response.status).toBe(500);
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ deletedAt: expect.any(Date) }),
+    }));
+  });
+
   it("rejects an image larger than 5 MiB before persisting an asset", async () => {
     const database = { mediaAsset: { create: vi.fn() } };
     const response = await createUploadSignPost({ storage: configuredStorage, database })(
@@ -222,5 +257,64 @@ describe("Blindly social launch upload signing API", () => {
     );
     expect(response.status).toBe(400);
     expect(database.mediaAsset.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("Blindly social launch upload completion API", () => {
+  const pendingAsset = {
+    id: "9cd87ddd-5890-467d-8feb-17c83f432111",
+    ownerId: "user-1",
+    key: "users/user-1/9cd87ddd-5890-467d-8feb-17c83f432111.webp",
+    publicUrl: "https://cdn.example.test/users/user-1/9cd87ddd-5890-467d-8feb-17c83f432111.webp",
+    mimeType: "image/webp",
+    bytes: 1024,
+    verifiedAt: null,
+  };
+
+  it("activates an asset only after R2 confirms its signed image metadata", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const database = {
+      mediaAsset: {
+        findFirst: vi.fn().mockResolvedValue(pendingAsset),
+        updateMany,
+      },
+    };
+    const storage = {
+      getR2Configuration: () => ({ configured: true }),
+      getObjectMetadata: vi.fn().mockResolvedValue({ ContentLength: 1024, ContentType: "image/webp" }),
+    };
+
+    const response = await createUploadCompletePost({ storage, database })(
+      jsonRequest("POST", { assetId: pendingAsset.id }), { user: { id: "user-1" } },
+    );
+
+    expect(response.status).toBe(200);
+    expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: pendingAsset.id, ownerId: "user-1", deletedAt: null, verifiedAt: null }),
+      data: expect.objectContaining({ verifiedAt: expect.any(Date) }),
+    }));
+  });
+
+  it("soft-deletes an uploaded object whose actual length differs from its signed metadata", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const database = {
+      mediaAsset: {
+        findFirst: vi.fn().mockResolvedValue(pendingAsset),
+        updateMany,
+      },
+    };
+    const storage = {
+      getR2Configuration: () => ({ configured: true }),
+      getObjectMetadata: vi.fn().mockResolvedValue({ ContentLength: 5242881, ContentType: "image/webp" }),
+    };
+
+    const response = await createUploadCompletePost({ storage, database })(
+      jsonRequest("POST", { assetId: pendingAsset.id }), { user: { id: "user-1" } },
+    );
+
+    expect(response.status).toBe(400);
+    expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ deletedAt: expect.any(Date) }),
+    }));
   });
 });

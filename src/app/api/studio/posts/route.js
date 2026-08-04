@@ -13,6 +13,21 @@ export const POST = withCreatorAuth(async (req, { user: creator }) => {
       return NextResponse.json({ error: "Validation failed", details: error }, { status: 400 });
     }
 
+    if (data.mediaUrl) {
+      const asset = await db.mediaAsset.findFirst({
+        where: {
+          ownerId: creator.id,
+          publicUrl: data.mediaUrl,
+          deletedAt: null,
+          verifiedAt: { not: null },
+        },
+        select: { id: true },
+      });
+      if (!asset) {
+        return NextResponse.json({ error: "Invalid post media" }, { status: 400 });
+      }
+    }
+
     const postPrice = data.isPremium ? data.price : 0.0;
 
     // Create the post in database
