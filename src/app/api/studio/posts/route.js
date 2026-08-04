@@ -1,57 +1,51 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { withCreatorAuth } from "@/lib/middleware";
+import { createPostSchema, validateBody } from "@/lib/validators";
 
 // POST create creator post
-export async function POST(req) {
+export const POST = withCreatorAuth(async (req, { user: creator }) => {
   try {
-    const { content, mediaUrl, mediaType, isPremium, price } = await req.json();
+    const body = await req.json();
+    const { error, data } = validateBody(createPostSchema, body);
 
-    if (!content || !content.trim()) {
-      return NextResponse.json({ error: "Post content is required" }, { status: 400 });
+    if (error) {
+      return NextResponse.json({ error: "Validation failed", details: error }, { status: 400 });
     }
 
-    const postPrice = isPremium ? parseFloat(price) : 0.0;
-
-    // Get active creator (Ananya Sharma)
-    const creator = await db.user.findUnique({
-      where: { handle: "ananyasharma" },
-    });
-
-    if (!creator) {
-      return NextResponse.json({ error: "Creator profile not found" }, { status: 404 });
-    }
+    const postPrice = data.isPremium ? data.price : 0.0;
 
     // Create the post in database
     const post = await db.post.create({
       data: {
         creatorId: creator.id,
-        content: content.trim(),
-        mediaUrl: mediaUrl || null,
-        mediaType: mediaType || null,
-        isPremium: isPremium || false,
+        content: data.content,
+        mediaUrl: data.mediaUrl || null,
+        mediaType: data.mediaType || null,
+        isPremium: data.isPremium || false,
         price: postPrice,
         likesCount: 0,
         commentsCount: 0
       }
     });
 
-    // Notify followers (Simulated)
-    // Find our main fan (Arjun) to notify them!
-    const fan = await db.user.findUnique({
-      where: { handle: "arjun" }
+    // Notify all followers (formerly hardcoded to 'arjun')
+    const follows = await db.follow.findMany({
+      where: { followingId: creator.id },
+      select: { followerId: true }
     });
 
-    if (fan) {
-      await db.notification.create({
-        data: {
-          userId: fan.id,
+    if (follows.length > 0) {
+      await db.notification.createMany({
+        data: follows.map(f => ({
+          userId: f.followerId,
           title: `New Post by ${creator.name}!`,
-          message: isPremium
+          message: data.isPremium
             ? `${creator.name} just posted a new premium locked post for ₹${postPrice.toFixed(0)}!`
-            : `${creator.name} uploaded a new post: "${content.substring(0, 30)}..."`,
+            : `${creator.name} uploaded a new post: "${data.content.substring(0, 30)}..."`,
           type: "SYSTEM",
           read: false
-        }
+        }))
       });
     }
 
@@ -60,4 +54,4 @@ export async function POST(req) {
     console.error("POST Creator Post Error:", error);
     return NextResponse.json({ error: "Failed to upload post" }, { status: 500 });
   }
-}
+});

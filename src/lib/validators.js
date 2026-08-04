@@ -1,0 +1,195 @@
+import { z } from "zod";
+
+// ─── Auth Schemas ───────────────────────────────────────────────────────────
+
+export const registerSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name must be at most 100 characters")
+    .trim(),
+  email: z
+    .string()
+    .email("Invalid email address")
+    .max(255)
+    .trim()
+    .toLowerCase(),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must be at most 128 characters")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+    ),
+  handle: z
+    .string()
+    .min(3, "Handle must be at least 3 characters")
+    .max(30, "Handle must be at most 30 characters")
+    .regex(
+      /^[a-zA-Z0-9_]+$/,
+      "Handle can only contain letters, numbers, and underscores"
+    )
+    .trim()
+    .toLowerCase(),
+  role: z.enum(["FAN", "CREATOR"], {
+    errorMap: () => ({ message: "Role must be FAN or CREATOR" }),
+  }),
+});
+
+export const loginSchema = z.object({
+  email: z
+    .string()
+    .email("Invalid email address")
+    .trim()
+    .toLowerCase(),
+  password: z
+    .string()
+    .min(1, "Password is required"),
+  role: z.enum(["FAN", "CREATOR"]).optional(),
+});
+
+// ─── Post Schemas ───────────────────────────────────────────────────────────
+
+export const createPostSchema = z.object({
+  content: z
+    .string()
+    .min(1, "Post content is required")
+    .max(5000, "Post content must be at most 5000 characters")
+    .trim(),
+  mediaUrl: z.string().url().nullable().optional(),
+  mediaType: z.enum(["image", "video", "audio", "document"]).nullable().optional(),
+  isPremium: z.boolean().optional().default(false),
+  price: z.number().min(0).optional().default(0),
+});
+
+// ─── Comment Schemas ────────────────────────────────────────────────────────
+
+export const createCommentSchema = z.object({
+  content: z
+    .string()
+    .min(1, "Comment cannot be empty")
+    .max(2000, "Comment must be at most 2000 characters")
+    .trim(),
+  parentId: z.string().uuid().nullable().optional(),
+});
+
+// ─── Message Schemas ────────────────────────────────────────────────────────
+
+export const sendMessageSchema = z.object({
+  receiverId: z.string().uuid("Invalid receiver ID").optional(),
+  conversationId: z.string().uuid("Invalid conversation ID").optional(),
+  content: z.string().max(5000).nullable().optional(),
+  isAudio: z.boolean().optional().default(false),
+  duration: z.string().nullable().optional(),
+  mediaUrl: z.string().url().nullable().optional(),
+});
+
+// ─── Subscription Schemas ───────────────────────────────────────────────────
+
+export const createSubscriptionSchema = z.object({
+  creatorId: z.string().uuid("Invalid creator ID"),
+  tier: z.string().min(1, "Tier is required"),
+  price: z.number().positive("Price must be positive"),
+  method: z.string().optional().default("Wallet Balance"),
+});
+
+// ─── Collection Schemas ─────────────────────────────────────────────────────
+
+export const createCollectionSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Collection name is required")
+    .max(100, "Collection name must be at most 100 characters")
+    .trim(),
+  description: z.string().max(500).nullable().optional(),
+});
+
+// ─── Wallet Schemas ─────────────────────────────────────────────────────────
+
+export const depositSchema = z.object({
+  amount: z
+    .number()
+    .positive("Amount must be positive")
+    .max(100000, "Maximum deposit is ₹1,00,000"),
+  method: z.string().optional().default("UPI"),
+  reference: z.string().optional(),
+});
+
+// ─── Search Schema ──────────────────────────────────────────────────────────
+
+export const searchSchema = z.object({
+  q: z.string().min(1, "Search query is required").max(200).trim(),
+  type: z.enum(["all", "creators", "posts", "communities", "videos"]).optional().default("all"),
+  cursor: z.string().optional(),
+  limit: z.number().int().min(1).max(50).optional().default(20),
+});
+
+// ─── Profile Update Schema ─────────────────────────────────────────────────
+
+export const updateProfileSchema = z.object({
+  name: z.string().min(2).max(100).trim().optional(),
+  bio: z.string().max(500).nullable().optional(),
+  avatar: z.string().url().nullable().optional(),
+  coverImage: z.string().url().nullable().optional(),
+  roleTitle: z.string().max(50).nullable().optional(),
+});
+
+// ─── Community Schemas ──────────────────────────────────────────────────────
+
+export const createCommunitySchema = z.object({
+  name: z.string().min(2).max(100).trim(),
+  description: z.string().max(1000).nullable().optional(),
+  avatar: z.string().url().nullable().optional(),
+  isPrivate: z.boolean().optional().default(false),
+});
+
+export const communityPostSchema = z.object({
+  content: z.string().min(1).max(5000).trim(),
+  mediaUrl: z.string().url().nullable().optional(),
+  isPinned: z.boolean().optional().default(false),
+});
+
+// ─── Report Schema ──────────────────────────────────────────────────────────
+
+export const reportSchema = z.object({
+  targetId: z.string().uuid(),
+  targetType: z.enum(["POST", "COMMENT", "USER", "COMMUNITY", "MESSAGE"]),
+  reason: z.enum([
+    "SPAM",
+    "HARASSMENT",
+    "HATE_SPEECH",
+    "NUDITY",
+    "VIOLENCE",
+    "MISINFORMATION",
+    "COPYRIGHT",
+    "OTHER",
+  ]),
+  description: z.string().max(1000).optional(),
+});
+
+// ─── Withdrawal Schema ─────────────────────────────────────────────────────
+
+export const withdrawalSchema = z.object({
+  amount: z.number().positive("Amount must be positive"),
+  method: z.enum(["BANK_TRANSFER", "UPI", "PAYPAL"]),
+  accountDetails: z.string().min(1, "Account details required"),
+});
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Validate request body against a Zod schema.
+ * Returns { data } on success or { error } on failure.
+ */
+export function validateBody(schema, body) {
+  const result = schema.safeParse(body);
+  if (!result.success) {
+    const errors = result.error.issues.map((issue) => ({
+      field: issue.path.join("."),
+      message: issue.message,
+    }));
+    return { error: errors };
+  }
+  return { data: result.data };
+}

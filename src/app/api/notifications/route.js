@@ -1,17 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { withAuth } from "@/lib/middleware";
 
-// GET notifications for Arjun
-export async function GET() {
+// GET notifications for authenticated user
+export const GET = withAuth(async (req, { user }) => {
   try {
-    const user = await db.user.findUnique({
-      where: { handle: "arjun" },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     const notifications = await db.notification.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" }
@@ -22,19 +15,11 @@ export async function GET() {
     console.error("GET Notifications Error:", error);
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
-}
+});
 
 // POST mark all as read
-export async function POST() {
+export const POST = withAuth(async (req, { user }) => {
   try {
-    const user = await db.user.findUnique({
-      where: { handle: "arjun" },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     await db.notification.updateMany({
       where: { userId: user.id, read: false },
       data: { read: true }
@@ -45,4 +30,4 @@ export async function POST() {
     console.error("POST Notifications Mark Read Error:", error);
     return NextResponse.json({ error: "Failed to mark notifications read" }, { status: 500 });
   }
-}
+});

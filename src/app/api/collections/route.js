@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { withAuth } from "@/lib/middleware";
+import { createCollectionSchema, validateBody } from "@/lib/validators";
 
-// GET collections for Arjun
-export async function GET() {
+// GET collections for active authenticated user
+export const GET = withAuth(async (req, { user }) => {
   try {
-    const user = await db.user.findUnique({
-      where: { handle: "arjun" },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     const collections = await db.collection.findMany({
-      where: { userId: user.id },
+      where: { userId: user.id, deletedAt: null },
       orderBy: { createdAt: "desc" }
     });
 
@@ -22,30 +16,23 @@ export async function GET() {
     console.error("GET Collections Error:", error);
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
-}
+});
 
-// POST create new collection
-export async function POST(req) {
+// POST create new collection for authenticated user
+export const POST = withAuth(async (req, { user }) => {
   try {
-    const { name, description } = await req.json();
+    const body = await req.json();
+    const { error, data } = validateBody(createCollectionSchema, body);
 
-    if (!name || !name.trim()) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
-    }
-
-    const user = await db.user.findUnique({
-      where: { handle: "arjun" },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (error) {
+      return NextResponse.json({ error: "Validation failed", details: error }, { status: 400 });
     }
 
     const collection = await db.collection.create({
       data: {
         userId: user.id,
-        name: name.trim(),
-        description: description || null,
+        name: data.name,
+        description: data.description || null,
         postsCount: 0
       }
     });
@@ -55,24 +42,16 @@ export async function POST(req) {
     console.error("POST Collection Error:", error);
     return NextResponse.json({ error: "Failed to create collection" }, { status: 500 });
   }
-}
+});
 
 // DELETE collection
-export async function DELETE(req) {
+export const DELETE = withAuth(async (req, { user }) => {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
     if (!id) {
       return NextResponse.json({ error: "Collection ID is required" }, { status: 400 });
-    }
-
-    const user = await db.user.findUnique({
-      where: { handle: "arjun" },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const collection = await db.collection.findUnique({
@@ -92,4 +71,4 @@ export async function DELETE(req) {
     console.error("DELETE Collection Error:", error);
     return NextResponse.json({ error: "Failed to delete collection" }, { status: 500 });
   }
-}
+});

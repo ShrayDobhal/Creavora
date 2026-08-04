@@ -123,12 +123,14 @@ export default function Landing() {
           <button className="flex items-center gap-1 text-[13.5px] font-bold">
             EN <ChevronDown size={14} className="text-muted" />
           </button>
-          <Link href="/studio" className="text-[14px] font-bold hover:text-brand-600">
+          <Link href="/register?role=CREATOR" className="text-[14px] font-bold hover:text-brand-600">
             Become a Creator
           </Link>
-          <Bell size={19} className="text-ink/70" />
-          <Link href="/profile" title="My profile">
-            <Avatar name="Arjun Singh" size={36} />
+          <Link
+            href="/login"
+            className="flex h-11 items-center justify-center rounded-xl bg-brand-600 px-5 text-[14px] font-bold text-white hover:bg-brand-700 transition"
+          >
+            Login
           </Link>
         </div>
       </header>

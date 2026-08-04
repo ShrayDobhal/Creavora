@@ -1,18 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { withAuth } from "@/lib/middleware";
+import { depositSchema, validateBody } from "@/lib/validators";
 
 // GET user transactions list
-export async function GET() {
+export const GET = withAuth(async (req, { user }) => {
   try {
-    // Get fan user (Arjun)
-    const user = await db.user.findUnique({
-      where: { handle: "arjun" },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     const transactions = await db.transaction.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" }
@@ -23,26 +16,26 @@ export async function GET() {
     console.error("GET Transactions Error:", error);
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
-}
+});
 
 // POST create deposit
-export async function POST(req) {
+export const POST = withAuth(async (req, { user }) => {
   try {
-    const { amount, method, reference } = await req.json();
-    const depositAmount = parseFloat(amount);
+    const body = await req.json();
+    
+    // Support string amounts from forms
+    const validatedBody = {
+      ...body,
+      amount: typeof body.amount === 'string' ? parseFloat(body.amount) : body.amount
+    };
 
-    if (isNaN(depositAmount) || depositAmount <= 0) {
-      return NextResponse.json({ error: "Invalid deposit amount" }, { status: 400 });
+    const { error, data } = validateBody(depositSchema, validatedBody);
+
+    if (error) {
+      return NextResponse.json({ error: "Validation failed", details: error }, { status: 400 });
     }
 
-    // Get fan user (Arjun)
-    const user = await db.user.findUnique({
-      where: { handle: "arjun" },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    const depositAmount = data.amount;
 
     // Perform database transaction to ensure Atomicity
     const result = await db.$transaction(async (tx) => {
@@ -65,8 +58,8 @@ export async function POST(req) {
           userId: user.id,
           amount: depositAmount,
           type: "DEPOSIT",
-          method: method || "UPI",
-          reference: reference || `REF${Math.floor(100000 + Math.random() * 900000)}`,
+          method: data.method,
+          reference: data.reference || `REF${Math.floor(100000 + Math.random() * 900000)}`,
           status: "COMPLETED",
         },
       });
@@ -90,4 +83,4 @@ export async function POST(req) {
     console.error("Wallet Deposit Error:", error);
     return NextResponse.json({ error: "Database error during deposit" }, { status: 500 });
   }
-}
+});

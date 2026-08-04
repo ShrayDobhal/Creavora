@@ -1,22 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { withAuth } from "@/lib/middleware";
 
-// POST claim rewards (claim XP)
-export async function POST(req) {
+// POST claim rewards (claim XP) for authenticated user
+export const POST = withAuth(async (req, { user }) => {
   try {
     const { questId, xpReward } = await req.json();
     const rewardValue = parseInt(xpReward);
 
     if (isNaN(rewardValue) || rewardValue <= 0) {
       return NextResponse.json({ error: "Invalid XP reward value" }, { status: 400 });
-    }
-
-    const user = await db.user.findUnique({
-      where: { handle: "arjun" },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Level up calculation: e.g. 1000 XP per level
@@ -63,4 +56,4 @@ export async function POST(req) {
     console.error("POST Claim Rewards Error:", error);
     return NextResponse.json({ error: "Failed to claim rewards" }, { status: 500 });
   }
-}
+});

@@ -1,0 +1,108 @@
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { cookies } from "next/headers";
+
+// ─── Secrets ────────────────────────────────────────────────────────────────
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "creavora-access-secret-dev-only";
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "creavora-refresh-secret-dev-only";
+const ACCESS_EXPIRES = "15m";
+const REFRESH_EXPIRES = "7d";
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  path: "/",
+};
+
+// ─── Password Hashing ──────────────────────────────────────────────────────
+const SALT_ROUNDS = 12;
+
+export async function hashPassword(plain) {
+  return bcrypt.hash(plain, SALT_ROUNDS);
+}
+
+export async function verifyPassword(plain, hashed) {
+  return bcrypt.compare(plain, hashed);
+}
+
+// ─── JWT Tokens ─────────────────────────────────────────────────────────────
+export function signAccessToken(userId, role) {
+  return jwt.sign({ sub: userId, role }, ACCESS_SECRET, {
+    expiresIn: ACCESS_EXPIRES,
+  });
+}
+
+export function signRefreshToken(userId) {
+  return jwt.sign({ sub: userId, type: "refresh" }, REFRESH_SECRET, {
+    expiresIn: REFRESH_EXPIRES,
+  });
+}
+
+export function verifyAccessToken(token) {
+  try {
+    return jwt.verify(token, ACCESS_SECRET);
+  } catch {
+    return null;
+  }
+}
+
+export function verifyRefreshToken(token) {
+  try {
+    return jwt.verify(token, REFRESH_SECRET);
+  } catch {
+    return null;
+  }
+}
+
+// ─── Cookie Management ─────────────────────────────────────────────────────
+export async function setAuthCookies(accessToken, refreshToken) {
+  const cookieStore = await cookies();
+  cookieStore.set("access_token", accessToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 15 * 60, // 15 minutes
+  });
+  cookieStore.set("refresh_token", refreshToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 7 * 24 * 60 * 60, // 7 days
+  });
+}
+
+export async function clearAuthCookies() {
+  const cookieStore = await cookies();
+  cookieStore.delete("access_token");
+  cookieStore.delete("refresh_token");
+}
+
+export async function getTokensFromCookies() {
+  const cookieStore = await cookies();
+  return {
+    accessToken: cookieStore.get("access_token")?.value || null,
+    refreshToken: cookieStore.get("refresh_token")?.value || null,
+  };
+}
+
+// ─── Extract token from request ─────────────────────────────────────────────
+export function extractTokenFromRequest(req) {
+  // 1. Try Authorization header (for mobile/API clients)
+  const authHeader = req.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.slice(7);
+  }
+
+  // 2. Try cookie (for web clients)
+  const cookieHeader = req.headers.get("cookie") || "";
+  const match = cookieHeader.match(/access_token=([^;]+)/);
+  if (match) {
+    return match[1];
+  }
+
+  return null;
+}
+
+// ─── Generate Token Pair ────────────────────────────────────────────────────
+export function generateTokenPair(userId, role) {
+  const accessToken = signAccessToken(userId, role);
+  const refreshToken = signRefreshToken(userId);
+  return { accessToken, refreshToken };
+}

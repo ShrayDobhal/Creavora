@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -56,6 +57,8 @@ export function CreatorTopBar({
   title,
   subtitle,
   right,
+  user,
+  unreadNotifications = 0,
 }) {
   return (
     <header className="sticky top-0 z-30 flex h-[76px] items-center gap-4 border-b border-line bg-white px-6">
@@ -98,16 +101,18 @@ export function CreatorTopBar({
             {coins}
           </span>
         )}
-        <button className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-canvas cursor-pointer">
+        <Link href="/notifications" className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-canvas cursor-pointer text-ink">
           <Bell size={19} />
-          <span className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
-            3
-          </span>
-        </button>
+          {unreadNotifications > 0 && (
+            <span className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[10px] font-bold text-white animate-pulse">
+              {unreadNotifications}
+            </span>
+          )}
+        </Link>
         <UserMenu
-          name="Ananya Sharma"
-          label="Ananya Sharma"
-          sub="Creator"
+          name={user?.name || "Creator"}
+          label={user?.name || "Creator"}
+          sub="Creator Portal"
           items={creatorMenu}
         />
       </div>
@@ -153,15 +158,74 @@ function PlanCard() {
 
 export default function CreatorLayout({ children, topbar }) {
   const pathname = usePathname();
+  const [user, setUser] = useState(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  const fetchUser = () => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.error) {
+          setUser(data);
+        }
+      })
+      .catch((err) => console.error("Error loading creator layout state:", err));
+  };
+
+  const fetchNotifications = () => {
+    fetch("/api/notifications")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.error) {
+          const count = data.filter((n) => !n.read).length;
+          setUnreadNotifications(count);
+        }
+      })
+      .catch((err) => console.error("Error loading notifications:", err));
+  };
+
+  useEffect(() => {
+    fetchUser();
+    fetchNotifications();
+
+    window.addEventListener("user-update", fetchUser);
+    window.addEventListener("notifications-update", fetchNotifications);
+    return () => {
+      window.removeEventListener("user-update", fetchUser);
+      window.removeEventListener("notifications-update", fetchNotifications);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-white">
-      <CreatorTopBar {...topbar} />
+      <CreatorTopBar
+        {...topbar}
+        coins={user ? Math.round(user.walletBalance) : 0}
+        user={user}
+        unreadNotifications={unreadNotifications}
+      />
       <div className="flex">
         <aside className="sticky top-[76px] hidden h-[calc(100vh-76px)] w-[244px] shrink-0 flex-col overflow-y-auto border-r border-line px-4 py-4 lg:flex">
-          <ProfileCard />
+          {user && (
+            <Link href={`/creator/${user.handle}`} className="block rounded-2xl bg-brand-50/70 p-3.5 hover:bg-brand-50">
+              <div className="flex items-center gap-3">
+                <Avatar name={user.name} size={46} />
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1 text-[14.5px] font-bold">
+                    {user.name} <Verified size={14} />
+                  </p>
+                  <p className="text-[12px] text-muted">@{user.handle}</p>
+                </div>
+              </div>
+              <span className="mt-2.5 inline-block rounded-md bg-brand-100 px-2 py-0.5 text-[11px] font-bold text-brand-700">
+                Creator Account
+              </span>
+            </Link>
+          )}
           <nav className="mt-4 space-y-1">
             {nav.map(({ href, label, icon: Icon, count, end }) => {
               const active = end ? pathname === href : pathname.startsWith(href);
+              const displayCount = label === "Messages" ? count : (label === "Notifications" ? unreadNotifications : null);
               return (
                 <Link
                   key={href + label}
@@ -172,9 +236,9 @@ export default function CreatorLayout({ children, topbar }) {
                 >
                   <Icon size={19} className={active ? "text-brand-600" : "text-ink/70"} />
                   <span className="flex-1">{label}</span>
-                  {count != null && (
+                  {displayCount != null && displayCount > 0 && (
                     <span className="grid h-5 min-w-5 place-items-center rounded-full bg-brand-600 px-1.5 text-[11px] font-bold text-white">
-                      {count}
+                      {displayCount}
                     </span>
                   )}
                 </Link>

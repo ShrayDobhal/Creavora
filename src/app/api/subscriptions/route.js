@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { withAuth } from "@/lib/middleware";
+import { createSubscriptionSchema, validateBody } from "@/lib/validators";
 
-// GET active subscriptions for Arjun
-export async function GET() {
+// GET active subscriptions for authenticated user
+export const GET = withAuth(async (req, { user }) => {
   try {
-    const user = await db.user.findUnique({
-      where: { handle: "arjun" },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     const subscriptions = await db.subscription.findMany({
       where: {
         userId: user.id,
@@ -26,30 +20,44 @@ export async function GET() {
     console.error("GET Subscriptions Error:", error);
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
-}
+});
 
 // POST create/renew subscription
-export async function POST(req) {
+export const POST = withAuth(async (req, { user }) => {
   try {
-    const { creatorHandle, tier, price, method } = await req.json();
-    const subPrice = parseFloat(price);
-
-    if (isNaN(subPrice) || subPrice <= 0) {
-      return NextResponse.json({ error: "Invalid subscription price" }, { status: 400 });
+    const body = await req.json();
+    
+    // Support legacy payloads that send creatorHandle
+    let creatorId = body.creatorId;
+    if (!creatorId && body.creatorHandle) {
+      const creatorUser = await db.user.findUnique({
+        where: { handle: body.creatorHandle }
+      });
+      if (creatorUser) {
+        creatorId = creatorUser.id;
+      }
     }
 
-    // Get fan user (Arjun)
-    const user = await db.user.findUnique({
-      where: { handle: "arjun" },
+    const { error, data } = validateBody(createSubscriptionSchema, {
+      creatorId,
+      tier: body.tier,
+      price: parseFloat(body.price),
+      method: body.method || "Wallet Balance",
     });
+
+    if (error) {
+      return NextResponse.json({ error: "Validation failed", details: error }, { status: 400 });
+    }
+
+    const subPrice = data.price;
 
     // Get creator user
     const creator = await db.user.findUnique({
-      where: { handle: creatorHandle },
+      where: { id: data.creatorId, deletedAt: null },
     });
 
-    if (!user || !creator) {
-      return NextResponse.json({ error: "User or Creator not found" }, { status: 404 });
+    if (!creator) {
+      return NextResponse.json({ error: "Creator not found" }, { status: 404 });
     }
 
     if (user.walletBalance < subPrice) {
@@ -74,7 +82,7 @@ export async function POST(req) {
         },
       });
 
-      // 2. Increment creator's wallet balance (simulating payout credit)
+      // 2. Increment creator's wallet balance
       await tx.user.update({
         where: { id: creator.id },
         data: {
@@ -103,17 +111,17 @@ export async function POST(req) {
         update: {
           status: "ACTIVE",
           price: subPrice,
-          tier: tier || "Premium Monthly",
+          tier: data.tier,
           renewsOn: renewsOnStr,
-          method: method || "Wallet Balance",
+          method: data.method,
         },
         create: {
           userId: user.id,
           creatorId: creator.id,
-          tier: tier || "Premium Monthly",
+          tier: data.tier,
           price: subPrice,
           renewsOn: renewsOnStr,
-          method: method || "Wallet Balance",
+          method: data.method,
           status: "ACTIVE",
         }
       });
@@ -124,7 +132,7 @@ export async function POST(req) {
           userId: user.id,
           amount: subPrice,
           type: "SUBSCRIPTION",
-          method: method || "Wallet Balance",
+          method: data.method,
           reference: `SUB${Math.floor(100000 + Math.random() * 900000)}`,
           status: "COMPLETED",
         }
@@ -147,7 +155,7 @@ export async function POST(req) {
         data: {
           userId: user.id,
           title: "Subscribed Successfully",
-          message: `You are now subscribed to ${creator.name} (${tier}). Received 150 XP!`,
+          message: `You are now subscribed to ${creator.name} (${data.tier}). Received 150 XP!`,
           type: "SYSTEM",
           read: false,
         }
@@ -158,7 +166,7 @@ export async function POST(req) {
         data: {
           userId: creator.id,
           title: "New Premium Subscriber!",
-          message: `${user.name} has subscribed to your ${tier} tier.`,
+          message: `${user.name} has subscribed to your ${data.tier} tier.`,
           type: "SYSTEM",
           read: false,
         }
@@ -172,4 +180,4 @@ export async function POST(req) {
     console.error("Purchase Subscription Error:", error);
     return NextResponse.json({ error: "Purchase transaction failed" }, { status: 500 });
   }
-}
+});
