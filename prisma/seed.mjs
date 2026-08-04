@@ -126,6 +126,20 @@ async function syncPostEngagement(db, posts) {
   }
 }
 
+export async function upsertCreatorProfile(db, userId, category) {
+  return db.creatorProfile.upsert({
+    where: { userId },
+    update: {
+      category,
+      subscriberCount: 0,
+      monthlyRevenue: 0,
+      totalEarnings: 0,
+      availableBalance: 0,
+    },
+    create: { userId, category },
+  });
+}
+
 export async function runSeed(env = process.env) {
   const databaseUrl = databaseUrlFor(env);
   const db = createClient(databaseUrl);
@@ -167,11 +181,7 @@ export async function runSeed(env = process.env) {
         verified: true,
       }, passwordHash);
       seededCreators.push({ ...creator, user });
-      await db.creatorProfile.upsert({
-        where: { userId: user.id },
-        update: { category: creator.category },
-        create: { userId: user.id, category: creator.category },
-      });
+      await upsertCreatorProfile(db, user.id, creator.category);
     }
 
     // Posts have no natural unique key in the schema. Replacing posts owned by the

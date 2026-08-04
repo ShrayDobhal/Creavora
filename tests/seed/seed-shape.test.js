@@ -109,4 +109,31 @@ describe("development seed", () => {
       }),
     ).rejects.toThrow("Seed data is only allowed for a local PostgreSQL DATABASE_URL");
   });
+
+  it("clears stale creator aggregates through the repeat-seed upsert update", async () => {
+    const { upsertCreatorProfile } = await import("../../prisma/seed.mjs");
+    const profile = {
+      userId: "creator-1",
+      category: "Legacy",
+      subscriberCount: 2500,
+      monthlyRevenue: 18000,
+      totalEarnings: 72000,
+      availableBalance: 18000,
+    };
+    const db = {
+      creatorProfile: {
+        upsert: async ({ update }) => Object.assign(profile, update),
+      },
+    };
+
+    await upsertCreatorProfile(db, "creator-1", "Food");
+
+    expect(profile).toMatchObject({
+      category: "Food",
+      subscriberCount: 0,
+      monthlyRevenue: 0,
+      totalEarnings: 0,
+      availableBalance: 0,
+    });
+  });
 });
