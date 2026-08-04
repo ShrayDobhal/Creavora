@@ -35,11 +35,11 @@ const presentProfile = (user) => ({
 });
 
 async function findActiveProfile(database, userId) {
-  const user = await database.user.findUnique({
-    where: { id: userId },
+  const user = await database.user.findFirst({
+    where: { id: userId, deletedAt: null },
     include: PROFILE_INCLUDE,
   });
-  if (!user || user.deletedAt) profileNotFound();
+  if (!user) profileNotFound();
   return user;
 }
 
@@ -62,17 +62,13 @@ export async function updateCurrentProfile(database, userId, input) {
     if (input[field]) await assertOwnedMedia(database, userId, input[field]);
   }
 
-  try {
-    const user = await database.user.update({
-      where: { id: userId },
-      data: input,
-      include: PROFILE_INCLUDE,
-    });
-    return presentProfile(user);
-  } catch (error) {
-    if (error?.code === "P2025") profileNotFound();
-    throw error;
-  }
+  const result = await database.user.updateMany({
+    where: { id: userId, deletedAt: null },
+    data: input,
+  });
+  if (result.count === 0) profileNotFound();
+
+  return getCurrentProfile(database, userId);
 }
 
 export { INVALID_PROFILE_MEDIA, PROFILE_NOT_FOUND };
