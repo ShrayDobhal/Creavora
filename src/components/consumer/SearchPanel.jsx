@@ -1,0 +1,50 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Search } from "lucide-react";
+
+export function SearchPanel({ onSearch, busy = false }) {
+  const [query, setQuery] = useState("");
+  const lastSubmitted = useRef("");
+
+  useEffect(() => {
+    const normalized = query.trim();
+    if (!normalized || normalized === lastSubmitted.current) return undefined;
+
+    const timer = window.setTimeout(() => {
+      lastSubmitted.current = normalized;
+      onSearch(normalized);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [onSearch, query]);
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    const normalized = query.trim();
+    if (!normalized) return;
+    lastSubmitted.current = normalized;
+    onSearch(normalized);
+  }
+
+  return (
+    <form role="search" onSubmit={handleSubmit} className="flex w-full items-center gap-2 rounded-2xl border border-line bg-white p-2 shadow-sm focus-within:border-brand-300">
+      <Search className="ml-2 shrink-0 text-muted" size={19} />
+      <label htmlFor="explore-search" className="sr-only">Search creators, posts, and communities</label>
+      <input
+        id="explore-search"
+        type="search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search creators, posts, and communities"
+        className="h-10 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted"
+      />
+      <button
+        type="submit"
+        disabled={busy}
+        className="h-10 rounded-xl bg-brand-600 px-5 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-60"
+      >
+        {busy ? "Searching" : "Search"}
+      </button>
+    </form>
+  );
+}
