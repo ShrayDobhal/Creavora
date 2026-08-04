@@ -42,21 +42,18 @@ const creatorStories = [
   {
     name: "Aisha Khan",
     role: "Food creator",
-    handle: "aisha-bites",
     seed: "aisha-bites",
     story: "Regional recipes and street-food stories from Mumbai.",
   },
   {
     name: "Meher Iyer",
     role: "Fashion creator",
-    handle: "meher-drapes",
     seed: "meher-drapes",
     story: "Handloom, styling, and thoughtful Indian fashion.",
   },
   {
     name: "Kabir Mehta",
     role: "Fitness creator",
-    handle: "coach-kabir",
     seed: "coach-kabir",
     story: "Strength training, yoga, and sustainable routines.",
   },
@@ -190,17 +187,17 @@ export default function Landing() {
             </div>
             <div className="mt-9 grid gap-6 md:grid-cols-3">
               {creatorStories.map((creator) => (
-                <article key={creator.handle} className="overflow-hidden rounded-3xl border border-line bg-white shadow-[0_18px_50px_-35px_rgba(15,15,20,.45)]">
+                <article key={creator.name} className="overflow-hidden rounded-3xl border border-line bg-white shadow-[0_18px_50px_-35px_rgba(15,15,20,.45)]">
                   <CreatorPhoto {...creator} className="h-72 w-full rounded-none" />
                   <div className="p-5">
                     <p className="min-h-12 text-sm leading-6 text-muted">{creator.story}</p>
-                    <Link href={`/creator/${creator.handle}`} className="mt-5 flex items-center gap-2 text-sm font-bold text-brand-700 hover:underline">
-                      View {creator.name.split(" ")[0]}&apos;s profile <ArrowRight size={15} />
-                    </Link>
                   </div>
                 </article>
               ))}
             </div>
+            <Link href="/explore" className="mt-8 flex w-fit items-center gap-2 text-sm font-bold text-brand-700 hover:underline">
+              Browse active creator profiles <ArrowRight size={15} />
+            </Link>
           </div>
         </section>
 

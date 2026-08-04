@@ -55,10 +55,12 @@ Do not reuse access and refresh secrets. Do not commit `.env` or copy production
 Seeding is deliberately restricted to a separate local PostgreSQL database. Create the schema in that database first, restore the application database variable, then run the guarded seed command:
 
 ```powershell
-$creavoraAppDatabase = $env:DATABASE_URL
-$env:DATABASE_URL = $env:SEED_DATABASE_URL
+$creavoraAppDatabase = "postgresql://creavora:creavora@localhost:5432/creavora_dev?schema=public"
+$creavoraSeedDatabase = "postgresql://creavora:creavora@localhost:5432/creavora_seed?schema=public"
+$env:DATABASE_URL = $creavoraSeedDatabase
 npx prisma db push
 $env:DATABASE_URL = $creavoraAppDatabase
+$env:SEED_DATABASE_URL = $creavoraSeedDatabase
 $env:NODE_ENV = "development"
 $env:SEED_DEVELOPMENT_CONFIRMATION = "local-development"
 npm run db:seed

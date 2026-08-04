@@ -27,6 +27,10 @@ describe("Landing auth entry points", () => {
 
     expect(container.querySelector('a[href="#"]')).not.toBeInTheDocument();
     expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(screen.getByRole("link", { name: /browse active creator profiles/i })).toHaveAttribute(
+      "href",
+      "/explore",
+    );
   });
 });
 
@@ -42,5 +46,9 @@ describe("Fan navigation", () => {
     );
     expect(screen.queryByPlaceholderText(/search creators/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /create/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Creavora" })).toHaveAttribute(
+      "href",
+      "/landing",
+    );
   });
 });

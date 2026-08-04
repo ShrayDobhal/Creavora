@@ -4,11 +4,12 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Sparkles, ArrowRight, Loader2 } from "lucide-react";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/";
+  const redirect = safeRedirectPath(searchParams.get("redirect"), "/");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -77,8 +78,9 @@ function LoginForm() {
             )}
 
             <div>
-              <label className="block text-[13px] font-semibold text-ink/80 mb-1.5">Email</label>
+              <label htmlFor="user-email" className="block text-[13px] font-semibold text-ink/80 mb-1.5">Email</label>
               <input
+                id="user-email"
                 type="email"
                 required
                 value={email}
@@ -89,9 +91,10 @@ function LoginForm() {
             </div>
 
             <div>
-              <label className="block text-[13px] font-semibold text-ink/80 mb-1.5">Password</label>
+              <label htmlFor="user-password" className="block text-[13px] font-semibold text-ink/80 mb-1.5">Password</label>
               <div className="relative">
                 <input
+                  id="user-password"
                   type={showPw ? "text" : "password"}
                   required
                   value={password}
@@ -101,6 +104,7 @@ function LoginForm() {
                 />
                 <button
                   type="button"
+                  aria-label={showPw ? "Hide password" : "Show password"}
                   onClick={() => setShowPw(!showPw)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
                 >

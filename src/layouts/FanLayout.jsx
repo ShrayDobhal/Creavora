@@ -47,11 +47,11 @@ export function Logo({ className = "" }) {
   return (
     <Link
       href="/landing"
-      title="Go to the Crevora landing page"
+      title="Go to the Creavora landing page"
       className={`flex w-fit items-center gap-2.5 ${className}`}
     >
       <Sparkles size={26} className="fill-brand-500 text-brand-500" />
-      <span className="text-[22px] font-extrabold tracking-tight">Crevora</span>
+      <span className="text-[22px] font-extrabold tracking-tight">Creavora</span>
     </Link>
   );
 }
