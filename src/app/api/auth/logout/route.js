@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { clearAuthCookies, getTokensFromCookies, verifyRefreshToken } from "@/lib/auth";
+import { clearAuthCookies, getTokensFromCookies, hashRefreshToken, verifyRefreshToken } from "@/lib/auth";
 
 export async function POST(req) {
   try {
@@ -22,7 +22,7 @@ export async function POST(req) {
         } else {
           // Revoke only the current session's token
           await db.refreshToken.updateMany({
-            where: { token: refreshToken },
+            where: { tokenHash: hashRefreshToken(refreshToken) },
             data: { revoked: true },
           });
         }

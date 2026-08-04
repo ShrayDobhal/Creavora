@@ -20,17 +20,19 @@ export default function StudioMessagesPage() {
 
   useEffect(() => {
     if (!activeContact) return;
-    setLoadingMsg(true);
-    fetch(`/api/messages?active=${activeContact.name}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setMessages(data);
-        setLoadingMsg(false);
-      })
-      .catch((err) => {
-        console.error("Error loading chat messages:", err);
-        setLoadingMsg(false);
-      });
+    queueMicrotask(() => {
+      setLoadingMsg(true);
+      fetch(`/api/messages?active=${activeContact.name}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setMessages(data);
+          setLoadingMsg(false);
+        })
+        .catch((err) => {
+          console.error("Error loading chat messages:", err);
+          setLoadingMsg(false);
+        });
+    });
   }, [activeContact]);
 
   const handleSend = (e) => {

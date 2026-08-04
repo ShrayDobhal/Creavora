@@ -66,9 +66,6 @@ export function UserMenu({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const pathname = usePathname();
-
-  useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
     if (!open) return;
     const close = (e) => !ref.current?.contains(e.target) && setOpen(false);
@@ -118,6 +115,7 @@ export function UserMenu({
               <Link
                 key={href + l}
                 href={href}
+                onClick={() => setOpen(false)}
                 className="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-semibold hover:bg-canvas"
               >
                 <Icon size={16} className="text-ink/60" />

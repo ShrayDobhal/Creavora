@@ -28,7 +28,7 @@ export default function Placeholder({ title }) {
         </span>
         <h1 className="mt-4 text-[21px] font-extrabold tracking-tight">{label}</h1>
         <p className="mt-2 text-[14px] leading-relaxed text-muted">
-          This screen isn't part of the supplied mockups, so there's nothing to clone yet.
+          This screen isn&apos;t part of the supplied mockups, so there&apos;s nothing to clone yet.
           Everything that was designed is wired and reachable from the sidebar and the
           account menu.
         </p>

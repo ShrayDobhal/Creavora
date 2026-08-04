@@ -40,7 +40,7 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchAdminData();
+    queueMicrotask(fetchAdminData);
   }, []);
 
   const handleUserBan = (userId, handle) => {

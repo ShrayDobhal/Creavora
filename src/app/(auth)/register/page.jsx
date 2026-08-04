@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Sparkles, ArrowRight, Loader2 } from "lucide-react";
@@ -18,15 +18,6 @@ function RegisterForm() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const roleParam = searchParams.get("role");
-    if (roleParam === "CREATOR") {
-      setRole("CREATOR");
-    } else {
-      setRole("FAN");
-    }
-  }, [searchParams]);
 
   async function handleSubmit(e) {
     e.preventDefault();

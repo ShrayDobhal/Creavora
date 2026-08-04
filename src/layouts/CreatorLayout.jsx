@@ -143,7 +143,7 @@ function PlanCard() {
   return (
     <div className="rounded-2xl bg-brand-50/70 p-5 text-center">
       <Crown size={26} className="mx-auto fill-brand-500 text-brand-500" />
-      <p className="mt-2.5 text-[14.5px] font-bold">You're on Premium Plan</p>
+      <p className="mt-2.5 text-[14.5px] font-bold">You&apos;re on Premium Plan</p>
       <p className="mt-2 text-[12.5px] leading-snug text-muted">
         Your plan renews on
         <br />

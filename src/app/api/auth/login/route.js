@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyPassword, generateTokenPair, setAuthCookies } from "@/lib/auth";
+import { hashRefreshToken, verifyPassword, generateTokenPair, setAuthCookies } from "@/lib/auth";
 import { loginSchema, validateBody } from "@/lib/validators";
 
 export async function POST(req) {
@@ -13,7 +13,7 @@ export async function POST(req) {
     }
 
     // Find user by email
-    const user = await db.user.findUnique({
+    const user = await db.user.findFirst({
       where: { email: data.email, deletedAt: null },
     });
 
@@ -66,7 +66,7 @@ export async function POST(req) {
     await db.refreshToken.create({
       data: {
         userId: user.id,
-        token: refreshToken,
+        tokenHash: hashRefreshToken(refreshToken),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         userAgent: req.headers.get("user-agent") || "unknown",
       },

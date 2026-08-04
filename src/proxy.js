@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "creavora-access-secret-dev-only";
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || (process.env.NODE_ENV === "production" ? undefined : "creavora-access-secret-dev-only");
 
 // Routes that don't require authentication
 const PUBLIC_ROUTES = [
@@ -23,25 +23,42 @@ const ADMIN_ROUTES = ["/admin"];
 const ADMIN_API_ROUTES = ["/api/admin"];
 
 /**
- * Decode JWT payload without verification (Edge Runtime doesn't support
- * the full jsonwebtoken library). The actual cryptographic verification
- * happens in the API route middleware. This edge middleware only does
- * a quick role check for routing purposes.
+ * Verify the HS256 access token in the Edge Runtime before using its role.
+ * Decoding an unverified JWT allows anyone to forge a role claim.
  */
-function decodeJwtPayload(token) {
+async function verifyJwtPayload(token) {
   try {
     const parts = token.split(".");
-    if (parts.length !== 3) return null;
+    if (parts.length !== 3 || !ACCESS_SECRET) return null;
+    const header = JSON.parse(atob(parts[0].replace(/-/g, "+").replace(/_/g, "/")));
+    if (header.alg !== "HS256") return null;
     const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-    // Check expiration
     if (payload.exp && payload.exp * 1000 < Date.now()) return null;
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(ACCESS_SECRET),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    const signature = Uint8Array.from(
+      atob(parts[2].replace(/-/g, "+").replace(/_/g, "/")),
+      (character) => character.charCodeAt(0)
+    );
+    const valid = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      signature,
+      new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
+    );
+    if (!valid) return null;
     return payload;
   } catch {
     return null;
   }
 }
 
-export function proxy(req) {
+export async function proxy(req) {
   const { pathname } = req.nextUrl;
 
   // Allow static files and Next.js internals
@@ -82,7 +99,7 @@ export function proxy(req) {
   }
 
   // Decode the token to get the role
-  const payload = decodeJwtPayload(token);
+  const payload = await verifyJwtPayload(token);
   if (!payload) {
     // Expired or malformed token
     if (pathname.startsWith("/api/")) {

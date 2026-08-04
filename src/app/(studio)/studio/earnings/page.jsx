@@ -122,26 +122,12 @@ function AreaChart() {
 function Donut() {
   const r = 54;
   const c = 2 * Math.PI * r;
-  let offset = 0;
   return (
     <svg viewBox="0 0 140 140" className="h-[140px] w-[140px] -rotate-90">
-      {breakdown.map((b) => {
+      {breakdown.map((b, index) => {
         const len = (b.pct / 100) * c;
-        const el = (
-          <circle
-            key={b.label}
-            cx="70"
-            cy="70"
-            r={r}
-            fill="none"
-            stroke={b.color}
-            strokeWidth="26"
-            strokeDasharray={`${len} ${c - len}`}
-            strokeDashoffset={-offset}
-          />
-        );
-        offset += len;
-        return el;
+        const offset = breakdown.slice(0, index).reduce((total, segment) => total + (segment.pct / 100) * c, 0);
+        return <circle key={b.label} cx="70" cy="70" r={r} fill="none" stroke={b.color} strokeWidth="26" strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-offset} />;
       })}
     </svg>
   );

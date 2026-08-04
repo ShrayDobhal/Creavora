@@ -216,7 +216,7 @@ function CheckoutContent() {
               </div>
             </Card>
 
-            <h2 className="mt-6 text-[17px] font-extrabold">What you'll get</h2>
+            <h2 className="mt-6 text-[17px] font-extrabold">What you&apos;ll get</h2>
             <div className="mt-3.5 space-y-3.5">
               {perks.map(({ icon: Icon, title, sub }) => (
                 <div key={title} className="flex items-start gap-3">
@@ -342,7 +342,7 @@ function CheckoutContent() {
             </button>
 
             <p className="mt-3.5 text-center text-[12px] text-muted">
-              By proceeding, you agree to Crevora's{" "}
+              By proceeding, you agree to Crevora&apos;s{" "}
               <a href="#" className="font-semibold text-brand-600">
                 Terms of Service
               </a>{" "}

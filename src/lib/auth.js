@@ -1,10 +1,12 @@
 import bcrypt from "bcryptjs";
+import { createHash } from "crypto";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
 // ─── Secrets ────────────────────────────────────────────────────────────────
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "creavora-access-secret-dev-only";
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "creavora-refresh-secret-dev-only";
+const isProduction = process.env.NODE_ENV === "production";
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || (isProduction ? undefined : "creavora-access-secret-dev-only");
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || (isProduction ? undefined : "creavora-refresh-secret-dev-only");
 const ACCESS_EXPIRES = "15m";
 const REFRESH_EXPIRES = "7d";
 
@@ -14,6 +16,11 @@ const COOKIE_OPTIONS = {
   sameSite: "lax",
   path: "/",
 };
+
+function requireSecret(secret, name) {
+  if (!secret) throw new Error(`${name} must be configured in production`);
+  return secret;
+}
 
 // ─── Password Hashing ──────────────────────────────────────────────────────
 const SALT_ROUNDS = 12;
@@ -28,20 +35,20 @@ export async function verifyPassword(plain, hashed) {
 
 // ─── JWT Tokens ─────────────────────────────────────────────────────────────
 export function signAccessToken(userId, role) {
-  return jwt.sign({ sub: userId, role }, ACCESS_SECRET, {
+  return jwt.sign({ sub: userId, role }, requireSecret(ACCESS_SECRET, "JWT_ACCESS_SECRET"), {
     expiresIn: ACCESS_EXPIRES,
   });
 }
 
 export function signRefreshToken(userId) {
-  return jwt.sign({ sub: userId, type: "refresh" }, REFRESH_SECRET, {
+  return jwt.sign({ sub: userId, type: "refresh" }, requireSecret(REFRESH_SECRET, "JWT_REFRESH_SECRET"), {
     expiresIn: REFRESH_EXPIRES,
   });
 }
 
 export function verifyAccessToken(token) {
   try {
-    return jwt.verify(token, ACCESS_SECRET);
+    return jwt.verify(token, requireSecret(ACCESS_SECRET, "JWT_ACCESS_SECRET"));
   } catch {
     return null;
   }
@@ -49,7 +56,7 @@ export function verifyAccessToken(token) {
 
 export function verifyRefreshToken(token) {
   try {
-    return jwt.verify(token, REFRESH_SECRET);
+    return jwt.verify(token, requireSecret(REFRESH_SECRET, "JWT_REFRESH_SECRET"));
   } catch {
     return null;
   }
@@ -64,8 +71,13 @@ export async function setAuthCookies(accessToken, refreshToken) {
   });
   cookieStore.set("refresh_token", refreshToken, {
     ...COOKIE_OPTIONS,
+    path: "/api/auth",
     maxAge: 7 * 24 * 60 * 60, // 7 days
   });
+}
+
+export function hashRefreshToken(token) {
+  return createHash("sha256").update(token).digest("hex");
 }
 
 export async function clearAuthCookies() {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   verifyRefreshToken,
+  hashRefreshToken,
   generateTokenPair,
   setAuthCookies,
   getTokensFromCookies,
@@ -41,7 +42,7 @@ export async function POST(req) {
     // Check the token exists in DB and is not revoked
     const storedToken = await db.refreshToken.findFirst({
       where: {
-        token: refreshToken,
+        tokenHash: hashRefreshToken(refreshToken),
         userId: payload.sub,
         revoked: false,
         expiresAt: { gt: new Date() },
@@ -61,7 +62,7 @@ export async function POST(req) {
     }
 
     // Get the user
-    const user = await db.user.findUnique({
+    const user = await db.user.findFirst({
       where: { id: payload.sub, deletedAt: null },
     });
 
@@ -86,7 +87,7 @@ export async function POST(req) {
     await db.refreshToken.create({
       data: {
         userId: user.id,
-        token: newRefresh,
+        tokenHash: hashRefreshToken(newRefresh),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         userAgent: req.headers.get("user-agent") || "unknown",
       },

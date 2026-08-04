@@ -37,7 +37,7 @@ export default function StudioPayoutsPage() {
   };
 
   useEffect(() => {
-    fetchPayoutDetails();
+    queueMicrotask(fetchPayoutDetails);
   }, []);
 
   const handleWithdrawal = () => {
