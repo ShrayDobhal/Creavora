@@ -55,9 +55,7 @@ export function createPostPost({ database = db, logError = console.error } = {})
             data: follows.map((follow) => ({
               userId: follow.followerId,
               title: `New Post by ${creator.name}`,
-              message: data.isPremium
-                ? `${creator.name} published work marked for future premium access.`
-                : `${creator.name} published: "${data.content.substring(0, 30)}..."`,
+              message: `${creator.name} published: "${data.content.substring(0, 30)}..."`,
               type: "SYSTEM",
               read: false,
             })),

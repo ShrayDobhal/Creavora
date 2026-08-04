@@ -143,19 +143,13 @@ export function FeedCard({
           </Link>
           <p className="text-xs text-muted">{post.creator.roleTitle || `@${post.creator.handle}`} · {formatDate(post.publishedAt)}</p>
         </div>
-        {post.isPremium ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-bold text-ink/70">
-            <Clock3 size={12} /> Premium flag
-          </span>
-        ) : null}
       </header>
 
       {unavailable ? (
         <div className="mx-4 grid min-h-44 place-items-center rounded-xl bg-neutral-100 p-8 text-center sm:mx-5">
           <div>
             <Clock3 className="mx-auto text-brand-600" size={28} />
-            <p className="mt-3 font-bold">Premium access coming later</p>
-            <p className="mt-1 text-sm text-muted">This post is unavailable in the current release.</p>
+            <p className="mt-3 font-bold">This post is not available in the current release.</p>
           </div>
         </div>
       ) : (

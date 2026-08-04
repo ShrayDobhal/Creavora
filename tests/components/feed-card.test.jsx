@@ -13,7 +13,6 @@ const post = {
   mediaUrl: "https://cdn.example.test/jaipur.jpg",
   mediaType: "image",
   isPremium: false,
-  price: 0,
   publishedAt: "2026-08-04T10:00:00.000Z",
   counts: { likes: 8, comments: 2, views: 34, shares: 1 },
   creator: {
@@ -23,7 +22,7 @@ const post = {
     avatar: null,
     roleTitle: "Textile artist",
     verified: true,
-    subscriberCount: 42,
+    followerCount: 42,
     isFollowing: false,
   },
   viewer: {
@@ -31,7 +30,6 @@ const post = {
     isBookmarked: false,
     isFollowing: false,
   },
-  isLocked: false,
 };
 
 afterEach(() => {
@@ -100,8 +98,8 @@ describe("FeedCard", () => {
     expect(screen.queryByLabelText(/shares/i)).not.toBeInTheDocument();
   });
 
-  it("shows premium work as neutrally unavailable without subscribe or upgrade claims", () => {
-    render(
+  it("shows unavailable work without paid-release claims", () => {
+    const { container } = render(
       <FeedCard
         post={{
           ...post,
@@ -115,8 +113,10 @@ describe("FeedCard", () => {
       />,
     );
 
-    expect(screen.getByText("Premium access coming later")).toBeVisible();
-    expect(screen.queryAllByText(/subscribe|upgrade|paid|unlock/i)).toHaveLength(0);
+    expect(
+      screen.getByText("This post is not available in the current release."),
+    ).toBeVisible();
+    expect(container).not.toHaveTextContent(/premium|subscribe|unlock|upgrade|₹/i);
   });
 
   it("loads and creates comments through explicit callbacks", async () => {

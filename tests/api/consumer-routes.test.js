@@ -214,6 +214,28 @@ describe("consumer API contracts", () => {
     expect(logError).toHaveBeenCalledOnce();
   });
 
+  it("keeps unavailable-post follower notifications free of paid-release claims", async () => {
+    const createMany = vi.fn().mockResolvedValue({ count: 1 });
+    const response = await createPostPost({
+      database: {
+        post: { create: vi.fn().mockResolvedValue({ id: "post-1", content: "New work" }) },
+        follow: { findMany: vi.fn().mockResolvedValue([{ followerId: "user-2" }]) },
+        notification: { createMany },
+      },
+    })(
+      new Request("http://localhost/api/posts", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: "New work", isPremium: true }),
+      }),
+      { user: { ...viewer, name: "Creator", role: "CREATOR" } },
+    );
+
+    expect(response.status).toBe(200);
+    const messages = createMany.mock.calls[0][0].data.map(({ message }) => message).join(" ");
+    expect(messages).not.toMatch(/premium|subscribe|unlock|upgrade|₹/i);
+  });
+
   it("validates creator directory filters and returns a cursor page", async () => {
     const invalid = await createCreatorsGet({ user: { findMany: vi.fn() } })(
       new Request("http://localhost/api/creators?category=Unknown"),

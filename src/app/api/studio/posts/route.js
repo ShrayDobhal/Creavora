@@ -40,9 +40,7 @@ export const POST = withCreatorAuth(async (req, { user: creator }) => {
         data: follows.map(f => ({
           userId: f.followerId,
           title: `New Post by ${creator.name}!`,
-          message: data.isPremium
-            ? `${creator.name} just posted a new premium locked post for ₹${postPrice.toFixed(0)}!`
-            : `${creator.name} uploaded a new post: "${data.content.substring(0, 30)}..."`,
+          message: `${creator.name} uploaded a new post: "${data.content.substring(0, 30)}..."`,
           type: "SYSTEM",
           read: false
         }))

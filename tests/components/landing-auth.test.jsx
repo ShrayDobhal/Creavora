@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/feed" }));
@@ -114,7 +114,7 @@ describe("Fan navigation", () => {
         }),
       ),
     );
-    render(<FanLayout><p>Release content</p></FanLayout>);
+    const { container } = render(<FanLayout><p>Release content</p></FanLayout>);
 
     expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute("href", "/feed");
     expect(screen.getByRole("link", { name: "Explore" })).toHaveAttribute("href", "/explore");
@@ -132,5 +132,88 @@ describe("Fan navigation", () => {
       "Go Premium",
       "Upgrade Now",
     ].forEach((label) => expect(screen.queryByText(label)).not.toBeInTheDocument());
+    expect(container).not.toHaveTextContent(/premium|subscribe|unlock|upgrade|₹/i);
+  });
+
+  it("keeps successful notification state when the identity request fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((path) => {
+        if (path === "/api/auth/me") return Promise.reject(new Error("Identity unavailable"));
+        return Promise.resolve(
+          new Response(JSON.stringify([{ id: "notice-1", read: false }]), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+        );
+      }),
+    );
+
+    render(<FanLayout><p>Release content</p></FanLayout>);
+
+    expect((await screen.findAllByText("1")).length).toBeGreaterThan(0);
+  });
+
+  it("keeps successful identity state when the notification request fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((path) => {
+        if (path === "/api/notifications") {
+          return Promise.reject(new Error("Notifications unavailable"));
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ name: "Leela Menon", handle: "leela" }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+        );
+      }),
+    );
+
+    render(<FanLayout><p>Release content</p></FanLayout>);
+
+    expect(await screen.findByText("Leela Menon")).toBeVisible();
+    expect(screen.getByText("@leela")).toBeVisible();
+  });
+
+  it("refreshes identity and notifications after in-session update events", async () => {
+    let userRequest = 0;
+    let notificationRequest = 0;
+    const fetchMock = vi.fn((path) => {
+      if (path === "/api/auth/me") {
+        userRequest += 1;
+        const user = userRequest === 1
+          ? { name: "Initial User", handle: "initial" }
+          : { name: "Updated User", handle: "updated" };
+        return Promise.resolve(
+          new Response(JSON.stringify(user), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+        );
+      }
+      notificationRequest += 1;
+      const notifications = notificationRequest === 1
+        ? []
+        : [{ id: "notice-1", read: false }, { id: "notice-2", read: false }];
+      return Promise.resolve(
+        new Response(JSON.stringify(notifications), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FanLayout><p>Release content</p></FanLayout>);
+    expect(await screen.findByText("Initial User")).toBeVisible();
+
+    await act(async () => window.dispatchEvent(new Event("user-update")));
+    expect(await screen.findByText("Updated User")).toBeVisible();
+    expect(notificationRequest).toBe(1);
+
+    await act(async () => window.dispatchEvent(new Event("notifications-update")));
+    expect((await screen.findAllByText("2")).length).toBeGreaterThan(0);
+    expect(userRequest).toBe(2);
   });
 });

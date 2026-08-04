@@ -187,26 +187,50 @@ export default function FanLayout({ children, topbar }) {
   const [unreadNotifications, setUnreadNotifications] = useState(null);
 
   useEffect(() => {
-    const controller = new AbortController();
-    Promise.all([
-      fetch("/api/auth/me", { signal: controller.signal }).then((response) =>
-        response.ok ? response.json() : null,
-      ),
-      fetch("/api/notifications", { signal: controller.signal }).then((response) =>
-        response.ok ? response.json() : null,
-      ),
-    ])
-      .then(([nextUser, notifications]) => {
-        if (nextUser) setUser(nextUser);
-        if (Array.isArray(notifications)) {
-          setUnreadNotifications(notifications.filter((notification) => !notification.read).length);
-        }
-      })
-      .catch((error) => {
-        if (error.name !== "AbortError") console.error("Unable to load consumer navigation", error);
-      });
+    let userController;
+    let notificationsController;
 
-    return () => controller.abort();
+    const loadUser = () => {
+      userController?.abort();
+      const controller = new AbortController();
+      userController = controller;
+      fetch("/api/auth/me", { signal: controller.signal })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((nextUser) => {
+          if (nextUser) setUser(nextUser);
+        })
+        .catch((error) => {
+          if (error.name !== "AbortError") console.error("Unable to load account identity", error);
+        });
+    };
+
+    const loadNotifications = () => {
+      notificationsController?.abort();
+      const controller = new AbortController();
+      notificationsController = controller;
+      fetch("/api/notifications", { signal: controller.signal })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((notifications) => {
+          if (Array.isArray(notifications)) {
+            setUnreadNotifications(notifications.filter((notification) => !notification.read).length);
+          }
+        })
+        .catch((error) => {
+          if (error.name !== "AbortError") console.error("Unable to load notifications", error);
+        });
+    };
+
+    loadUser();
+    loadNotifications();
+    window.addEventListener("user-update", loadUser);
+    window.addEventListener("notifications-update", loadNotifications);
+
+    return () => {
+      window.removeEventListener("user-update", loadUser);
+      window.removeEventListener("notifications-update", loadNotifications);
+      userController?.abort();
+      notificationsController?.abort();
+    };
   }, []);
 
   return (
