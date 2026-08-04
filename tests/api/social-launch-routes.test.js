@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { S3Client } from "@aws-sdk/client-s3";
 
 vi.mock("@/lib/db", () => ({ db: {} }));
 vi.mock("@/lib/middleware", () => ({ withAuth: (handler) => handler }));
@@ -303,6 +304,33 @@ describe("Blindly social launch upload signing API", () => {
       "content-type": "image/webp",
       "if-none-match": "*",
     });
+  });
+
+  it("includes content-type and create-only headers in the real AWS signed-header list", async () => {
+    const intent = await createUploadIntent({
+      ownerId: "user-1",
+      assetId: "asset-1",
+      extension: "webp",
+      mimeType: "image/webp",
+      env: {
+        R2_ACCOUNT_ID: "account",
+        R2_ACCESS_KEY_ID: "access",
+        R2_SECRET_ACCESS_KEY: "secret",
+        R2_BUCKET: "uploads",
+        R2_PUBLIC_BASE_URL: "https://cdn.example.test",
+      },
+      client: new S3Client({
+        endpoint: "https://account.r2.cloudflarestorage.com",
+        region: "auto",
+        credentials: { accessKeyId: "access", secretAccessKey: "secret" },
+      }),
+    });
+
+    const signedHeaders = new URL(intent.uploadUrl)
+      .searchParams
+      .get("X-Amz-SignedHeaders")
+      .split(";");
+    expect(signedHeaders).toEqual(expect.arrayContaining(["content-type", "if-none-match"]));
   });
 
   it("rejects an image larger than 5 MiB before persisting an asset", async () => {

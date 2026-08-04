@@ -39,7 +39,10 @@ export async function createUploadIntent({ ownerId, assetId, extension, mimeType
       ContentType: mimeType,
       IfNoneMatch: "*",
     }),
-    { expiresIn: 300 },
+    {
+      expiresIn: 300,
+      signableHeaders: new Set(["content-type", "if-none-match"]),
+    },
   );
 
   return {
