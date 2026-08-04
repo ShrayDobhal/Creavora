@@ -1,8 +1,12 @@
-# Creavora Social Launch Design
+# Blindly Social Launch Design
+
+## Branding
+
+Blindly replaces Creavora across the visible product: logo wordmark, browser metadata, authentication copy, navigation, notifications, email-ready templates, image alt text, accessibility labels, documentation, and deployment-facing titles. Internal repository/package names and historical database records are not renamed unless an API contract requires it; public URLs remain unchanged for compatibility.
 
 ## Goal
 
-Deliver the next launch-ready Creavora vertical: real account management, profile onboarding, image-backed posting, follows, responsive navigation, and a polished feed that matches the supplied desktop reference without exposing unimplemented product features.
+Deliver the next launch-ready Blindly vertical: real account management, profile onboarding, image-backed posting, follows, responsive navigation, and a polished feed that matches the supplied desktop reference without exposing unimplemented product features.
 
 ## Product boundary
 
