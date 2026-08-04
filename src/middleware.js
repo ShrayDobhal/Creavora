@@ -4,6 +4,7 @@ const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "creavora-access-secret-d
 
 // Routes that don't require authentication
 const PUBLIC_ROUTES = [
+  "/",
   "/landing",
   "/login",
   "/creator-login",
@@ -67,6 +68,10 @@ export function middleware(req) {
   const token = accessToken || bearerToken;
 
   if (!token) {
+    // If hitting the index page without auth, redirect to landing
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/landing", req.url));
+    }
     // No token — redirect to login for pages, 401 for APIs
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
