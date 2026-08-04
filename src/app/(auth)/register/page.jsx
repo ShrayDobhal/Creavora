@@ -8,7 +8,7 @@ import { Eye, EyeOff, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialRole = searchParams.get("role") === "CREATOR" ? "CREATOR" : "FAN";
+  const initialRole = searchParams.get("role") === "CREATOR" ? "CREATOR" : "USER";
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -89,14 +89,14 @@ function RegisterForm() {
             <div className="grid grid-cols-2 gap-1 rounded-xl bg-canvas p-1 border border-line">
               <button
                 type="button"
-                onClick={() => setRole("FAN")}
+                onClick={() => setRole("USER")}
                 className={`py-2 text-[13.5px] font-bold rounded-lg transition-all ${
-                  role === "FAN"
+                  role === "USER"
                     ? "bg-white text-brand-700 shadow-sm"
                     : "text-muted hover:text-ink"
                 }`}
               >
-                Join as Fan
+                Join as User
               </button>
               <button
                 type="button"

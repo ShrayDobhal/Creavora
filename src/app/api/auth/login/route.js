@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { hashRefreshToken, verifyPassword, generateTokenPair, setAuthCookies } from "@/lib/auth";
+import { hashRefreshToken, normalizeRole, verifyPassword, generateTokenPair, setAuthCookies } from "@/lib/auth";
 import { loginSchema, validateBody } from "@/lib/validators";
 
 export async function POST(req) {
@@ -34,7 +34,8 @@ export async function POST(req) {
     }
 
     // If a specific role is requested, verify the user has that role
-    if (data.role && user.role !== data.role) {
+    const role = normalizeRole(user.role);
+    if (data.role && role !== data.role) {
       const roleLabel = data.role === "CREATOR" ? "Creator" : "User";
       return NextResponse.json(
         { error: `This account is not registered as a ${roleLabel}. Please use the correct login.` },
@@ -43,7 +44,7 @@ export async function POST(req) {
     }
 
     // Generate tokens
-    const { accessToken, refreshToken } = generateTokenPair(user.id, user.role);
+    const { accessToken, refreshToken } = generateTokenPair(user.id, role);
 
     // Store refresh token (limit to 5 active sessions per user)
     const existingSessions = await db.refreshToken.count({
@@ -91,7 +92,7 @@ export async function POST(req) {
         name: user.name,
         email: user.email,
         handle: user.handle,
-        role: user.role,
+        role,
         avatar: user.avatar,
         verified: user.verified,
       },

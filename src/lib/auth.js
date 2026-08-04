@@ -10,6 +10,10 @@ const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || (isProduction ? undefin
 const ACCESS_EXPIRES = "15m";
 const REFRESH_EXPIRES = "7d";
 
+export function normalizeRole(role) {
+  return role === "FAN" ? "USER" : role;
+}
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
@@ -114,7 +118,7 @@ export function extractTokenFromRequest(req) {
 
 // ─── Generate Token Pair ────────────────────────────────────────────────────
 export function generateTokenPair(userId, role) {
-  const accessToken = signAccessToken(userId, role);
+  const accessToken = signAccessToken(userId, normalizeRole(role));
   const refreshToken = signRefreshToken(userId);
   return { accessToken, refreshToken };
 }

@@ -17,6 +17,7 @@ const PUBLIC_ROUTES = [
 // Routes that require CREATOR role
 const CREATOR_ROUTES = ["/studio"];
 const CREATOR_API_ROUTES = ["/api/studio"];
+const USER_ROUTES = ["/", "/feed", "/explore", "/live", "/subscriptions", "/messages", "/notifications", "/collections", "/wallet", "/rewards", "/saved", "/settings", "/profile", "/checkout"];
 
 // Routes that require ADMIN role
 const ADMIN_ROUTES = ["/admin"];
@@ -111,6 +112,10 @@ export async function proxy(req) {
   }
 
   const role = payload.role;
+
+  if (role === "CREATOR" && USER_ROUTES.some((route) => pathname === route || (route !== "/" && pathname.startsWith(`${route}/`)))) {
+    return NextResponse.redirect(new URL("/studio/content", req.url));
+  }
 
   // Check creator-only routes
   if (

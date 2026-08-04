@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import {
   verifyRefreshToken,
   hashRefreshToken,
+  normalizeRole,
   generateTokenPair,
   setAuthCookies,
   getTokensFromCookies,
@@ -81,7 +82,7 @@ export async function POST(req) {
 
     const { accessToken: newAccess, refreshToken: newRefresh } = generateTokenPair(
       user.id,
-      user.role
+      normalizeRole(user.role)
     );
 
     await db.refreshToken.create({
@@ -101,7 +102,7 @@ export async function POST(req) {
         name: user.name,
         email: user.email,
         handle: user.handle,
-        role: user.role,
+        role: normalizeRole(user.role),
         avatar: user.avatar,
       },
       accessToken: newAccess,

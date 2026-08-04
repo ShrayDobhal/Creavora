@@ -32,8 +32,8 @@ export const registerSchema = z.object({
     )
     .trim()
     .toLowerCase(),
-  role: z.enum(["FAN", "CREATOR"], {
-    errorMap: () => ({ message: "Role must be FAN or CREATOR" }),
+  role: z.enum(["USER", "CREATOR"], {
+    errorMap: () => ({ message: "Role must be USER or CREATOR" }),
   }),
 });
 
@@ -46,7 +46,7 @@ export const loginSchema = z.object({
   password: z
     .string()
     .min(1, "Password is required"),
-  role: z.enum(["FAN", "CREATOR"]).optional(),
+  role: z.enum(["USER", "CREATOR"]).optional(),
 });
 
 // ─── Post Schemas ───────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyAccessToken, extractTokenFromRequest } from "@/lib/auth";
+import { normalizeRole, verifyAccessToken, extractTokenFromRequest } from "@/lib/auth";
 
 /**
  * Authenticate a request and return the full user object.
@@ -31,7 +31,7 @@ export async function authenticate(req) {
     };
   }
 
-  const user = await db.user.findUnique({
+  const user = await db.user.findFirst({
     where: { id: payload.sub, deletedAt: null },
   });
 
@@ -44,7 +44,7 @@ export async function authenticate(req) {
     };
   }
 
-  return { user };
+  return { user: { ...user, role: normalizeRole(user.role) } };
 }
 
 /**

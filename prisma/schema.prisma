@@ -15,7 +15,7 @@ model User {
   handle        String    @unique
   passwordHash  String?
   avatar        String?
-  role          String    @default("FAN") // "FAN", "CREATOR", "ADMIN"
+  role          String    @default("USER") // "USER", "CREATOR", "ADMIN"
   walletBalance Float     @default(0.0)
   xp            Int       @default(0)
   level         Int       @default(1)
