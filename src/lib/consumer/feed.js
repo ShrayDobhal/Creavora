@@ -47,6 +47,7 @@ export async function getFeedPage(db, viewerId, query) {
   const where = {
     deletedAt: null,
     publishedAt: { lte: new Date() },
+    creator: { is: { deletedAt: null } },
   };
 
   if (query.mode === "following") {

@@ -84,4 +84,18 @@ describe("feed services", () => {
 
     expect(fixture.calls.postFindMany[0].where.creatorId).toEqual({ in: ["creator-1"] });
   });
+
+  it("excludes posts from soft-deleted creators", async () => {
+    const fixture = makeTransactionFixture();
+
+    await getFeedPage(fixture.db, "viewer-1", {
+      mode: "latest",
+      limit: 12,
+      cursor: null,
+    });
+
+    expect(fixture.calls.postFindMany[0].where.creator).toEqual({
+      is: { deletedAt: null },
+    });
+  });
 });

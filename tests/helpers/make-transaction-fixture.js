@@ -32,6 +32,7 @@ export function makeTransactionFixture({
         avatar: null,
         roleTitle: "Artist",
         verified: false,
+        deletedAt: null,
         creatorProfile: { subscriberCount: 0 },
         followers: [],
       },
@@ -46,10 +47,16 @@ export function makeTransactionFixture({
   likes = [],
   bookmarks = [],
   subscriptions = [],
+  comments: initialComments = [],
 } = {}) {
   const notifications = [];
-  const comments = [];
-  const calls = { transactions: 0, postFindMany: [] };
+  const comments = [...initialComments];
+  const calls = {
+    transactions: 0,
+    postFindMany: [],
+    postFindFirst: [],
+    commentFindFirst: [],
+  };
 
   const db = {
     $transaction: async (callback) => {
@@ -57,8 +64,15 @@ export function makeTransactionFixture({
       return callback(db);
     },
     post: {
-      findFirst: async ({ where }) =>
-        posts.find((post) => post.id === where.id && post.deletedAt === null) ?? null,
+      findFirst: async ({ where }) => {
+        calls.postFindFirst.push(where);
+        return posts.find(
+          (post) =>
+            post.id === where.id &&
+            post.deletedAt === null &&
+            (!where.creator || post.creator?.deletedAt === where.creator.is?.deletedAt),
+        ) ?? null;
+      },
       findMany: async (args) => {
         calls.postFindMany.push(args);
         return posts;
@@ -147,6 +161,15 @@ export function makeTransactionFixture({
       },
     },
     comment: {
+      findFirst: async ({ where }) => {
+        calls.commentFindFirst.push(where);
+        return comments.find(
+          (comment) =>
+            comment.id === where.id &&
+            comment.postId === where.postId &&
+            comment.deletedAt === null,
+        ) ?? null;
+      },
       create: async ({ data, include }) => {
         const comment = {
           id: `comment-${comments.length + 1}`,

@@ -1,13 +1,39 @@
 import { createCommentSchema } from "../validators";
 
+const ERRORS = Object.freeze({
+  invalidUser: "Invalid user",
+  invalidUserId: "Invalid user ID",
+  invalidPostId: "Invalid post ID",
+  invalidHandle: "Invalid creator handle",
+  postNotFound: "Post not found",
+  creatorNotFound: "Creator not found",
+  parentNotFound: "Parent comment not found",
+});
+
+const requireNonEmptyString = (value, error) => {
+  if (typeof value !== "string" || !value.trim()) throw new Error(error);
+  return value;
+};
+
+const validateUser = (user) => {
+  if (!user || typeof user !== "object") throw new Error(ERRORS.invalidUser);
+  requireNonEmptyString(user.id, ERRORS.invalidUser);
+  requireNonEmptyString(user.name, ERRORS.invalidUser);
+};
+
 const findPost = (tx, postId) =>
-  tx.post.findFirst({ where: { id: postId, deletedAt: null } });
+  tx.post.findFirst({
+    where: { id: postId, deletedAt: null, creator: { is: { deletedAt: null } } },
+  });
 
 const postMissing = () => {
-  throw new Error("Post not found");
+  throw new Error(ERRORS.postNotFound);
 };
 
 export async function toggleLike(db, user, postId) {
+  validateUser(user);
+  requireNonEmptyString(postId, ERRORS.invalidPostId);
+
   return db.$transaction(async (tx) => {
     const post = await findPost(tx, postId);
     if (!post) postMissing();
@@ -48,6 +74,9 @@ export async function toggleLike(db, user, postId) {
 }
 
 export async function toggleBookmark(db, userId, postId) {
+  requireNonEmptyString(userId, ERRORS.invalidUserId);
+  requireNonEmptyString(postId, ERRORS.invalidPostId);
+
   return db.$transaction(async (tx) => {
     const post = await findPost(tx, postId);
     if (!post) postMissing();
@@ -67,11 +96,14 @@ export async function toggleBookmark(db, userId, postId) {
 }
 
 export async function toggleFollow(db, user, handle) {
+  validateUser(user);
+  requireNonEmptyString(handle, ERRORS.invalidHandle);
+
   return db.$transaction(async (tx) => {
     const creator = await tx.user.findFirst({
       where: { handle, role: "CREATOR", deletedAt: null },
     });
-    if (!creator) throw new Error("Creator not found");
+    if (!creator) throw new Error(ERRORS.creatorNotFound);
 
     const existing = await tx.follow.findUnique({
       where: {
@@ -108,11 +140,20 @@ export async function toggleFollow(db, user, handle) {
 }
 
 export async function createComment(db, user, postId, input) {
+  validateUser(user);
+  requireNonEmptyString(postId, ERRORS.invalidPostId);
   const data = createCommentSchema.parse(input);
 
   return db.$transaction(async (tx) => {
     const post = await findPost(tx, postId);
     if (!post) postMissing();
+
+    if (data.parentId) {
+      const parent = await tx.comment.findFirst({
+        where: { id: data.parentId, postId: post.id, deletedAt: null },
+      });
+      if (!parent) throw new Error(ERRORS.parentNotFound);
+    }
 
     const comment = await tx.comment.create({
       data: {
