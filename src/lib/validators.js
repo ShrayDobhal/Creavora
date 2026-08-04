@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { FEED_MODES } from "./consumer/constants";
 
 // ─── Auth Schemas ───────────────────────────────────────────────────────────
 
@@ -72,6 +73,12 @@ export const createCommentSchema = z.object({
     .max(2000, "Comment must be at most 2000 characters")
     .trim(),
   parentId: z.string().uuid().nullable().optional(),
+});
+
+export const feedQuerySchema = z.object({
+  mode: z.enum([...FEED_MODES]),
+  limit: z.coerce.number().int().min(1).max(30),
+  cursor: z.string().min(1).nullable(),
 });
 
 // ─── Message Schemas ────────────────────────────────────────────────────────
