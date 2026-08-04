@@ -7,6 +7,7 @@ import {
   createProfileGet,
   createProfilePatch,
 } from "@/app/api/profile/route";
+import { createUploadSignPost } from "@/app/api/uploads/sign/route";
 
 const jsonRequest = (method, body) =>
   new Request("http://localhost/api/profile", {
@@ -29,6 +30,35 @@ const profileRow = {
   profileVisibility: "PUBLIC",
   deletedAt: null,
   _count: { followers: 12, following: 8, posts: 4 },
+};
+
+const imageInput = {
+  fileName: "morning-run.webp",
+  mimeType: "image/webp",
+  bytes: 1024,
+  width: 640,
+  height: 480,
+  kind: "post",
+};
+
+const unavailableStorage = {
+  getR2Configuration: () => ({ configured: false, reason: "missing_configuration" }),
+};
+
+const configuredStorage = {
+  getR2Configuration: () => ({ configured: true }),
+  buildObjectKey: ({ ownerId, assetId, extension }) => `users/${ownerId}/${assetId}.${extension}`,
+  buildPublicUrl: (key) => `https://cdn.example.test/${key}`,
+  createUploadIntent: vi.fn(async ({ assetId, ownerId, extension, mimeType }) => {
+    const key = `users/${ownerId}/${assetId}.${extension}`;
+    return {
+      assetId,
+      key,
+      uploadUrl: "https://uploads.example.test/signed",
+      publicUrl: `https://cdn.example.test/${key}`,
+      headers: { "content-type": mimeType },
+    };
+  }),
 };
 
 describe("Blindly social launch profile API", () => {
@@ -103,7 +133,7 @@ describe("Blindly social launch profile API", () => {
     expect(response.status).toBe(400);
     expect(updateMany).not.toHaveBeenCalled();
     expect(findFirst).toHaveBeenCalledWith({
-      where: { ownerId: "user-1", publicUrl: "https://cdn.example.test/other-avatar.jpg" },
+      where: { ownerId: "user-1", publicUrl: "https://cdn.example.test/other-avatar.jpg", deletedAt: null },
       select: { id: true },
     });
   });
@@ -150,5 +180,47 @@ describe("Blindly social launch profile API", () => {
         coverImage: "https://cdn.example.test/owned-cover.jpg",
       },
     });
+  });
+});
+
+describe("Blindly social launch upload signing API", () => {
+  it("fails closed when R2 configuration is absent", async () => {
+    const response = await createUploadSignPost({ storage: unavailableStorage })(
+      jsonRequest("POST", imageInput), { user: { id: "user-1" } },
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "Image uploads are not configured yet" });
+  });
+
+  it("creates an owned post-image asset only for a 5 MiB-or-smaller image", async () => {
+    const database = { mediaAsset: { create: vi.fn(async ({ data }) => ({ id: data.id, ...data })) } };
+    const response = await createUploadSignPost({ storage: configuredStorage, database })(
+      jsonRequest("POST", { ...imageInput, bytes: 5242880, mimeType: "image/webp" }),
+      { user: { id: "user-1" } },
+    );
+    expect(response.status).toBe(201);
+    expect(database.mediaAsset.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ ownerId: "user-1", kind: "post" }),
+    }));
+  });
+
+  it("rejects an image larger than 5 MiB before persisting an asset", async () => {
+    const database = { mediaAsset: { create: vi.fn() } };
+    const response = await createUploadSignPost({ storage: configuredStorage, database })(
+      jsonRequest("POST", { ...imageInput, bytes: 5242881 }),
+      { user: { id: "user-1" } },
+    );
+    expect(response.status).toBe(413);
+    expect(database.mediaAsset.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-image MIME type before persisting an asset", async () => {
+    const database = { mediaAsset: { create: vi.fn() } };
+    const response = await createUploadSignPost({ storage: configuredStorage, database })(
+      jsonRequest("POST", { ...imageInput, mimeType: "application/pdf" }),
+      { user: { id: "user-1" } },
+    );
+    expect(response.status).toBe(400);
+    expect(database.mediaAsset.create).not.toHaveBeenCalled();
   });
 });

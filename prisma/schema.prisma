@@ -99,6 +99,7 @@ model MediaAsset {
   height    Int?
   kind      String
   createdAt DateTime @default(now())
+  deletedAt DateTime?
   owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId, kind])

@@ -45,7 +45,7 @@ async function findActiveProfile(database, userId) {
 
 async function assertOwnedMedia(database, userId, url) {
   const asset = await database.mediaAsset.findFirst({
-    where: { ownerId: userId, publicUrl: url },
+    where: { ownerId: userId, publicUrl: url, deletedAt: null },
     select: { id: true },
   });
   if (!asset) throw new Error(INVALID_PROFILE_MEDIA);
