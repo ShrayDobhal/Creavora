@@ -1,7 +1,6 @@
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -716,3 +715,4 @@ model FeatureFlag {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+

@@ -1,22 +1,17 @@
 import { PrismaClient } from "../generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import path from "path";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-let prisma;
+const connectionString = process.env.DATABASE_URL;
 
-const getPrismaClient = () => {
-  const dbPath = path.join(process.cwd(), "dev.db");
-  const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
-  return new PrismaClient({ adapter });
-};
-
-if (process.env.NODE_ENV === "production") {
-  prisma = getPrismaClient();
-} else {
-  if (!global.cachedPrisma) {
-    global.cachedPrisma = getPrismaClient();
-  }
-  prisma = global.cachedPrisma;
+if (!connectionString) {
+  throw new Error("DATABASE_URL must be configured before starting Creavora.");
 }
 
-export const db = prisma;
+const globalForPrisma = globalThis;
+const adapter = new PrismaPg({ connectionString });
+
+export const db = globalForPrisma.cachedPrisma ?? new PrismaClient({ adapter });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.cachedPrisma = db;
+}
