@@ -99,20 +99,20 @@ export default function Explore() {
         <div className="relative mt-5 overflow-hidden rounded-2xl bg-[#141419] p-8 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div className="max-w-[330px] shrink-0">
             <h2 className="text-[34px] font-extrabold leading-[1.15] tracking-tight text-white">
-              Discover.
+              Discover
               <br />
               <span className="bg-gradient-to-r from-[#f0399a] to-[#c084fc] bg-clip-text text-transparent">
-                Connect.
+                Connect
               </span>
               <br />
               <span className="bg-gradient-to-r from-[#a97bff] to-[#7c3aed] bg-clip-text text-transparent">
-                Get Inspired.
+                Get inspired
               </span>
             </h2>
             <p className="mt-4 text-[14px] leading-relaxed text-white/70">
               Explore top creators across
               <br />
-              categories and find your favorites.
+              categories and find your favourites
             </p>
             <Link href="/creator/ananya-sharma"
               className="mt-6 flex w-fit items-center gap-2.5 rounded-xl bg-white px-6 py-3 text-[14px] font-bold text-ink"

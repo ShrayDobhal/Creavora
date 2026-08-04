@@ -64,9 +64,9 @@ function LoginForm() {
 
         {/* Form */}
         <div className="mx-auto w-full max-w-[420px]">
-          <h1 className="text-[32px] font-extrabold tracking-tight">Welcome back 👋</h1>
+          <h1 className="text-[32px] font-extrabold tracking-tight">Welcome back</h1>
           <p className="mt-2 text-[15px] text-muted">
-            Sign in to discover creators, exclusive content, and more.
+            Sign in to discover creators, exclusive content, and more
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
