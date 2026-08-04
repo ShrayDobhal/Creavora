@@ -35,3 +35,32 @@ Implemented the feed, Explore, and creator-profile routes against the Task 3 con
 - Lint retains two unrelated pre-existing hook dependency warnings outside Task 5 scope.
 - Next build reports the existing multi-lockfile workspace-root inference warning.
 - `npm install` reports three high-severity audit findings; dependency remediation was not attempted because it is outside this consumer-screen change and may require breaking upgrades.
+
+## Round 1 review fixes
+
+### Red evidence
+
+- Creator-profile error test remained on `Loading` after a 404 instead of exposing `Creator not found` and `Try again`.
+- Fast-submit search test called `onSearch` twice after the pending debounce fired; the same-query Explore test stayed loading without issuing a second request.
+- Feed pagination remained disabled as `Loading more` after changing mode aborted a cursor request.
+- Missing engagement, profile-subscriber, and community-member fields rendered as zero.
+- Page landmark tests could not find concise `Feed` and `Explore` headings while decorative headings were still present.
+
+### Fixes
+
+- Creator-profile rendering now preserves loading only for a stale successful profile while a replacement loads; terminal errors always reach `AsyncState` with retry.
+- `SearchPanel` owns and clears its debounce timer on submit. Explore assigns every submission a request sequence, so repeated identical queries start new abortable requests.
+- Mode changes and retries cancel pagination and synchronously reconcile `loadingMore`; cursor-request finalization only updates the controller it owns.
+- Engagement, subscriber, and community counts render only when their API values are finite numbers.
+- Feed and Explore use concise headings and explanatory interface copy.
+
+### Green evidence
+
+- Focused regression suite: 3 files passed, 17 tests passed.
+- Full `npm run test`: 8 files passed, 59 tests passed.
+- `npm run lint`: exited 0 with the same two unrelated existing warnings.
+- `npm run build`: completed successfully.
+
+### Round 1 concerns
+
+- No new Task 5 concerns. The unrelated lint, workspace-root, and dependency-audit warnings above remain unchanged.

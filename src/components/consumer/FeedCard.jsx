@@ -11,9 +11,12 @@ const formatDate = (value) => {
   return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(date);
 };
 
+const numericCount = (value) =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
 export function FeedCard({ post, onLike, onBookmark }) {
   const [isLiked, setIsLiked] = useState(Boolean(post.viewer?.isLiked));
-  const [likes, setLikes] = useState(Number(post.counts?.likes || 0));
+  const [likes, setLikes] = useState(numericCount(post.counts?.likes));
   const [isBookmarked, setIsBookmarked] = useState(Boolean(post.viewer?.isBookmarked));
   const [pendingAction, setPendingAction] = useState(null);
   const [error, setError] = useState("");
@@ -23,13 +26,13 @@ export function FeedCard({ post, onLike, onBookmark }) {
     if (!onLike || pendingAction) return;
     const previous = { isLiked, likes };
     setIsLiked(!isLiked);
-    setLikes(Math.max(0, likes + (isLiked ? -1 : 1)));
+    setLikes(likes === null ? null : Math.max(0, likes + (isLiked ? -1 : 1)));
     setPendingAction("like");
     setError("");
     try {
       const result = await onLike(post.id);
       setIsLiked(Boolean(result.isLiked));
-      setLikes(Number(result.likesCount));
+      setLikes(numericCount(result.likesCount));
     } catch (likeError) {
       setIsLiked(previous.isLiked);
       setLikes(previous.likes);
@@ -57,6 +60,8 @@ export function FeedCard({ post, onLike, onBookmark }) {
   }
 
   const mediaAlt = post.content || `Post by ${post.creator.name}`;
+  const comments = numericCount(post.counts?.comments);
+  const shares = numericCount(post.counts?.shares);
 
   return (
     <article className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
@@ -83,7 +88,7 @@ export function FeedCard({ post, onLike, onBookmark }) {
           <div>
             <Lock className="mx-auto text-brand-300" size={28} />
             <p className="mt-3 font-bold">Subscriber post</p>
-            <p className="mt-1 text-sm text-white/65">Follow the creator&apos;s subscription options to unlock this work.</p>
+            <p className="mt-1 text-sm text-white/65">Subscribe to this creator to unlock the post.</p>
           </div>
         </div>
       ) : (
@@ -124,14 +129,18 @@ export function FeedCard({ post, onLike, onBookmark }) {
           onClick={handleLike}
           className={`inline-flex min-h-10 items-center gap-2 rounded-full px-2 text-sm font-bold disabled:opacity-60 ${isLiked ? "text-rose-600" : "text-ink/70"}`}
         >
-          <Heart size={19} className={isLiked ? "fill-current" : ""} /> {likes.toLocaleString("en-IN")}
+          <Heart size={19} className={isLiked ? "fill-current" : ""} /> {likes === null ? null : likes.toLocaleString("en-IN")}
         </button>
-        <span className="inline-flex items-center gap-1.5 text-sm text-muted" aria-label={`${post.counts?.comments || 0} comments`}>
-          <MessageCircle size={18} /> {Number(post.counts?.comments || 0).toLocaleString("en-IN")}
-        </span>
-        <span className="hidden items-center gap-1.5 text-sm text-muted sm:inline-flex" aria-label={`${post.counts?.shares || 0} shares`}>
-          <Share2 size={17} /> {Number(post.counts?.shares || 0).toLocaleString("en-IN")}
-        </span>
+        {comments === null ? null : (
+          <span className="inline-flex items-center gap-1.5 text-sm text-muted" aria-label={`${comments} comments`}>
+            <MessageCircle size={18} /> {comments.toLocaleString("en-IN")}
+          </span>
+        )}
+        {shares === null ? null : (
+          <span className="hidden items-center gap-1.5 text-sm text-muted sm:inline-flex" aria-label={`${shares} shares`}>
+            <Share2 size={17} /> {shares.toLocaleString("en-IN")}
+          </span>
+        )}
         <button
           type="button"
           aria-label={isBookmarked ? "Remove bookmark" : "Bookmark post"}

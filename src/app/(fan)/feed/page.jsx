@@ -57,12 +57,22 @@ export default function FeedPage() {
     } catch (loadError) {
       if (loadError.name !== "AbortError") setError(loadError.message);
     } finally {
-      if (!controller.signal.aborted) setLoadingMore(false);
+      if (paginationController.current === controller) {
+        paginationController.current = null;
+        setLoadingMore(false);
+      }
     }
+  }
+
+  function cancelPagination() {
+    paginationController.current?.abort();
+    paginationController.current = null;
+    setLoadingMore(false);
   }
 
   function chooseMode(nextMode) {
     if (nextMode === mode) return;
+    cancelPagination();
     setStatus("loading");
     setPosts([]);
     setNextCursor(null);
@@ -71,6 +81,7 @@ export default function FeedPage() {
   }
 
   function retry() {
+    cancelPagination();
     setStatus("loading");
     setError("");
     setReloadKey((value) => value + 1);
@@ -81,9 +92,9 @@ export default function FeedPage() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="min-w-0" aria-labelledby="feed-title">
           <header className="mb-5">
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-600">Your daily edition</p>
-            <h1 id="feed-title" className="mt-1 text-3xl font-black tracking-tight">Creator feed</h1>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">Fresh work, conversations, and subscriber posts from India&apos;s independent creators.</p>
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-600">Posts</p>
+            <h1 id="feed-title" className="mt-1 text-3xl font-black tracking-tight">Feed</h1>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">Posts from creators you follow and discover.</p>
           </header>
 
           <div className="mb-5 flex gap-2 overflow-x-auto pb-1" aria-label="Feed filters">
@@ -107,8 +118,8 @@ export default function FeedPage() {
               status={status}
               error={error}
               onRetry={retry}
-              emptyTitle={mode === "following" ? "Your following feed is quiet" : "No posts published yet"}
-              emptyMessage={mode === "following" ? "Follow creators in Explore to shape this feed." : "Check back when creators publish something new."}
+              emptyTitle={mode === "following" ? "No posts from followed creators" : "No posts yet"}
+              emptyMessage={mode === "following" ? "Follow creators in Explore to add posts here." : "Check back later."}
             />
           ) : (
             <div className="space-y-5">
@@ -132,9 +143,9 @@ export default function FeedPage() {
 
         <aside className="hidden lg:block">
           <div className="sticky top-5 rounded-2xl bg-[#17121f] p-6 text-white">
-            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-300">Feed notes</p>
-            <h2 className="mt-3 text-xl font-black">Made for slow discovery.</h2>
-            <p className="mt-3 text-sm leading-6 text-white/70">Latest follows publication order. Following narrows the edition to creators you follow. Trending reflects recent engagement.</p>
+            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-300">Feed filters</p>
+            <h2 className="mt-3 text-xl font-black">Choose what to view</h2>
+            <p className="mt-3 text-sm leading-6 text-white/70">Latest sorts by publication time. Following shows creators you follow. Trending uses recent engagement.</p>
           </div>
         </aside>
       </div>

@@ -34,12 +34,12 @@ const post = {
   isLocked: false,
 };
 
-describe("FeedCard", () => {
-  afterEach(() => {
-    cleanup();
-    vi.unstubAllGlobals();
-  });
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
+describe("FeedCard", () => {
   it("rolls back the heart count when a like request fails", async () => {
     const user = userEvent.setup();
     render(
@@ -85,6 +85,20 @@ describe("FeedCard", () => {
     );
     expect(screen.getByLabelText("Asha Rao avatar")).toHaveTextContent("AR");
   });
+
+  it("does not display unknown engagement counts as zero", () => {
+    render(
+      <FeedCard
+        post={{ ...post, counts: {} }}
+        onLike={vi.fn()}
+        onBookmark={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /like/i })).not.toHaveTextContent("0");
+    expect(screen.queryByLabelText(/comments/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/shares/i)).not.toBeInTheDocument();
+  });
 });
 
 describe("Feed page", () => {
@@ -104,5 +118,43 @@ describe("Feed page", () => {
 
     expect(await screen.findByText("API-only post from Kochi.")).toBeVisible();
     expect(screen.getByRole("button", { name: /load more/i })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Feed" })).toBeVisible();
+  });
+
+  it("re-enables pagination after a mode change aborts an in-flight page", async () => {
+    const followingPost = {
+      ...post,
+      id: "following-post",
+      content: "Following-only post.",
+    };
+    const fetchMock = vi.fn((url, options = {}) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes("cursor=latest-next")) {
+        return new Promise((_resolve, reject) => {
+          options.signal.addEventListener("abort", () => {
+            reject(new DOMException("Aborted", "AbortError"));
+          });
+        });
+      }
+      const page = requestUrl.includes("mode=following")
+        ? { items: [followingPost], nextCursor: "following-next" }
+        : { items: [post], nextCursor: "latest-next" };
+      return Promise.resolve(
+        new Response(JSON.stringify(page), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<FeedPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Load more" }));
+    expect(screen.getByRole("button", { name: "Loading more" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Following" }));
+
+    expect(await screen.findByText("Following-only post.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Load more" })).toBeEnabled();
   });
 });

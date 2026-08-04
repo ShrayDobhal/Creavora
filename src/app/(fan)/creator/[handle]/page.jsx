@@ -62,9 +62,10 @@ export default function CreatorProfilePage() {
 
   const profileMatchesRoute = profile?.creator.handle === handle;
   if (status !== "success" || !profileMatchesRoute) {
+    const visibleStatus = status === "success" && !profileMatchesRoute ? "loading" : status;
     return (
       <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-        <AsyncState status={profileMatchesRoute ? status : "loading"} error={error} onRetry={retry} />
+        <AsyncState status={visibleStatus} error={error} onRetry={retry} />
       </main>
     );
   }
@@ -112,7 +113,9 @@ export default function CreatorProfilePage() {
             </div>
             <dl className="flex gap-6 rounded-2xl bg-canvas px-5 py-3">
               <div><dt className="text-xs text-muted">Recent posts</dt><dd className="mt-0.5 text-lg font-black">{posts.length.toLocaleString("en-IN")}</dd></div>
-              <div><dt className="flex items-center gap-1 text-xs text-muted"><Users size={12} /> Subscribers</dt><dd className="mt-0.5 text-lg font-black">{Number(creator.subscriberCount || 0).toLocaleString("en-IN")}</dd></div>
+              {typeof creator.subscriberCount === "number" ? (
+                <div><dt className="flex items-center gap-1 text-xs text-muted"><Users size={12} /> Subscribers</dt><dd className="mt-0.5 text-lg font-black">{creator.subscriberCount.toLocaleString("en-IN")}</dd></div>
+              ) : null}
             </dl>
           </div>
         </div>

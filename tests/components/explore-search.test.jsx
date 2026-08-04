@@ -9,12 +9,13 @@ import { CreatorCard } from "@/components/consumer/CreatorCard";
 import { getFeed, search } from "@/services/consumer-api";
 import ExplorePage from "@/app/(fan)/explore/page";
 
-describe("SearchPanel", () => {
-  afterEach(() => {
-    cleanup();
-    vi.useRealTimers();
-  });
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
+describe("SearchPanel", () => {
   it("debounces typed searches and sends only the latest trimmed query", async () => {
     vi.useFakeTimers();
     const onSearch = vi.fn();
@@ -45,11 +46,22 @@ describe("SearchPanel", () => {
 
     expect(onSearch).toHaveBeenCalledWith("Jaipur craft");
   });
+
+  it("cancels the pending debounce when a search is submitted quickly", async () => {
+    vi.useFakeTimers();
+    const onSearch = vi.fn();
+    render(<SearchPanel onSearch={onSearch} />);
+
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Asha" } });
+    fireEvent.submit(screen.getByRole("search"));
+    await act(() => vi.advanceTimersByTimeAsync(350));
+
+    expect(onSearch).toHaveBeenCalledTimes(1);
+    expect(onSearch).toHaveBeenCalledWith("Asha");
+  });
 });
 
 describe("consumer API client", () => {
-  afterEach(() => vi.unstubAllGlobals());
-
   it("builds cursor requests without sending an empty cursor", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ items: [], nextCursor: null }), {
@@ -133,5 +145,91 @@ describe("Explore page", () => {
 
     expect(await screen.findByText("Leela Menon")).toBeVisible();
     expect(screen.getByRole("button", { name: "Art" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Explore" })).toBeVisible();
+  });
+
+  it("runs the same explicit search again", async () => {
+    let searchCalls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url) => {
+        if (String(url).startsWith("/api/discovery")) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ categories: [], recommended: [], trending: [] }), {
+              status: 200,
+              headers: { "content-type": "application/json" },
+            }),
+          );
+        }
+        searchCalls += 1;
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              creators: [],
+              communities: [],
+              posts: [{
+                id: `result-${searchCalls}`,
+                content: searchCalls === 1 ? "First result" : "Second result",
+                mediaUrl: null,
+                mediaType: null,
+                isPremium: false,
+                price: 0,
+                publishedAt: "2026-08-04T10:00:00.000Z",
+                counts: {},
+                creator: {
+                  id: "creator-1",
+                  name: "Asha Rao",
+                  handle: "asha-rao",
+                  avatar: null,
+                  roleTitle: "Textile artist",
+                  verified: true,
+                },
+                viewer: { isLiked: false, isBookmarked: false },
+                isLocked: false,
+              }],
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    render(<ExplorePage />);
+
+    await user.type(screen.getByRole("searchbox"), "Asha");
+    await user.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByText("First result")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByText("Second result")).toBeVisible();
+    expect(searchCalls).toBe(2);
+  });
+
+  it("does not display an unknown community member count as zero", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url) => Promise.resolve(
+        new Response(
+          JSON.stringify(
+            String(url).startsWith("/api/discovery")
+              ? { categories: [], recommended: [], trending: [] }
+              : {
+                  creators: [],
+                  posts: [],
+                  communities: [{ id: "community-1", name: "Kochi Makers", description: null }],
+                },
+          ),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      )),
+    );
+    const user = userEvent.setup();
+    render(<ExplorePage />);
+
+    await user.type(screen.getByRole("searchbox"), "Kochi");
+    await user.click(screen.getByRole("button", { name: "Search" }));
+
+    expect(await screen.findByText("Kochi Makers")).toBeVisible();
+    expect(screen.queryByText("0 members")).not.toBeInTheDocument();
   });
 });

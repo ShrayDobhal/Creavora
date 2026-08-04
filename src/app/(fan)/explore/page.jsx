@@ -25,7 +25,9 @@ function CommunityCard({ community }) {
           {community.isPrivate ? <Lock size={15} aria-label="Private community" /> : null}
         </div>
         {community.description ? <p className="mt-2 text-sm leading-6 text-muted">{community.description}</p> : null}
-        <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-muted"><Users size={14} /> {Number(community.memberCount || 0).toLocaleString("en-IN")} members</p>
+        {typeof community.memberCount === "number" ? (
+          <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-muted"><Users size={14} /> {community.memberCount.toLocaleString("en-IN")} members</p>
+        ) : null}
       </div>
     </article>
   );
@@ -37,7 +39,7 @@ export default function ExplorePage() {
   const [error, setError] = useState("");
   const [category, setCategory] = useState("All");
   const [reloadKey, setReloadKey] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchRequest, setSearchRequest] = useState(null);
   const [searchState, setSearchState] = useState({ status: "idle", results: emptySearch, error: "" });
 
   useEffect(() => {
@@ -56,26 +58,27 @@ export default function ExplorePage() {
   }, [reloadKey]);
 
   useEffect(() => {
-    if (!searchQuery) return undefined;
+    if (!searchRequest) return undefined;
 
     const controller = new AbortController();
-    search({ query: searchQuery, signal: controller.signal })
+    search({ query: searchRequest.query, signal: controller.signal })
       .then((results) => setSearchState({ status: "success", results, error: "" }))
       .catch((searchError) => {
         if (searchError.name === "AbortError") return;
         setSearchState({ status: "error", results: emptySearch, error: searchError.message });
       });
     return () => controller.abort();
-  }, [searchQuery]);
+  }, [searchRequest]);
 
   const handleSearch = useCallback((query) => {
     setSearchState((current) => ({ ...current, status: "loading", error: "" }));
-    setSearchQuery(query);
+    setSearchRequest((current) => ({ query, sequence: (current?.sequence || 0) + 1 }));
   }, []);
   const clearSearch = useCallback(() => {
-    setSearchQuery("");
+    setSearchRequest(null);
     setSearchState({ status: "idle", results: emptySearch, error: "" });
   }, []);
+  const searchQuery = searchRequest?.query || "";
   const retryDiscovery = useCallback(() => {
     setStatus("loading");
     setError("");
@@ -93,9 +96,9 @@ export default function ExplorePage() {
     <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
       <header className="grid gap-6 rounded-3xl bg-[#17121f] p-6 text-white md:grid-cols-[1fr_minmax(320px,520px)] md:items-end md:p-8">
         <div>
-          <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-brand-300"><Compass size={15} /> Creator directory</p>
-          <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Find your next favourite voice.</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">Search independent creators, original posts, and fan communities from across India.</p>
+          <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-brand-300"><Compass size={15} /> Discover</p>
+          <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Explore</h1>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">Search creators, posts, and communities.</p>
         </div>
         <SearchPanel onSearch={handleSearch} busy={searchState.status === "loading"} />
       </header>
@@ -130,8 +133,8 @@ export default function ExplorePage() {
       ) : (
         <section className="mt-8" aria-labelledby="discovery-title">
           <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-600">Browse the edit</p>
-            <h2 id="discovery-title" className="mt-1 text-2xl font-black">Creators worth knowing</h2>
+            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-600">Categories</p>
+            <h2 id="discovery-title" className="mt-1 text-2xl font-black">Discover creators</h2>
           </div>
           {discovery ? (
             <div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Creator categories">

@@ -6,22 +6,32 @@ import { Search } from "lucide-react";
 export function SearchPanel({ onSearch, busy = false }) {
   const [query, setQuery] = useState("");
   const lastSubmitted = useRef("");
+  const debounceTimer = useRef(null);
 
   useEffect(() => {
     const normalized = query.trim();
     if (!normalized || normalized === lastSubmitted.current) return undefined;
 
     const timer = window.setTimeout(() => {
+      debounceTimer.current = null;
       lastSubmitted.current = normalized;
       onSearch(normalized);
     }, 300);
-    return () => window.clearTimeout(timer);
+    debounceTimer.current = timer;
+    return () => {
+      window.clearTimeout(timer);
+      if (debounceTimer.current === timer) debounceTimer.current = null;
+    };
   }, [onSearch, query]);
 
   function handleSubmit(event) {
     event.preventDefault();
     const normalized = query.trim();
     if (!normalized) return;
+    if (debounceTimer.current) {
+      window.clearTimeout(debounceTimer.current);
+      debounceTimer.current = null;
+    }
     lastSubmitted.current = normalized;
     onSearch(normalized);
   }
