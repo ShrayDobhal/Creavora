@@ -1,11 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({ db: {} }));
+vi.mock("@/lib/middleware", () => ({
+  withAuth: (handler) => handler,
+  withCreatorAuth: (handler) => handler,
+}));
 
-import { createPostsGet } from "@/app/api/posts/route";
+import { createPostsGet, POST as createPost } from "@/app/api/posts/route";
 import { createLikePost } from "@/app/api/posts/[id]/like/route";
 import { createBookmarkPost } from "@/app/api/posts/[id]/bookmark/route";
-import { createCommentPost } from "@/app/api/posts/[id]/comment/route";
+import {
+  createCommentPost,
+  createCommentsGet,
+} from "@/app/api/posts/[id]/comment/route";
 import { createCreatorsGet } from "@/app/api/creators/route";
 import { createCreatorGet } from "@/app/api/creators/[handle]/route";
 import { createFollowPost } from "@/app/api/creators/[handle]/follow/route";
@@ -125,6 +132,35 @@ describe("consumer API contracts", () => {
     expect(await json(response)).toEqual({ error: "Comment cannot be empty" });
   });
 
+  it("returns 404 before loading comments when the parent post is unavailable", async () => {
+    const findMany = vi.fn().mockResolvedValue([{ id: "comment-1" }]);
+    const response = await createCommentsGet({
+      post: { findFirst: vi.fn().mockResolvedValue(null) },
+      comment: { findMany },
+    })(new Request("http://localhost/api/posts/post-1/comment"), {
+      user: viewer,
+      params: Promise.resolve({ id: "post-1" }),
+    });
+
+    expect(response.status).toBe(404);
+    expect(await json(response)).toEqual({ error: "Post not found" });
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for malformed JSON in creator post creation", async () => {
+    const response = await createPost(
+      new Request("http://localhost/api/posts", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{",
+      }),
+      { user: { ...viewer, role: "CREATOR" } },
+    );
+
+    expect(response.status).toBe(400);
+    expect(await json(response)).toEqual({ error: "Invalid JSON body" });
+  });
+
   it("validates creator directory filters and returns a cursor page", async () => {
     const invalid = await createCreatorsGet({ user: { findMany: vi.fn() } })(
       new Request("http://localhost/api/creators?category=Unknown"),
@@ -240,6 +276,36 @@ describe("consumer API contracts", () => {
     expect(await json(response)).toMatchObject({
       posts: [{ id: "post-premium", content: null, mediaUrl: null, isLocked: true }],
     });
+  });
+
+  it("does not return posts owned by non-creators", async () => {
+    const nonCreatorPost = {
+      id: "user-post",
+      creatorId: "user-2",
+      content: "Lesson from a normal account",
+      mediaUrl: null,
+      mediaType: null,
+      isPremium: false,
+      price: 0,
+      likesCount: 0,
+      commentsCount: 0,
+      viewsCount: 0,
+      sharesCount: 0,
+      publishedAt: new Date("2026-08-03T00:00:00.000Z"),
+      creator: creatorRow({ id: "user-2", role: "USER", handle: "normal-user" }),
+      likes: [],
+      bookmarks: [],
+    };
+    const response = await createSearchGet({
+      post: {
+        findMany: vi.fn(async ({ where }) =>
+          where.creator?.is?.role === "CREATOR" ? [] : [nonCreatorPost],
+        ),
+      },
+      subscription: { findMany: vi.fn().mockResolvedValue([]) },
+    })(new Request("http://localhost/api/search?q=lesson&type=posts"), authContext);
+
+    expect(await json(response)).toMatchObject({ posts: [] });
   });
 
   it("persists search history only through a validated POST", async () => {

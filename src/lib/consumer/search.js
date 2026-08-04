@@ -52,7 +52,7 @@ export async function searchConsumer(database, viewerId, query) {
             deletedAt: null,
             publishedAt: { lte: new Date() },
             content: contains,
-            creator: { is: { deletedAt: null } },
+            creator: { is: { role: "CREATOR", deletedAt: null } },
           },
           take: 15,
           orderBy: [{ publishedAt: "desc" }, { id: "desc" }],

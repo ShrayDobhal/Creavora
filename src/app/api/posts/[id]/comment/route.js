@@ -8,6 +8,16 @@ export function createCommentsGet(database = db) {
   return async (_req, { params }) => {
     try {
       const { id } = await params;
+      const post = await database.post.findFirst({
+        where: {
+          id,
+          deletedAt: null,
+          creator: { is: { deletedAt: null } },
+        },
+        select: { id: true },
+      });
+      if (!post) throw new Error("Post not found");
+
       const comments = await database.comment.findMany({
         where: { postId: id, deletedAt: null },
         orderBy: { createdAt: "desc" },

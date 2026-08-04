@@ -67,7 +67,6 @@ export const POST = withCreatorAuth(async (req, { user: creator }) => {
 
     return NextResponse.json(post);
   } catch (error) {
-    console.error("Failed to upload post", error);
-    return NextResponse.json({ error: "Failed to upload post" }, { status: 500 });
+    return consumerErrorResponse(error, "Failed to upload post");
   }
 });
