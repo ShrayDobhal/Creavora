@@ -91,6 +91,9 @@ export default function Messages() {
 
   useEffect(() => {
     loadMessages();
+  // `loadMessages` closes over the currently selected thread.
+  // Re-run whenever that thread changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
   const handleSend = async (e) => {

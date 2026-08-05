@@ -3,8 +3,13 @@ import { io } from "socket.io-client";
 
 export function useWebSocket(roomId, callbacks = {}) {
   const socketRef = useRef(null);
+  const callbacksRef = useRef(callbacks);
   const [connected, setConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState({});
+
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+  }, [callbacks]);
 
   useEffect(() => {
     // Connect to websocket server (dynamic host resolution)
@@ -27,8 +32,8 @@ export function useWebSocket(roomId, callbacks = {}) {
 
     // Listeners for message events
     socket.on("new_message", (message) => {
-      if (callbacks.onMessage) {
-        callbacks.onMessage(message);
+      if (callbacksRef.current.onMessage) {
+        callbacksRef.current.onMessage(message);
       }
     });
 
@@ -45,8 +50,8 @@ export function useWebSocket(roomId, callbacks = {}) {
     });
 
     socket.on("message_read", (payload) => {
-      if (callbacks.onMessageRead) {
-        callbacks.onMessageRead(payload);
+      if (callbacksRef.current.onMessageRead) {
+        callbacksRef.current.onMessageRead(payload);
       }
     });
 
