@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { withAuth } from "@/lib/middleware";
-import { sendMessageSchema, validateBody } from "@/lib/validators";
+import { databaseIdSchema, sendMessageSchema, validateBody } from "@/lib/validators";
 import { consumerErrorResponse } from "@/lib/consumer/http";
 
 const participantSelect = {
@@ -44,9 +44,13 @@ export function createMessagesGet({ database = db } = {}) {
     try {
       const participantId = new URL(req.url).searchParams.get("userId");
 
-      if (participantId) {
+      if (participantId !== null) {
+        const parsedParticipantId = databaseIdSchema.safeParse(participantId);
+        if (!parsedParticipantId.success) {
+          return NextResponse.json({ error: "Invalid participant ID" }, { status: 400 });
+        }
         const participant = await database.user.findFirst({
-          where: { id: participantId, deletedAt: null, banned: false },
+          where: { id: parsedParticipantId.data, deletedAt: null, banned: false },
           select: participantSelect,
         });
         if (!participant || participant.id === user.id) {

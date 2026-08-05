@@ -363,10 +363,51 @@ it("sends to a safe imported creator id and rejects unsafe database ids", async 
   }));
 
   expect(databaseIdSchema.safeParse(importedId).success).toBe(true);
-  for (const unsafeId of ["has space", "path/segment", "dot.id", "x".repeat(192)]) {
+  for (const unsafeId of ["", "has space", "path/segment", "dot.id", "x".repeat(192)]) {
     expect(databaseIdSchema.safeParse(unsafeId).success).toBe(false);
     expect(sendMessageSchema.safeParse({ receiverId: unsafeId, content: "No" }).success).toBe(false);
   }
+});
+
+it("loads an imported-style message participant id and rejects unsafe GET ids before querying", async () => {
+  const importedId = "blindly-demo-user-travel-1";
+  const participant = {
+    id: importedId,
+    name: "Kabir Singh",
+    handle: "wander-with-kabir",
+    avatar: null,
+    roleTitle: "Travel creator",
+    verified: true,
+  };
+  const findParticipant = vi.fn().mockResolvedValue(participant);
+  const findMessages = vi.fn().mockResolvedValue([]);
+  const handler = createMessagesGet({ database: {
+    user: { findFirst: findParticipant },
+    message: { findMany: findMessages },
+  } });
+
+  const validResponse = await handler(
+    new Request(`http://localhost/api/messages?userId=${importedId}`),
+    { user: fixtureUser },
+  );
+  expect(validResponse.status).toBe(200);
+  expect(await validResponse.json()).toMatchObject({ participant: { id: importedId }, items: [] });
+  expect(findParticipant).toHaveBeenCalledWith(expect.objectContaining({
+    where: { id: importedId, deletedAt: null, banned: false },
+  }));
+
+  findParticipant.mockClear();
+  findMessages.mockClear();
+  for (const unsafeId of ["", "has space", "path/segment", "dot.id", "x".repeat(192)]) {
+    const invalidResponse = await handler(
+      new Request(`http://localhost/api/messages?userId=${encodeURIComponent(unsafeId)}`),
+      { user: fixtureUser },
+    );
+    expect(invalidResponse.status).toBe(400);
+    expect(await invalidResponse.json()).toEqual({ error: "Invalid participant ID" });
+  }
+  expect(findParticipant).not.toHaveBeenCalled();
+  expect(findMessages).not.toHaveBeenCalled();
 });
 
 it("returns followed creators without messages as suggestions and omits unsafe or existing participants", async () => {
