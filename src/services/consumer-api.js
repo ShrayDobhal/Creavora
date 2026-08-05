@@ -27,6 +27,36 @@ export function createPost(input, { signal } = {}) {
   return request("/api/posts", { method: "POST", signal, body: input });
 }
 
+export function getProfile({ signal } = {}) {
+  return request("/api/profile", { signal });
+}
+
+export function updateProfile(input, { signal } = {}) {
+  return request("/api/profile", { method: "PATCH", signal, body: input });
+}
+
+export function signImageUpload(input, { signal } = {}) {
+  return request("/api/uploads/sign", { method: "POST", signal, body: input });
+}
+
+export async function uploadSignedImage({ uploadUrl, headers }, file, { signal } = {}) {
+  const response = await fetch(uploadUrl, {
+    method: "PUT",
+    headers,
+    body: file,
+    signal,
+  });
+  if (!response.ok) throw new Error("Image upload failed. Please try again.");
+}
+
+export function completeImageUpload(assetId, { signal } = {}) {
+  return request("/api/uploads/complete", {
+    method: "POST",
+    signal,
+    body: { assetId },
+  });
+}
+
 export function updatePost(postId, input, { signal } = {}) {
   return request(`/api/posts/${encodeURIComponent(postId)}`, {
     method: "PATCH",

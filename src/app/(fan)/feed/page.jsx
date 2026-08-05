@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { Clock3, Users } from "lucide-react";
 import { AsyncState } from "@/components/consumer/AsyncState";
 import { FeedCard } from "@/components/consumer/FeedCard";
+import { PostComposer } from "@/components/consumer/PostComposer";
 import {
   createComment,
   getComments,
   getFeed,
+  getProfile,
   toggleBookmark,
   toggleLike,
 } from "@/services/consumer-api";
@@ -25,6 +27,7 @@ export default function FeedPage() {
   const [error, setError] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [profile, setProfile] = useState(null);
   const paginationController = useRef(null);
 
   useEffect(() => {
@@ -47,6 +50,14 @@ export default function FeedPage() {
   }, [mode, reloadKey]);
 
   useEffect(() => () => paginationController.current?.abort(), []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getProfile({ signal: controller.signal })
+      .then(setProfile)
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
 
   async function loadMore() {
     if (!nextCursor || loadingMore) return;
@@ -118,6 +129,10 @@ export default function FeedPage() {
             ))}
           </div>
 
+          <div className="mb-5">
+            <PostComposer user={profile} onPublished={retry} />
+          </div>
+
           {status !== "success" ? (
             <AsyncState
               status={status}
@@ -136,6 +151,7 @@ export default function FeedPage() {
                   onBookmark={toggleBookmark}
                   onLoadComments={getComments}
                   onCreateComment={createComment}
+                  onMutated={retry}
                 />
               ))}
               {error ? <p className="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700" role="alert">{error}</p> : null}

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ConsumerAvatar } from "./CreatorCard";
+import { OwnedPostMenu } from "./OwnedPostMenu";
 
 const formatDate = (value) => {
   const date = new Date(value);
@@ -28,7 +29,10 @@ export function FeedCard({
   onBookmark,
   onLoadComments,
   onCreateComment,
+  onMutated,
 }) {
+  const [editedContent, setEditedContent] = useState(null);
+  const content = editedContent ?? post.content;
   const [isLiked, setIsLiked] = useState(Boolean(post.viewer?.isLiked));
   const [likes, setLikes] = useState(numericCount(post.counts?.likes));
   const [isBookmarked, setIsBookmarked] = useState(Boolean(post.viewer?.isBookmarked));
@@ -123,7 +127,7 @@ export function FeedCard({
     }
   }
 
-  const mediaAlt = post.content || `Post by ${post.creator.name}`;
+  const mediaAlt = content || `Post by ${post.creator.name}`;
   const shares = numericCount(post.counts?.shares);
   const unavailable = post.isPremium && post.availability === "coming_soon";
   const commentButtonLabel = commentsOpen
@@ -143,6 +147,13 @@ export function FeedCard({
           </Link>
           <p className="text-xs text-muted">{post.creator.roleTitle || `@${post.creator.handle}`} · {formatDate(post.publishedAt)}</p>
         </div>
+        <OwnedPostMenu
+          post={{ ...post, content }}
+          onMutated={(mutation) => {
+            if (mutation.type === "update") setEditedContent(mutation.post.content);
+            onMutated?.(mutation);
+          }}
+        />
       </header>
 
       {unavailable ? (
@@ -154,7 +165,7 @@ export function FeedCard({
         </div>
       ) : (
         <>
-          {post.content ? <p className="px-4 pb-4 text-[15px] leading-7 text-ink/85 sm:px-5">{post.content}</p> : null}
+          {content ? <p className="px-4 pb-4 text-[15px] leading-7 text-ink/85 sm:px-5">{content}</p> : null}
           {post.mediaUrl && !mediaFailed ? (
             post.mediaType?.toLowerCase().startsWith("video") ? (
               <div className="relative bg-black">
