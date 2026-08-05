@@ -71,10 +71,19 @@ export function constantTimeEqual(left, right) {
 }
 
 export function parseCookieHeader(request) {
-  return Object.fromEntries((request.headers.get("cookie") || "").split(";").map((part) => part.trim()).filter(Boolean).map((part) => {
+  const entries = [];
+  for (const part of (request.headers.get("cookie") || "").split(";").map((value) => value.trim()).filter(Boolean)) {
     const split = part.indexOf("=");
-    return [part.slice(0, split), decodeURIComponent(part.slice(split + 1))];
-  }));
+    if (split <= 0) continue;
+    const name = part.slice(0, split);
+    const rawValue = part.slice(split + 1);
+    try {
+      entries.push([name, decodeURIComponent(rawValue)]);
+    } catch {
+      entries.push([name, rawValue]);
+    }
+  }
+  return Object.fromEntries(entries);
 }
 
 export async function exchangeGoogleCode({ env, code, verifier, fetchImpl = fetch }) {
@@ -120,7 +129,12 @@ export async function resolveGoogleUser({ database, profile, intentRole }) {
           if (bySubject.deletedAt || bySubject.banned || bySubject.role !== intentRole) throw new Error("Google account cannot use this portal");
           return bySubject;
         }
-        const byEmail = await transaction.user.findFirst({ where: { email: { equals: profile.email, mode: "insensitive" } } });
+        const emailMatches = await transaction.user.findMany({
+          where: { email: { equals: profile.email, mode: "insensitive" } },
+          take: 2,
+        });
+        if (emailMatches.length > 1) throw new Error("Google account email is ambiguous");
+        const byEmail = emailMatches[0];
         if (byEmail) {
           if (byEmail.deletedAt || byEmail.banned || byEmail.role !== intentRole || (byEmail.googleSubject && byEmail.googleSubject !== profile.subject)) {
             throw new Error("Google account cannot be linked");
@@ -129,7 +143,19 @@ export async function resolveGoogleUser({ database, profile, intentRole }) {
             where: { id: byEmail.id, googleSubject: null },
             data: { googleSubject: profile.subject },
           });
-          if (linked.count !== 1) throw new Error("Google account linking conflict");
+          if (linked.count !== 1) {
+            const concurrentLink = await transaction.user.findUnique({ where: { googleSubject: profile.subject } });
+            if (
+              concurrentLink?.id !== byEmail.id
+              || concurrentLink.googleSubject !== profile.subject
+              || concurrentLink.deletedAt
+              || concurrentLink.banned
+              || concurrentLink.role !== intentRole
+            ) {
+              throw new Error("Google account linking conflict");
+            }
+            return concurrentLink;
+          }
           return { ...byEmail, googleSubject: profile.subject };
         }
         if (intentRole !== "USER") throw new Error("Creator account not found");

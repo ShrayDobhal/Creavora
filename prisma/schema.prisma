@@ -144,6 +144,19 @@ model PasswordResetToken {
   @@index([userId, usedAt])
 }
 
+model AuthRateLimit {
+  id              String   @id @default(uuid())
+  scope           String
+  keyHash         String
+  windowStartedAt DateTime
+  attempts        Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([scope, keyHash])
+  @@index([windowStartedAt])
+}
+
 model ActivityLog {
   id        String   @id @default(uuid())
   userId    String

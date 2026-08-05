@@ -5,6 +5,7 @@ vi.mock("@/lib/db", () => ({ db: {} }));
 
 import { createForgotPasswordPost } from "@/app/api/auth/forgot-password/route";
 import { createResetPasswordPost } from "@/app/api/auth/reset-password/route";
+import { consumePasswordResetAttempt, rateLimitDigest } from "@/lib/password-reset";
 
 const env = {
   NEXT_PUBLIC_APP_URL: "https://blindly.example",
@@ -13,9 +14,9 @@ const env = {
 };
 const genericMessage = "If an active account matches that email, a reset link has been sent.";
 
-const postJson = (path, body) => new Request(`https://blindly.example${path}`, {
+const postJson = (path, body, headers = {}) => new Request(`https://blindly.example${path}`, {
   method: "POST",
-  headers: { "content-type": "application/json" },
+  headers: { "content-type": "application/json", ...headers },
   body: JSON.stringify(body),
 });
 
@@ -27,6 +28,44 @@ describe("forgot password", () => {
     );
     expect(response.status).toBe(503);
     expect(database.user.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("returns the generic response and creates nothing when either durable limit is exceeded", async () => {
+    const database = { user: { findFirst: vi.fn() }, $transaction: vi.fn() };
+    const checkRateLimit = vi.fn().mockResolvedValue(false);
+    const sendResetEmail = vi.fn();
+    const randomToken = vi.fn();
+    const response = await createForgotPasswordPost({ env, database, checkRateLimit, sendResetEmail, randomToken })(
+      postJson(
+        "/api/auth/forgot-password",
+        { email: "fan@example.test" },
+        { "x-vercel-forwarded-for": "203.0.113.7, 10.0.0.1", "x-forwarded-for": "198.51.100.9" },
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ message: genericMessage });
+    expect(database.user.findFirst).not.toHaveBeenCalled();
+    expect(sendResetEmail).not.toHaveBeenCalled();
+    expect(randomToken).not.toHaveBeenCalled();
+    expect(checkRateLimit).toHaveBeenCalledWith(expect.objectContaining({
+      normalizedEmail: "fan@example.test",
+      ipAddress: "203.0.113.7",
+    }));
+  });
+
+  it("fails closed with the same generic response when the limiter database operation fails", async () => {
+    const database = { user: { findFirst: vi.fn() } };
+    const sendResetEmail = vi.fn();
+    const response = await createForgotPasswordPost({
+      env,
+      database,
+      sendResetEmail,
+      checkRateLimit: vi.fn().mockRejectedValue(new Error("database unavailable")),
+    })(postJson("/api/auth/forgot-password", { email: "fan@example.test" }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ message: genericMessage });
+    expect(database.user.findFirst).not.toHaveBeenCalled();
+    expect(sendResetEmail).not.toHaveBeenCalled();
   });
 
   it("uses the same response for unknown and eligible accounts while storing only a token hash", async () => {
@@ -45,6 +84,7 @@ describe("forgot password", () => {
       now: () => now,
       randomToken: () => rawToken,
       sendResetEmail,
+      checkRateLimit: vi.fn().mockResolvedValue(true),
     });
 
     const response = await handler(postJson("/api/auth/forgot-password", { email: " FAN@Example.Test " }));
@@ -65,6 +105,47 @@ describe("forgot password", () => {
     database.user.findFirst.mockResolvedValueOnce(null);
     const unknown = await handler(postJson("/api/auth/forgot-password", { email: "missing@example.test" }));
     expect(await unknown.json()).toEqual({ message: genericMessage });
+  });
+});
+
+describe("durable forgot-password limits", () => {
+  it("persists only scoped SHA-256 email and Vercel-forwarded IP digests below the limits", async () => {
+    const now = new Date("2026-08-05T10:00:00.000Z");
+    const authRateLimit = {
+      upsert: vi.fn()
+        .mockResolvedValueOnce({ id: "email-limit", attempts: 0, windowStartedAt: now })
+        .mockResolvedValueOnce({ id: "ip-limit", attempts: 0, windowStartedAt: now }),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    };
+    const database = { $transaction: (callback) => callback({ authRateLimit }) };
+    await expect(consumePasswordResetAttempt({
+      database,
+      normalizedEmail: "fan@example.test",
+      ipAddress: "203.0.113.7",
+      now: () => now,
+    })).resolves.toBe(true);
+
+    const calls = JSON.stringify([authRateLimit.upsert.mock.calls, authRateLimit.updateMany.mock.calls]);
+    expect(calls).toContain(rateLimitDigest("email:fan@example.test"));
+    expect(calls).toContain(rateLimitDigest("ip:203.0.113.7"));
+    expect(calls).not.toContain("fan@example.test");
+    expect(calls).not.toContain("203.0.113.7");
+  });
+
+  it("denies an email already at three attempts in the active hour", async () => {
+    const now = new Date("2026-08-05T10:30:00.000Z");
+    const authRateLimit = {
+      upsert: vi.fn().mockResolvedValue({ id: "email-limit", attempts: 3, windowStartedAt: new Date("2026-08-05T10:00:00.000Z") }),
+      updateMany: vi.fn(),
+    };
+    const database = { $transaction: (callback) => callback({ authRateLimit }) };
+    await expect(consumePasswordResetAttempt({
+      database,
+      normalizedEmail: "fan@example.test",
+      ipAddress: "203.0.113.7",
+      now: () => now,
+    })).resolves.toBe(false);
+    expect(authRateLimit.updateMany).not.toHaveBeenCalled();
   });
 });
 

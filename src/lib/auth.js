@@ -84,10 +84,19 @@ export function hashRefreshToken(token) {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export async function clearAuthCookies() {
-  const cookieStore = await cookies();
-  cookieStore.delete("access_token");
-  cookieStore.delete("refresh_token");
+export async function clearAuthCookies(cookieStoreOverride) {
+  const cookieStore = cookieStoreOverride || await cookies();
+  cookieStore.set("access_token", "", {
+    ...COOKIE_OPTIONS,
+    maxAge: 0,
+    expires: new Date(0),
+  });
+  cookieStore.set("refresh_token", "", {
+    ...COOKIE_OPTIONS,
+    path: "/api/auth",
+    maxAge: 0,
+    expires: new Date(0),
+  });
 }
 
 export async function getTokensFromCookies() {

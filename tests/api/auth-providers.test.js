@@ -141,11 +141,21 @@ describe("Google OAuth callback", () => {
     expect(new URL(response.headers.get("location")).pathname).toBe("/login");
     expect(exchangeCode).not.toHaveBeenCalled();
   });
+
+  it("clears OAuth cookies instead of crashing on malformed cookie segments", async () => {
+    const response = await createGoogleCallbackGet({ env: configuredEnv })(new Request(
+      "https://blindly.example/api/auth/google/callback?code=abc&state=state",
+      { headers: { cookie: "missing-equals; blindly_oauth_state=%E0%A4%A; blindly_oauth_verifier=verifier" } },
+    ));
+    expect(response.status).toBe(307);
+    expect(new URL(response.headers.get("location")).pathname).toBe("/login");
+    expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
+  });
 });
 
 describe("Google account resolution", () => {
   it("never creates or elevates an account from the creator portal", async () => {
-    const user = { findUnique: vi.fn().mockResolvedValue(null), findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() };
+    const user = { findUnique: vi.fn().mockResolvedValue(null), findMany: vi.fn().mockResolvedValue([]), create: vi.fn() };
     const database = { $transaction: vi.fn((callback) => callback({ user })) };
     await expect(resolveGoogleUser({
       database,
@@ -160,7 +170,7 @@ describe("Google account resolution", () => {
     const created = { id: "user-1", role: "USER" };
     const user = {
       findUnique: vi.fn().mockResolvedValue(null),
-      findFirst: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
       create: vi.fn().mockRejectedValueOnce(collision).mockResolvedValueOnce(created),
     };
     const database = { $transaction: vi.fn((callback) => callback({ user })) };
@@ -173,5 +183,41 @@ describe("Google account resolution", () => {
     expect(database.$transaction).toHaveBeenCalledTimes(2);
     expect(user.create).toHaveBeenCalledTimes(2);
     expect(user.create.mock.calls[1][0].data.handle).not.toBe(user.create.mock.calls[0][0].data.handle);
+  });
+
+  it("rejects ambiguous case-insensitive legacy email matches", async () => {
+    const user = {
+      findUnique: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([
+        { id: "user-1", email: "Fan@example.test", role: "USER", googleSubject: null },
+        { id: "user-2", email: "fan@example.test", role: "USER", googleSubject: null },
+      ]),
+      updateMany: vi.fn(),
+      create: vi.fn(),
+    };
+    const database = { $transaction: (callback) => callback({ user }) };
+    await expect(resolveGoogleUser({
+      database,
+      profile: { subject: "sub-1", email: "fan@example.test", name: "Fan" },
+      intentRole: "USER",
+    })).rejects.toThrow("ambiguous");
+    expect(user.updateMany).not.toHaveBeenCalled();
+    expect(user.create).not.toHaveBeenCalled();
+  });
+
+  it("accepts a concurrent link only when the same user now owns the same subject", async () => {
+    const existing = { id: "user-1", email: "fan@example.test", role: "USER", googleSubject: null, deletedAt: null, banned: false };
+    const linked = { ...existing, googleSubject: "sub-1" };
+    const user = {
+      findUnique: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(linked),
+      findMany: vi.fn().mockResolvedValue([existing]),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+    };
+    const database = { $transaction: (callback) => callback({ user }) };
+    await expect(resolveGoogleUser({
+      database,
+      profile: { subject: "sub-1", email: "fan@example.test", name: "Fan" },
+      intentRole: "USER",
+    })).resolves.toEqual(linked);
   });
 });

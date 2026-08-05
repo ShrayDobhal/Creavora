@@ -3,7 +3,7 @@ import { expect, it, vi } from "vitest";
 vi.mock("@/lib/db", () => ({ db: {} }));
 
 import { POST } from "@/app/api/auth/login/route";
-import { hashRefreshToken, issueSession } from "@/lib/auth";
+import { clearAuthCookies, hashRefreshToken, issueSession } from "@/lib/auth";
 
 it("returns a client error when the login body is malformed JSON", async () => {
   const response = await POST(
@@ -50,4 +50,13 @@ it("issues the shared Blindly session and keeps at most five active refresh sess
   }) });
   expect(setCookies).toHaveBeenCalledWith(result.accessToken, result.refreshToken);
   expect(database.activityLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ action: "LOGIN" }) });
+});
+
+it("clears the refresh cookie with the same /api/auth path used when it was created", async () => {
+  const cookieStore = { set: vi.fn(), delete: vi.fn() };
+  await clearAuthCookies(cookieStore);
+  expect(cookieStore.set).toHaveBeenCalledWith("refresh_token", "", expect.objectContaining({
+    path: "/api/auth",
+    maxAge: 0,
+  }));
 });

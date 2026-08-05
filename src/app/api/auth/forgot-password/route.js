@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
+import { isIP } from "node:net";
 import { db } from "@/lib/db";
 import { forgotPasswordSchema, validateBody } from "@/lib/validators";
 import { getAuthProviderStatus, trustedAppOrigin } from "@/lib/auth-providers";
-import { randomResetToken, RESET_MESSAGE, resetTokenHash, sendPasswordResetEmail } from "@/lib/password-reset";
+import { consumePasswordResetAttempt, randomResetToken, RESET_MESSAGE, resetTokenHash, sendPasswordResetEmail } from "@/lib/password-reset";
+
+function clientIpAddress(request) {
+  for (const header of ["x-vercel-forwarded-for", "x-real-ip"]) {
+    const candidate = request.headers.get(header)?.split(",")[0]?.trim();
+    if (candidate && isIP(candidate)) return candidate;
+  }
+  return "unknown";
+}
 
 export function createForgotPasswordPost({
   env = process.env,
@@ -10,6 +19,7 @@ export function createForgotPasswordPost({
   now = () => new Date(),
   randomToken = randomResetToken,
   sendResetEmail = ({ email, resetUrl }) => sendPasswordResetEmail({ env, email, resetUrl }),
+  checkRateLimit = consumePasswordResetAttempt,
 } = {}) {
   return async function forgotPassword(request) {
     if (!getAuthProviderStatus(env).passwordReset) {
@@ -19,6 +29,19 @@ export function createForgotPasswordPost({
     try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid request" }, { status: 400 }); }
     const parsed = validateBody(forgotPasswordSchema, body);
     if (parsed.error) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    let allowed = false;
+    try {
+      allowed = await checkRateLimit({
+        database,
+        normalizedEmail: parsed.data.email,
+        ipAddress: clientIpAddress(request),
+        now,
+      });
+    } catch {
+      console.error("Password reset rate limiter unavailable");
+      return NextResponse.json({ message: RESET_MESSAGE });
+    }
+    if (!allowed) return NextResponse.json({ message: RESET_MESSAGE });
     const user = await database.user.findFirst({ where: { email: parsed.data.email, deletedAt: null, banned: false } });
     if (user) {
       const token = randomToken();
