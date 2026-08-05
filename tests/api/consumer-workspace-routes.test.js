@@ -67,6 +67,10 @@ it("returns bounded viewer-safe Home data", async () => {
     deletedAt: null,
   });
   const findCreators = vi.fn().mockResolvedValue([creator]);
+  const groupCreatorCategories = vi.fn().mockResolvedValue([
+    { category: "Fitness", _count: { _all: 1 } },
+    { category: "Technology", _count: { _all: 2 } },
+  ]);
   const findPosts = vi.fn().mockResolvedValue([post]);
   const findStories = vi.fn().mockResolvedValue([
     {
@@ -102,6 +106,7 @@ it("returns bounded viewer-safe Home data", async () => {
   ]);
   const database = {
     user: { findFirst: findViewer, findMany: findCreators },
+    creatorProfile: { groupBy: groupCreatorCategories },
     post: { findMany: findPosts },
     story: { findMany: findStories },
     liveSession: { findMany: findLiveSessions },
@@ -118,7 +123,10 @@ it("returns bounded viewer-safe Home data", async () => {
   expect(response.status).toBe(200);
   expect(body).toMatchObject({
     viewer: { id: "viewer-1", name: "Riya", handle: "riya" },
-    categories: expect.arrayContaining(["Fitness", "Technology"]),
+    categories: [
+      { name: "Technology", creatorCount: 2 },
+      { name: "Fitness", creatorCount: 1 },
+    ],
     creators: expect.any(Array),
     featuredPosts: expect.any(Array),
     stories: expect.any(Array),
@@ -128,6 +136,9 @@ it("returns bounded viewer-safe Home data", async () => {
   });
   expect(body.viewer).not.toHaveProperty("email");
   expect(findCreators.mock.calls[0][0].take).toBeLessThanOrEqual(12);
+  expect(groupCreatorCategories).toHaveBeenCalledWith(expect.objectContaining({
+    where: { user: { is: { role: "CREATOR", deletedAt: null } } },
+  }));
   expect(findPosts.mock.calls[0][0]).toMatchObject({ take: 5 });
   expect(findStories.mock.calls[0][0].take).toBeLessThanOrEqual(12);
   expect(findLiveSessions.mock.calls[0][0].take).toBeLessThanOrEqual(12);
