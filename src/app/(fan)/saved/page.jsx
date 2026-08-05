@@ -50,14 +50,14 @@ export default function SavedPage() {
   };
 
   return (
-    <div className="mx-auto min-h-[calc(100vh-72px)] max-w-[860px] bg-canvas px-6 py-6">
+    <div className="mx-auto min-h-[calc(100vh-72px)] min-w-0 max-w-[860px] overflow-x-hidden bg-canvas px-3 py-6 sm:px-6">
       <h1 className="flex items-center gap-2 text-[25px] font-extrabold tracking-tight">
         <Bookmark className="fill-brand-600 text-brand-600" size={24} /> Saved Posts
       </h1>
       <p className="text-sm text-muted">Posts you bookmark appear here.</p>
 
       {(loadError || actionError) && (
-        <div role="alert" className="mt-5 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+        <div role="alert" className="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
           <span>{loadError || actionError}</span>
           {loadError && <button onClick={retry} className="inline-flex items-center gap-1 font-bold"><RefreshCw size={14} /> Try again</button>}
         </div>

@@ -6,9 +6,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PostComposer } from "@/components/consumer/PostComposer";
 import { ProfileEditor } from "@/components/consumer/ProfileEditor";
+import { SearchPanel } from "@/components/consumer/SearchPanel";
 import { FeedCard } from "@/components/consumer/FeedCard";
 import SettingsPage from "@/app/(fan)/settings/page";
-import { UserMenu } from "@/layouts/FanLayout";
+import FanLayout, { UserMenu } from "@/layouts/FanLayout";
 import ResponsiveNav from "@/components/consumer/ResponsiveNav";
 import {
   completeImageUpload,
@@ -210,6 +211,36 @@ describe("social launch UI", () => {
     expect(screen.queryByText(/billing|wallet|achievements/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Profile" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Privacy" })).toBeVisible();
+  });
+
+  it("keeps the shared consumer shell and settings editor within the phone viewport", async () => {
+    getProfile.mockResolvedValue(profile);
+    vi.stubGlobal("fetch", vi.fn((url) => Promise.resolve(new Response(
+      JSON.stringify(String(url) === "/api/notifications" ? [] : null),
+      { status: 200 },
+    ))));
+    const shell = render(<FanLayout><div>Consumer content</div></FanLayout>);
+
+    expect(screen.getByRole("main")).toHaveClass("min-w-0", "overflow-x-hidden");
+    expect(screen.getByRole("button", { name: "Open account menu" })).toBeVisible();
+    shell.unmount();
+
+    render(<SettingsPage />);
+
+    const settings = await screen.findByRole("navigation", { name: "Settings sections" });
+    expect(settings).toHaveClass("max-w-full", "overflow-x-auto");
+    expect(screen.getByRole("main")).toHaveClass("min-w-0", "overflow-x-hidden");
+    const editor = await screen.findByRole("form", { name: "Profile editor" });
+    expect(editor).toHaveClass("min-w-0");
+    expect(screen.getByLabelText("Address")).toHaveClass("w-full");
+    expect(screen.getByRole("button", { name: "Save profile" })).toHaveClass("min-h-11");
+  });
+
+  it("keeps the Explore search action reachable in a narrow shared layout", () => {
+    render(<SearchPanel onQueryChange={vi.fn()} onSubmit={vi.fn()} />);
+
+    expect(screen.getByRole("search")).toHaveClass("min-w-0", "max-w-full");
+    expect(screen.getByRole("button", { name: "Search" })).toHaveClass("min-h-11");
   });
 
   it("renders Home, Feed, Explore, Notifications, and Profile in the mobile primary navigation", () => {

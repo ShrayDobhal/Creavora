@@ -498,6 +498,18 @@ it("shows persisted subscriptions as read-only without purchase or cancel action
 });
 
 it.each([
+  ["collections", CollectionsPage],
+  ["saved posts", SavedPage],
+  ["subscriptions", SubscriptionsPage],
+])("keeps the %s page boundary inside narrow documents", (name, Page) => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ items: [] }), { status: 200 })));
+
+  const { container } = render(<Page />);
+
+  expect(container.firstChild).toHaveClass("min-w-0", "overflow-x-hidden", "px-3", "sm:px-6");
+});
+
+it.each([
   ["collections", CollectionsPage, "No collections yet"],
   ["saved posts", SavedPage, "No saved posts"],
   ["subscriptions", SubscriptionsPage, "No subscriptions found"],

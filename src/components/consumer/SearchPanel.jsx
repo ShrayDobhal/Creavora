@@ -34,7 +34,7 @@ export function SearchPanel({ onQueryChange, onSubmit, busy = false }) {
   }
 
   return (
-    <form role="search" onSubmit={handleSubmit} className="flex w-full items-center gap-2 rounded-2xl border border-line bg-white p-2 shadow-sm focus-within:border-brand-300">
+    <form role="search" onSubmit={handleSubmit} className="flex min-w-0 w-full max-w-full items-center gap-2 rounded-2xl border border-line bg-white p-2 shadow-sm focus-within:border-brand-300">
       <Search className="ml-2 shrink-0 text-muted" size={19} />
       <label htmlFor="explore-search" className="sr-only">Search Blindly creators, posts, and communities</label>
       <input
@@ -48,7 +48,7 @@ export function SearchPanel({ onQueryChange, onSubmit, busy = false }) {
       <button
         type="submit"
         disabled={busy}
-        className="h-10 rounded-xl bg-brand-600 px-5 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-60"
+        className="min-h-11 shrink-0 rounded-xl bg-brand-600 px-3 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-60 sm:px-5"
       >
         {busy ? "Searching" : "Search"}
       </button>

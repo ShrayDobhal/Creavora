@@ -38,14 +38,14 @@ export default function SubscriptionsPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-72px)] bg-canvas px-6 py-6">
+    <div className="min-h-[calc(100vh-72px)] min-w-0 overflow-x-hidden bg-canvas px-3 py-6 sm:px-6">
       <h1 className="flex items-center gap-2 text-[25px] font-extrabold tracking-tight">
         <Library className="text-brand-600" size={24} /> Subscriptions
       </h1>
       <p className="text-sm text-muted">Your current creator access, shown as recorded.</p>
 
       {error && (
-        <div role="alert" className="mt-5 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+        <div role="alert" className="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
           <span>{error}</span>
           <button onClick={retry} className="inline-flex items-center gap-1 font-bold"><RefreshCw size={14} /> Try again</button>
         </div>
@@ -63,14 +63,14 @@ export default function SubscriptionsPage() {
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
           {subscriptions.map((subscription) => (
             <Card key={subscription.id} className="p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <Link href={`/creator/${encodeURIComponent(subscription.creator.handle)}`} className="font-extrabold text-ink hover:underline">
+              <div className="flex min-w-0 items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <Link href={`/creator/${encodeURIComponent(subscription.creator.handle)}`} className="block truncate font-extrabold text-ink hover:underline">
                     {subscription.creator.name}
                   </Link>
                   {subscription.creator.roleTitle && <p className="mt-0.5 text-xs text-muted">{subscription.creator.roleTitle}</p>}
                 </div>
-                <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">{subscription.status}</span>
+                <span className="shrink-0 rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">{subscription.status}</span>
               </div>
               <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-4 text-sm">
                 <div>

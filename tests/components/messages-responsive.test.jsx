@@ -10,8 +10,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("opens, reads, and sends from the thread pane at a 375px viewport", async () => {
-  Object.defineProperty(window, "innerWidth", { configurable: true, value: 375 });
+it("opens, reads, sends, and returns to conversations from the single phone pane at 320px", async () => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
   const participants = [
     { id: "creator-1", name: "Asha Rao", handle: "asha", avatar: null, roleTitle: "Artist" },
     { id: "creator-2", name: "Dev Shah", handle: "dev", avatar: null, roleTitle: "Coach" },
@@ -78,6 +78,13 @@ it("opens, reads, and sends from the thread pane at a 375px viewport", async () 
       body: JSON.stringify({ receiverId: "creator-2", content: "Hello from mobile" }),
     }),
   ));
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to conversations" }));
+  expect(screen.getByRole("heading", { name: "Messages" })).toBeVisible();
+  expect(screen.getByRole("textbox", { name: "Message Dev Shah" }).closest(".hidden")).toHaveClass(
+    "hidden",
+    "md:flex",
+  );
 });
 
 it("keeps mobile thread recovery controls available while a selected conversation loads or fails", async () => {

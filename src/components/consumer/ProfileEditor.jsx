@@ -130,7 +130,7 @@ export function ProfileEditor({ profile, onSaved }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5" aria-label="Profile editor">
+    <form onSubmit={handleSubmit} className="min-w-0 space-y-5" aria-label="Profile editor">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-extrabold text-ink">Profile appearance</p>
@@ -176,7 +176,7 @@ export function ProfileEditor({ profile, onSaved }) {
       </fieldset>
       {error ? <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">{error}</p> : null}
       <div className="flex justify-end border-t border-line pt-4">
-        <button type="submit" disabled={saving || values.name.trim().length < 2} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-bold text-white hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-60">
+        <button type="submit" disabled={saving || values.name.trim().length < 2} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-bold text-white hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-60">
           {saving ? <LoaderCircle size={16} className="animate-spin" /> : <Save size={16} />}
           {saving ? "Saving profile" : "Save profile"}
         </button>

@@ -76,7 +76,7 @@ export default function CollectionsPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-72px)] bg-canvas px-6 py-6">
+    <div className="min-h-[calc(100vh-72px)] min-w-0 overflow-x-hidden bg-canvas px-3 py-6 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-[25px] font-extrabold tracking-tight">
@@ -89,14 +89,14 @@ export default function CollectionsPage() {
             setModalError("");
             setShowForm(true);
           }}
-          className="flex h-10 items-center gap-2 rounded-xl bg-brand-600 px-4 font-bold text-white"
+          className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-brand-600 px-4 font-bold text-white"
         >
           <FolderPlus size={16} /> Create collection
         </button>
       </div>
 
       {(loadError || actionError) && (
-        <div className="mt-5 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700" role="alert">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700" role="alert">
           <span>{loadError || actionError}</span>
           {loadError && <button onClick={retry} className="inline-flex items-center gap-1 font-bold"><RefreshCw size={14} /> Try again</button>}
         </div>
@@ -104,7 +104,7 @@ export default function CollectionsPage() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <Card className="w-full max-w-[440px] p-6" role="dialog" aria-modal="true" aria-labelledby="collection-dialog-title">
+          <Card className="w-full min-w-0 max-w-[440px] p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="collection-dialog-title">
             <h2 id="collection-dialog-title" className="text-lg font-extrabold">New collection</h2>
             <form onSubmit={handleCreate} className="mt-4 space-y-4">
               {modalError && (
@@ -135,8 +135,8 @@ export default function CollectionsPage() {
                 <button type="button" disabled={saving} onClick={() => {
                   setModalError("");
                   setShowForm(false);
-                }} className="h-10 rounded-xl border border-line px-4 font-bold">Cancel</button>
-                <button type="submit" disabled={saving || !name.trim()} className="h-10 rounded-xl bg-brand-600 px-4 font-bold text-white disabled:opacity-50">
+                }} className="min-h-11 rounded-xl border border-line px-4 font-bold">Cancel</button>
+                <button type="submit" disabled={saving || !name.trim()} className="min-h-11 rounded-xl bg-brand-600 px-4 font-bold text-white disabled:opacity-50">
                   {saving ? "Saving…" : "Save collection"}
                 </button>
               </div>

@@ -59,19 +59,19 @@ export default function SettingsPage() {
   }
 
   if (status !== "success" || !profile) {
-    return <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6"><AsyncState status={status} error={error} onRetry={loadProfile} emptyTitle="Settings unavailable" emptyMessage="Try again in a moment" /></main>;
+    return <main className="mx-auto min-w-0 w-full max-w-4xl overflow-x-hidden px-3 py-6 sm:px-6"><AsyncState status={status} error={error} onRetry={loadProfile} emptyTitle="Settings unavailable" emptyMessage="Try again in a moment" /></main>;
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 lg:py-8">
+    <main className="mx-auto min-w-0 w-full max-w-4xl overflow-x-hidden px-3 py-6 sm:px-6 lg:py-8">
       <header><h1 className="flex items-center gap-2 text-3xl font-black"><Settings className="text-brand-600" size={25} />Settings</h1><p className="mt-1 text-sm text-muted">Manage the details you share on Blindly</p></header>
       <div className="mt-6 grid gap-5 md:grid-cols-[210px_minmax(0,1fr)]">
-        <nav className="flex gap-2 overflow-x-auto rounded-2xl border border-line bg-white p-2 md:block md:space-y-1" aria-label="Settings sections">
+        <nav className="flex min-w-0 max-w-full gap-2 overflow-x-auto rounded-2xl border border-line bg-white p-2 md:block md:space-y-1 md:overflow-visible" aria-label="Settings sections">
           <TabButton active={tab === "profile"} onClick={() => setTab("profile")} icon={UserRound}>Profile</TabButton>
           <TabButton active={tab === "privacy"} onClick={() => setTab("privacy")} icon={ShieldCheck}>Privacy</TabButton>
-          <button type="button" onClick={signOut} disabled={signingOut} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-60 md:flex md:w-full"><LogOut size={16} />{signingOut ? "Signing out" : "Sign out"}</button>
+          <button type="button" onClick={signOut} disabled={signingOut} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-60 md:flex md:w-full"><LogOut size={16} />{signingOut ? "Signing out" : "Sign out"}</button>
         </nav>
-        <section className="rounded-2xl border border-line bg-white p-4 shadow-sm sm:p-6">
+        <section className="min-w-0 rounded-2xl border border-line bg-white p-4 shadow-sm sm:p-6">
           {tab === "profile" ? <ProfileEditor profile={profile} onSaved={setProfile} /> : null}
           {tab === "privacy" ? <PrivacySettings profile={profile} saving={savingPrivacy} onChange={saveVisibility} /> : null}
           {error ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">{error}</p> : null}
@@ -82,7 +82,7 @@ export default function SettingsPage() {
 }
 
 function TabButton({ active, onClick, icon: Icon, children }) {
-  return <button type="button" onClick={onClick} className={`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500 md:flex md:w-full ${active ? "bg-brand-50 text-brand-700" : "hover:bg-canvas"}`}><Icon size={16} />{children}</button>;
+  return <button type="button" onClick={onClick} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500 md:flex md:w-full ${active ? "bg-brand-50 text-brand-700" : "hover:bg-canvas"}`}><Icon size={16} />{children}</button>;
 }
 
 function PrivacySettings({ profile, saving, onChange }) {
