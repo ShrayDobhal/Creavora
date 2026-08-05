@@ -1,0 +1,235 @@
+import { describe, expect, it, vi } from "vitest";
+import {
+  assertDemoImportEnvironment,
+  importBlindlyDemoContent,
+  runDemoContentImport,
+} from "../../scripts/import-blindly-demo-content.mjs";
+
+const LAUNCH_CATEGORIES = [
+  "Fitness",
+  "Sports",
+  "Technology",
+  "Fashion",
+  "Food",
+  "Travel",
+  "Education",
+  "Music",
+  "Art",
+  "Comedy",
+  "Gaming",
+  "Lifestyle",
+];
+
+function createTable(keyForWhere) {
+  const records = new Map();
+
+  return {
+    records,
+    upsert: vi.fn(async ({ where, update, create }) => {
+      const key = keyForWhere(where);
+      const current = records.get(key);
+      const record = current ? { ...current, ...update } : { ...create };
+      records.set(key, record);
+      return record;
+    }),
+  };
+}
+
+function createUserTable() {
+  const records = new Map();
+
+  return {
+    records,
+    upsert: vi.fn(async ({ where, update, create }) => {
+      const current = [...records.values()].find((record) => (
+        Object.entries(where).every(([field, value]) => record[field] === value)
+      ));
+      if (current) {
+        const record = { ...current, ...update };
+        records.set(record.id, record);
+        return record;
+      }
+
+      const collides = [...records.values()].some((record) => (
+        record.email === create.email || record.handle === create.handle
+      ));
+      if (collides) {
+        throw new Error("Unique constraint failed");
+      }
+      records.set(create.id, { ...create });
+      return { ...create };
+    }),
+  };
+}
+
+function createDatabase() {
+  return {
+    user: createUserTable(),
+    creatorProfile: createTable((where) => where.userId),
+    post: createTable((where) => where.id),
+    story: createTable((where) => where.id),
+    liveSession: createTable((where) => where.id),
+    follow: createTable(({ followerId_followingId }) => (
+      `${followerId_followingId.followerId}:${followerId_followingId.followingId}`
+    )),
+    like: createTable(({ userId_postId }) => `${userId_postId.userId}:${userId_postId.postId}`),
+    comment: createTable((where) => where.id),
+  };
+}
+
+describe("Blindly production demo-content importer", () => {
+  it("requires exact production confirmation", () => {
+    expect(() => assertDemoImportEnvironment({
+      DATABASE_URL: "postgresql://host/db",
+    })).toThrow("BLINDLY_DEMO_CONTENT_CONFIRMATION");
+
+    expect(() => assertDemoImportEnvironment({
+      DATABASE_URL: "postgresql://host/db",
+      BLINDLY_DEMO_CONTENT_CONFIRMATION: "yes",
+    })).toThrow("BLINDLY_DEMO_CONTENT_CONFIRMATION");
+  });
+
+  it.each([
+    undefined,
+    "",
+    "mysql://host/db",
+    "https://host/db",
+    "postgres-example://host/db",
+    "postgresql:foo",
+    "postgresql:/db",
+    "postgresql:///db",
+    "postgresql://host",
+    "postgresql://host/",
+  ])("rejects non-PostgreSQL DATABASE_URL value %s", (databaseUrl) => {
+    expect(() => assertDemoImportEnvironment({
+      DATABASE_URL: databaseUrl,
+      BLINDLY_DEMO_CONTENT_CONFIRMATION: "blindly-production-demo-content",
+    })).toThrow("DATABASE_URL must be a PostgreSQL URL");
+  });
+
+  it("validates the environment before creating a database connection", async () => {
+    const createDatabaseClient = vi.fn();
+
+    await expect(runDemoContentImport({
+      env: { DATABASE_URL: "postgresql://host/db" },
+      createDatabaseClient,
+    })).rejects.toThrow("BLINDLY_DEMO_CONTENT_CONFIRMATION");
+    expect(createDatabaseClient).not.toHaveBeenCalled();
+  });
+
+  it("upserts the complete India launch experience in an explicit demo namespace", async () => {
+    const database = createDatabase();
+    const now = new Date("2026-08-05T09:00:00.000Z");
+
+    const counts = await importBlindlyDemoContent({ database, now });
+
+    expect(counts).toEqual({
+      users: 12,
+      creatorProfiles: 12,
+      posts: 36,
+      stories: 12,
+      liveSessions: 4,
+      follows: 12,
+      likes: 36,
+      comments: 12,
+    });
+    expect(database.user.records.size).toBe(12);
+    expect(database.creatorProfile.records.size).toBe(12);
+    expect(database.post.records.size).toBe(36);
+    expect(database.story.records.size).toBe(12);
+    expect(database.liveSession.records.size).toBe(4);
+
+    const users = [...database.user.records.values()];
+    const categories = [...database.creatorProfile.records.values()].map(({ category }) => category);
+    const posts = [...database.post.records.values()];
+    const stories = [...database.story.records.values()];
+    const liveSessions = [...database.liveSession.records.values()];
+    const postsById = new Map(posts.map((post) => [post.id, post]));
+    const categoryByCreatorId = new Map(
+      [...database.creatorProfile.records.values()].map((profile) => [profile.userId, profile.category]),
+    );
+
+    expect(users.every(({ email }) => email.endsWith("@blindly.demo"))).toBe(true);
+    expect(users.every(({ bio }) => bio.includes("Fictional demo creator"))).toBe(true);
+    expect(new Set(categories)).toEqual(new Set(LAUNCH_CATEGORIES));
+    expect(posts.every(({ id, content }) => (
+      id.startsWith("blindly-demo-post-") && content.startsWith("[blindly-demo:")
+    ))).toBe(true);
+    expect(posts.every(({ mediaUrl }) => (
+      ["images.unsplash.com", "images.pexels.com"].includes(new URL(mediaUrl).hostname)
+    ))).toBe(true);
+    expect(posts.every(({ mediaUrl }) => (
+      /^https:\/\/images\.unsplash\.com\/photo-\d+-[a-z0-9]+\?/.test(mediaUrl)
+    ))).toBe(true);
+    expect(new Set(posts.map(({ mediaUrl }) => mediaUrl)).size).toBe(36);
+    expect(stories.every(({ id, expiresAt }) => (
+      id.startsWith("blindly-demo-story-") && expiresAt > now
+    ))).toBe(true);
+    expect(liveSessions.every(({ id, status, scheduledAt }) => (
+      id.startsWith("blindly-demo-live-") && status === "SCHEDULED" && scheduledAt > now
+    ))).toBe(true);
+    expect([...database.like.records.values()].every(({ userId, postId }) => (
+      userId !== postsById.get(postId).creatorId
+    ))).toBe(true);
+    expect([...database.comment.records.values()].every(({ userId, postId }) => (
+      userId !== postsById.get(postId).creatorId
+    ))).toBe(true);
+    expect([...database.comment.records.values()].every(({ content, postId }) => {
+      const category = categoryByCreatorId.get(postsById.get(postId).creatorId);
+      return content.toLowerCase().includes(category.toLowerCase());
+    })).toBe(true);
+
+    for (const user of users) {
+      const creatorMedia = posts
+        .filter(({ creatorId }) => creatorId === user.id)
+        .map(({ mediaUrl }) => mediaUrl);
+      const story = stories.find(({ userId }) => userId === user.id);
+      const liveSession = liveSessions.find(({ hostId }) => hostId === user.id);
+
+      expect(creatorMedia).toHaveLength(3);
+      expect(creatorMedia).toContain(user.coverImage);
+      expect(creatorMedia).toContain(story.mediaUrl);
+      if (liveSession) {
+        expect(creatorMedia).toContain(liveSession.thumbnailUrl);
+      }
+    }
+  });
+
+  it("does not duplicate importer-owned records", async () => {
+    const database = createDatabase();
+    const now = new Date("2026-08-05T09:00:00.000Z");
+
+    const firstCounts = await importBlindlyDemoContent({ database, now });
+    const firstSizes = Object.fromEntries(
+      Object.entries(database).map(([name, table]) => [name, table.records.size]),
+    );
+    const secondCounts = await importBlindlyDemoContent({ database, now });
+
+    expect(secondCounts).toEqual(firstCounts);
+    expect(Object.fromEntries(
+      Object.entries(database).map(([name, table]) => [name, table.records.size]),
+    )).toEqual(firstSizes);
+    expect(database.post.upsert).toHaveBeenCalledTimes(72);
+  });
+
+  it("fails on importer-email collisions without altering the non-importer user", async () => {
+    const database = createDatabase();
+    const existingUser = {
+      id: "real-user-id",
+      name: "Existing account",
+      email: "blindly-demo-aisha-bites@blindly.demo",
+      handle: "existing-account",
+      role: "USER",
+    };
+    database.user.records.set(existingUser.id, existingUser);
+
+    await expect(importBlindlyDemoContent({
+      database,
+      now: new Date("2026-08-05T09:00:00.000Z"),
+    })).rejects.toThrow("Unique constraint failed");
+
+    expect(database.user.records.get(existingUser.id)).toEqual(existingUser);
+    expect(database.creatorProfile.records.size).toBe(0);
+    expect(database.post.records.size).toBe(0);
+  });
+});

@@ -114,7 +114,7 @@ export const LAUNCH_FEED_FIXTURES = LAUNCH_CATEGORIES.flatMap((category, categor
 const LOCAL_DATABASE_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 const DEFAULT_PASSWORD = "Test1234";
 
-const creators = [
+export const LAUNCH_CREATOR_FIXTURES = [
   ["aisha-bites", "Aisha Khan", "Food", "Mumbai", "Regional recipes and street-food stories from Mumbai."],
   ["meher-drapes", "Meher Iyer", "Fashion", "Chennai", "Handloom, styling, and thoughtful Indian fashion."],
   ["coach-kabir", "Kabir Mehta", "Fitness", "Delhi", "Strength training, yoga, and sustainable routines."],
@@ -263,7 +263,7 @@ export async function runSeed(env = process.env) {
     ]);
 
     const seededCreators = [];
-    for (const creator of creators) {
+    for (const creator of LAUNCH_CREATOR_FIXTURES) {
       const user = await upsertUser(db, {
         name: creator.name,
         email: creator.email,

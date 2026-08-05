@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
+import packageJson from "../../package.json";
 
 describe("development seed", () => {
+  it("keeps the production demo importer explicit and outside lifecycle hooks", () => {
+    expect(packageJson.scripts["db:import-demo-content"]).toBe(
+      "node scripts/import-blindly-demo-content.mjs",
+    );
+    expect(packageJson.scripts.build).not.toContain("import-blindly-demo-content");
+    expect(packageJson.scripts.postinstall).not.toContain("import-blindly-demo-content");
+    expect(packageJson.scripts["db:seed"]).not.toContain("import-blindly-demo-content");
+  });
+
   it("defines every Blindly launch category and never runs when NODE_ENV is production", async () => {
     const { CATEGORY_OPTIONS, LAUNCH_CATEGORIES, runSeed } = await import("../../prisma/seed.mjs");
 

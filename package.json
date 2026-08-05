@@ -8,6 +8,7 @@
     "start": "next start",
     "test": "vitest run",
     "db:seed": "prisma db seed",
+    "db:import-demo-content": "node scripts/import-blindly-demo-content.mjs",
     "lint": "eslint",
     "postinstall": "prisma generate"
   },
