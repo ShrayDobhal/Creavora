@@ -127,3 +127,44 @@ it("keeps mobile thread recovery controls available while a selected conversatio
   fireEvent.click(screen.getByRole("button", { name: "Back to conversations" }));
   expect(screen.queryByRole("button", { name: "Back to conversations" })).not.toBeInTheDocument();
 });
+
+it("opens a followed creator locally and promotes the starter after its first submitted message", async () => {
+  const participant = { id: "creator-3", name: "Mina Das", handle: "mina", avatar: null, roleTitle: "Photographer", verified: true };
+  const fetchMock = vi.fn((url, options = {}) => {
+    if (options.method === "POST") {
+      return Promise.resolve(new Response(JSON.stringify({
+        id: "message-starter",
+        content: "Hi Mina",
+        mine: true,
+        status: "SENT",
+        createdAt: "2026-08-05T10:05:00.000Z",
+      }), { status: 201 }));
+    }
+    return Promise.resolve(new Response(JSON.stringify({ items: [], suggestions: [participant] }), { status: 200 }));
+  });
+  vi.stubGlobal("fetch", fetchMock);
+
+  render(<MessagesPage />);
+
+  fireEvent.click(await screen.findByRole("button", { name: /Mina Das/ }));
+  expect(await screen.findByText("No messages in this conversation yet.")).toBeVisible();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+
+  fireEvent.change(screen.getByRole("textbox", { name: "Message Mina Das" }), {
+    target: { value: "Hi Mina" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  expect(fetchMock).toHaveBeenLastCalledWith(
+    "/api/messages",
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ receiverId: "creator-3", content: "Hi Mina" }),
+    }),
+  );
+  expect(await screen.findByText("Hi Mina")).toBeVisible();
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to conversations" }));
+  expect(screen.getByRole("button", { name: /Mina Das/ })).toBeVisible();
+});

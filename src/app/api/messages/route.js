@@ -92,7 +92,27 @@ export function createMessagesGet({ database = db } = {}) {
         });
       }
 
-      return NextResponse.json({ items });
+      const followRows = database.follow?.findMany
+        ? await database.follow.findMany({
+          where: {
+            followerId: user.id,
+            following: { is: { role: "CREATOR", deletedAt: null } },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 12,
+          select: { following: { select: participantSelect } },
+        })
+        : [];
+      const suggestions = [];
+
+      for (const follow of followRows) {
+        const participant = follow.following;
+        if (!participant || participant.id === user.id || participant.deletedAt || seen.has(participant.id)) continue;
+        seen.add(participant.id);
+        suggestions.push(presentParticipant(participant));
+      }
+
+      return NextResponse.json({ items, suggestions });
     } catch (error) {
       return consumerErrorResponse(error, "Failed to load messages");
     }

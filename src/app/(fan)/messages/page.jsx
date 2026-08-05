@@ -28,8 +28,10 @@ const formatTime = (value) =>
 
 export default function MessagesPage() {
   const [conversations, setConversations] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [thread, setThread] = useState(null);
+  const [localStarterId, setLocalStarterId] = useState(null);
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,7 @@ export default function MessagesPage() {
       .then((data) => {
         const items = Array.isArray(data?.items) ? data.items : [];
         setConversations(items);
+        setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
         setActiveId((current) => current || items[0]?.participant.id || null);
         setThreadLoading(items.length > 0);
       })
@@ -59,7 +62,7 @@ export default function MessagesPage() {
   }, [reloadKey]);
 
   useEffect(() => {
-    if (!activeId) return undefined;
+    if (!activeId || localStarterId === activeId) return undefined;
     const controller = new AbortController();
     const requestId = threadRequestRef.current + 1;
     threadRequestRef.current = requestId;
@@ -79,7 +82,7 @@ export default function MessagesPage() {
       controller.abort();
       if (threadRequestRef.current === requestId) threadRequestRef.current += 1;
     };
-  }, [activeId, threadReloadKey]);
+  }, [activeId, localStarterId, threadReloadKey]);
 
   const retryConversations = () => {
     setLoading(true);
@@ -91,10 +94,21 @@ export default function MessagesPage() {
     setMobileThreadOpen(true);
     if (participantId === activeId) return;
     threadRequestRef.current += 1;
+    setLocalStarterId(null);
     setThread(null);
     setThreadLoading(true);
     setError("");
     setActiveId(participantId);
+  };
+
+  const selectSuggestion = (participant) => {
+    setMobileThreadOpen(true);
+    threadRequestRef.current += 1;
+    setLocalStarterId(participant.id);
+    setThread({ participant, items: [] });
+    setThreadLoading(false);
+    setError("");
+    setActiveId(participant.id);
   };
 
   const retryThread = () => {
@@ -112,6 +126,14 @@ export default function MessagesPage() {
     );
   }, [conversations, query]);
 
+  const filteredSuggestions = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return suggestions;
+    return suggestions.filter((participant) =>
+      `${participant.name} ${participant.handle || ""}`.toLowerCase().includes(normalized),
+    );
+  }, [suggestions, query]);
+
   const handleSend = async (event) => {
     event.preventDefault();
     const content = draft.trim();
@@ -121,11 +143,18 @@ export default function MessagesPage() {
     try {
       const created = await sendMessage(thread.participant.id, content);
       setThread((current) => ({ ...current, items: [...current.items, created] }));
-      setConversations((current) => current.map((conversation) =>
-        conversation.participant.id === thread.participant.id
-          ? { ...conversation, lastMessage: created }
-          : conversation,
-      ));
+      setConversations((current) => {
+        const existing = current.find((conversation) => conversation.participant.id === thread.participant.id);
+        if (existing) {
+          return current.map((conversation) =>
+            conversation.participant.id === thread.participant.id
+              ? { ...conversation, lastMessage: created }
+              : conversation,
+          );
+        }
+        return [{ participant: thread.participant, lastMessage: created }, ...current];
+      });
+      setSuggestions((current) => current.filter((participant) => participant.id !== thread.participant.id));
       setDraft("");
     } catch (sendFailure) {
       setSendError(sendFailure.message);
@@ -164,24 +193,46 @@ export default function MessagesPage() {
                 <RefreshCw size={14} /> Try again
               </button>
             </div>
-          ) : filtered.length === 0 ? (
+          ) : filtered.length === 0 && filteredSuggestions.length === 0 ? (
             <div className="p-5 text-center text-sm text-muted">
               <MessageCircle className="mx-auto mb-2" />
               {query ? "No conversations match your search." : "No conversations yet."}
             </div>
-          ) : filtered.map((conversation) => (
-            <button
-              key={conversation.participant.id}
-              onClick={() => selectConversation(conversation.participant.id)}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left ${activeId === conversation.participant.id ? "bg-brand-50" : "hover:bg-canvas"}`}
-            >
-              <ParticipantAvatar participant={conversation.participant} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-bold text-ink">{conversation.participant.name}</span>
-                <span className="block text-xs text-muted">{formatTime(conversation.lastMessage.createdAt)}</span>
-              </span>
-            </button>
-          ))}
+          ) : (
+            <>
+              {filteredSuggestions.length > 0 && (
+                <div className="px-3 pb-2 pt-1">
+                  <p className="px-1 pb-2 text-xs font-bold uppercase tracking-wide text-muted">Start a conversation</p>
+                  {filteredSuggestions.map((participant) => (
+                    <button
+                      key={participant.id}
+                      onClick={() => selectSuggestion(participant)}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left ${activeId === participant.id ? "bg-brand-50" : "hover:bg-canvas"}`}
+                    >
+                      <ParticipantAvatar participant={participant} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold text-ink">{participant.name}</span>
+                        {participant.roleTitle && <span className="block truncate text-xs text-muted">{participant.roleTitle}</span>}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {filtered.map((conversation) => (
+                <button
+                  key={conversation.participant.id}
+                  onClick={() => selectConversation(conversation.participant.id)}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left ${activeId === conversation.participant.id ? "bg-brand-50" : "hover:bg-canvas"}`}
+                >
+                  <ParticipantAvatar participant={conversation.participant} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-ink">{conversation.participant.name}</span>
+                    <span className="block text-xs text-muted">{formatTime(conversation.lastMessage.createdAt)}</span>
+                  </span>
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </Card>
 

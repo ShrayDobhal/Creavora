@@ -320,6 +320,66 @@ it("lists persisted conversations and sends by receiver id", async () => {
   });
 });
 
+it("returns followed creators without messages as suggestions and omits unsafe or existing participants", async () => {
+  const user = { id: "user-1", name: "Riya" };
+  const existingParticipant = {
+    id: "creator-existing",
+    name: "Already Messaged",
+    handle: "already-messaged",
+    avatar: null,
+    roleTitle: "Writer",
+    verified: false,
+  };
+  const suggestedParticipant = {
+    id: "creator-new",
+    name: "New Follow",
+    handle: "new-follow",
+    avatar: null,
+    roleTitle: "Illustrator",
+    verified: true,
+  };
+  const messageFindMany = vi.fn().mockResolvedValue([{
+    id: "message-existing",
+    senderId: existingParticipant.id,
+    receiverId: user.id,
+    content: "Hello",
+    mediaUrl: null,
+    mediaType: null,
+    isAudio: false,
+    duration: null,
+    status: "READ",
+    createdAt: new Date("2026-08-05T10:00:00.000Z"),
+    sender: existingParticipant,
+    receiver: user,
+  }]);
+  const followFindMany = vi.fn().mockResolvedValue([
+    { following: suggestedParticipant },
+    { following: { ...user, handle: "riya", avatar: null, roleTitle: null, verified: false } },
+    { following: { ...suggestedParticipant, id: "creator-deleted", name: "Deleted Follow", deletedAt: new Date() } },
+    { following: existingParticipant },
+  ]);
+
+  const response = await createMessagesGet({
+    database: {
+      message: { findMany: messageFindMany },
+      follow: { findMany: followFindMany },
+    },
+  })(new Request("http://localhost/api/messages"), { user });
+
+  expect(await response.json()).toMatchObject({
+    items: [{ participant: { id: "creator-existing" } }],
+    suggestions: [{ id: "creator-new", name: "New Follow", handle: "new-follow", verified: true }],
+  });
+  expect(followFindMany).toHaveBeenCalledWith(expect.objectContaining({
+    where: {
+      followerId: user.id,
+      following: { is: { role: "CREATOR", deletedAt: null } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+  }));
+});
+
 it("returns bookmarked posts through the shared safe post presenter", async () => {
   const bookmark = {
     id: "bookmark-1",
