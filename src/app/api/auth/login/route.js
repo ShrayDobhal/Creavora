@@ -4,8 +4,15 @@ import { hashRefreshToken, normalizeRole, verifyPassword, generateTokenPair, set
 import { loginSchema, validateBody } from "@/lib/validators";
 
 export async function POST(req) {
+  let body;
+
   try {
-    const body = await req.json();
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  try {
     const { error, data } = validateBody(loginSchema, body);
 
     if (error) {
