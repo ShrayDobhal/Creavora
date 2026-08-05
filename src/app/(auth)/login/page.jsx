@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { safeRedirectPath } from "@/lib/safe-redirect";
+import AuthProviderOptions from "@/components/auth/AuthProviderOptions";
 
 function LoginForm() {
   const router = useRouter();
@@ -125,6 +126,8 @@ function LoginForm() {
               )}
             </button>
           </form>
+
+          <AuthProviderOptions role="USER" redirect={redirect} />
 
           <p className="mt-6 text-center text-[13.5px] text-muted">
             Don&apos;t have an account?{" "}

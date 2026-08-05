@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { hashRefreshToken, normalizeRole, verifyPassword, generateTokenPair, setAuthCookies } from "@/lib/auth";
+import { issueSession, normalizeRole, verifyPassword } from "@/lib/auth";
 import { loginSchema, validateBody } from "@/lib/validators";
 
 export async function POST(req) {
@@ -50,48 +50,7 @@ export async function POST(req) {
       );
     }
 
-    // Generate tokens
-    const { accessToken, refreshToken } = generateTokenPair(user.id, role);
-
-    // Store refresh token (limit to 5 active sessions per user)
-    const existingSessions = await db.refreshToken.count({
-      where: { userId: user.id, revoked: false },
-    });
-    if (existingSessions >= 5) {
-      // Revoke oldest session
-      const oldest = await db.refreshToken.findFirst({
-        where: { userId: user.id, revoked: false },
-        orderBy: { createdAt: "asc" },
-      });
-      if (oldest) {
-        await db.refreshToken.update({
-          where: { id: oldest.id },
-          data: { revoked: true },
-        });
-      }
-    }
-
-    await db.refreshToken.create({
-      data: {
-        userId: user.id,
-        tokenHash: hashRefreshToken(refreshToken),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        userAgent: req.headers.get("user-agent") || "unknown",
-      },
-    });
-
-    // Set cookies
-    await setAuthCookies(accessToken, refreshToken);
-
-    // Log activity
-    await db.activityLog.create({
-      data: {
-        userId: user.id,
-        action: "LOGIN",
-        details: `Logged in from ${req.headers.get("user-agent")?.substring(0, 100) || "unknown"}`,
-        ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown",
-      },
-    });
+    const { accessToken } = await issueSession({ database: db, user, request: req });
 
     return NextResponse.json({
       user: {

@@ -42,6 +42,10 @@ Blindly is a Next.js creator-discovery product with separate fan and creator aut
 | `JWT_ACCESS_SECRET` | Yes | Secret for access tokens. Use a unique random value of at least 32 bytes. |
 | `JWT_REFRESH_SECRET` | Yes | Separate secret for refresh tokens, also at least 32 bytes. |
 | `NEXT_PUBLIC_APP_URL` | Yes | Public application origin, such as `http://localhost:3000` locally. |
+| `GOOGLE_CLIENT_ID` | No | Enables Google sign-in only when paired with `GOOGLE_CLIENT_SECRET` and a trusted app origin. |
+| `GOOGLE_CLIENT_SECRET` | No | Server-only Google OAuth secret. Never expose it to browser code. |
+| `RESEND_API_KEY` | No | Enables password-reset email only when paired with `PASSWORD_RESET_FROM_EMAIL`. |
+| `PASSWORD_RESET_FROM_EMAIL` | No | Verified Resend sender used for password recovery. |
 | `SEED_DATABASE_URL` | Seed only | Separate local PostgreSQL database that may receive development fixtures. |
 | `SEED_DEVELOPMENT_CONFIRMATION` | Seed only | Must be `local-development` before the seed command will run. |
 | `SEED_PASSWORD` | No | Password for seeded accounts; defaults to `Test1234`. |
@@ -50,6 +54,7 @@ Blindly is a Next.js creator-discovery product with separate fan and creator aut
 | `RAZORPAY_KEY_SECRET` | No | Reserved for payment integration. |
 
 Do not reuse access and refresh secrets. Do not commit `.env` or copy production database credentials into seed configuration.
+Google OAuth uses `/api/auth/google/callback` on `NEXT_PUBLIC_APP_URL`. Password recovery stays visibly unavailable until both Resend variables are configured.
 
 ## Development seed data
 

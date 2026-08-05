@@ -10,6 +10,15 @@ const PUBLIC_ROUTES = [
   "/api/auth/register",
   "/api/auth/refresh",
 ];
+const EXACT_PUBLIC_ROUTES = new Set([
+  "/forgot-password",
+  "/reset-password",
+  "/api/auth/providers",
+  "/api/auth/google/start",
+  "/api/auth/google/callback",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+]);
 const AUTH_ENTRY_ROUTES = ["/login", "/creator-login", "/register"];
 const CREATOR_ROUTES = ["/studio"];
 const CREATOR_API_ROUTES = ["/api/studio"];
@@ -91,6 +100,7 @@ export async function proxy(req) {
   }
 
   const isAuthEntry = AUTH_ENTRY_ROUTES.some((route) => matchesRoute(pathname, route));
+  if (EXACT_PUBLIC_ROUTES.has(pathname)) return NextResponse.next();
   if (!isAuthEntry && PUBLIC_ROUTES.some((route) => matchesRoute(pathname, route))) {
     return NextResponse.next();
   }

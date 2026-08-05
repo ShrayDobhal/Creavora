@@ -3,6 +3,15 @@ import { FEED_MODES } from "./consumer/constants";
 
 // ─── Auth Schemas ───────────────────────────────────────────────────────────
 
+export const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .max(128, "Password must be at most 128 characters")
+  .regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+    "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+  );
+
 export const registerSchema = z.object({
   name: z
     .string()
@@ -15,14 +24,7 @@ export const registerSchema = z.object({
     .max(255)
     .trim()
     .toLowerCase(),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(128, "Password must be at most 128 characters")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
-    ),
+  password: passwordSchema,
   handle: z
     .string()
     .min(3, "Handle must be at least 3 characters")
@@ -49,6 +51,15 @@ export const loginSchema = z.object({
     .min(1, "Password is required"),
   role: z.enum(["USER", "CREATOR"]).optional(),
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().pipe(z.string().email("Invalid email address").max(255)),
+}).strict();
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1).max(512),
+  password: passwordSchema,
+}).strict();
 
 // ─── Post Schemas ───────────────────────────────────────────────────────────
 

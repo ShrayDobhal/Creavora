@@ -14,6 +14,7 @@ model User {
   email         String    @unique
   handle        String    @unique
   passwordHash  String?
+  googleSubject String?   @unique
   avatar        String?
   role          String    @default("USER") // "USER", "CREATOR", "ADMIN"
   walletBalance Float     @default(0.0)
@@ -35,6 +36,7 @@ model User {
 
   // Auth relations
   refreshTokens  RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
   activityLogs   ActivityLog[]
 
   // Content relations
@@ -125,6 +127,21 @@ model RefreshToken {
   @@index([userId])
   @@index([tokenHash])
   @@index([deletedAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([userId, usedAt])
 }
 
 model ActivityLog {

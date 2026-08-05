@@ -3,6 +3,7 @@ import { expect, it, vi } from "vitest";
 vi.mock("@/lib/db", () => ({ db: {} }));
 
 import { POST } from "@/app/api/auth/login/route";
+import { hashRefreshToken, issueSession } from "@/lib/auth";
 
 it("returns a client error when the login body is malformed JSON", async () => {
   const response = await POST(
@@ -15,4 +16,38 @@ it("returns a client error when the login body is malformed JSON", async () => {
 
   expect(response.status).toBe(400);
   expect(await response.json()).toEqual({ error: "Invalid JSON body" });
+});
+
+it("issues the shared Blindly session and keeps at most five active refresh sessions", async () => {
+  const oldest = { id: "refresh-oldest" };
+  const database = {
+    refreshToken: {
+      count: vi.fn().mockResolvedValue(5),
+      findFirst: vi.fn().mockResolvedValue(oldest),
+      update: vi.fn(),
+      create: vi.fn(),
+    },
+    activityLog: { create: vi.fn() },
+  };
+  const setCookies = vi.fn();
+  const request = new Request("https://blindly.example/api/auth/login", {
+    headers: { "user-agent": "Vitest browser", "x-forwarded-for": "203.0.113.7" },
+  });
+  const result = await issueSession({
+    database,
+    user: { id: "user-1", role: "USER" },
+    request,
+    setCookies,
+    now: () => new Date("2026-08-05T10:00:00.000Z"),
+  });
+
+  expect(database.refreshToken.update).toHaveBeenCalledWith({ where: { id: oldest.id }, data: { revoked: true } });
+  expect(database.refreshToken.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+    userId: "user-1",
+    tokenHash: hashRefreshToken(result.refreshToken),
+    expiresAt: new Date("2026-08-12T10:00:00.000Z"),
+    userAgent: "Vitest browser",
+  }) });
+  expect(setCookies).toHaveBeenCalledWith(result.accessToken, result.refreshToken);
+  expect(database.activityLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ action: "LOGIN" }) });
 });

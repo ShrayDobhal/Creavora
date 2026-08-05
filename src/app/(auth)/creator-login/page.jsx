@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Sparkles, ArrowLeft, Loader2, ShieldAlert } from "lucide-react";
 import { safeRedirectPath } from "@/lib/safe-redirect";
+import AuthProviderOptions from "@/components/auth/AuthProviderOptions";
 
 function CreatorLoginForm() {
   const router = useRouter();
@@ -128,6 +129,8 @@ function CreatorLoginForm() {
               )}
             </button>
           </form>
+
+          <AuthProviderOptions role="CREATOR" redirect={redirect} dark />
 
           <p className="mt-6 text-center text-[13.5px] text-neutral-400">
             Apply to become a creator?{" "}

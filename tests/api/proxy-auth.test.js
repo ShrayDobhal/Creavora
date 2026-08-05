@@ -18,6 +18,23 @@ const request = (pathname, token) =>
 const redirectLocation = (response) => new URL(response.headers.get("location"));
 
 describe("actual consumer auth boundaries", () => {
+  it("allows only the exact recovery and OAuth public surfaces anonymously", async () => {
+    const publicPaths = [
+      "/forgot-password",
+      "/reset-password",
+      "/api/auth/providers",
+      "/api/auth/google/start",
+      "/api/auth/google/callback",
+      "/api/auth/forgot-password",
+      "/api/auth/reset-password",
+    ];
+    for (const pathname of publicPaths) {
+      expect((await proxy(request(pathname))).status, pathname).toBe(200);
+    }
+    expect((await proxy(request("/api/auth/google/private"))).status).toBe(401);
+    expect((await proxy(request("/api/auth/reset-password/private"))).status).toBe(401);
+  });
+
   it("redirects an unauthenticated root request to the public landing page", async () => {
     const response = await proxy(request("/"));
 
