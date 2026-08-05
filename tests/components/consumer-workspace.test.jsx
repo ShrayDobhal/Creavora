@@ -5,14 +5,10 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import ConsumerWorkspaceNav from "@/components/consumer/ConsumerWorkspaceNav";
 import EditorialImage from "@/components/consumer/EditorialImage";
-import HomePage from "@/app/(fan)/home/page";
+import HomeDashboard from "@/components/consumer/HomeDashboard";
 import WalletPage from "@/app/(fan)/wallet/page";
 import RewardsPage from "@/app/(fan)/rewards/page";
 import { CommunityCard } from "@/app/(fan)/explore/page";
-
-vi.mock("@/app/(fan)/feed/page", () => ({
-  default: () => <h1>Feed</h1>,
-}));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/home",
@@ -29,10 +25,26 @@ it("shows the complete desktop user navigation", () => {
   expect(screen.getByRole("link", { name: "Saved Posts" })).toHaveAttribute("href", "/saved");
 });
 
-it("delegates the safe home route to the feed until its dashboard exists", () => {
-  render(<HomePage />);
+it("uses an honest Home empty state", () => {
+  render(
+    <HomeDashboard
+      data={{
+        viewer: { name: "Riya" },
+        categories: [],
+        creators: [],
+        featuredPosts: [],
+        stories: [],
+        liveSessions: [],
+        subscriptions: [],
+        unreadNotifications: 0,
+      }}
+    />,
+  );
 
-  expect(screen.getByRole("heading", { name: "Feed" })).toBeVisible();
+  expect(
+    screen.getByText("Your Blindly workspace is ready for new connections"),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("Ananya Sharma")).not.toBeInTheDocument();
 });
 
 it("shows wallet as unavailable without fabricated balances or payment controls", () => {

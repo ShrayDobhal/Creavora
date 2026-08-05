@@ -23,6 +23,10 @@ export function getFeed({ mode = "latest", cursor, signal } = {}) {
   return request(`/api/posts?${query}`, { signal });
 }
 
+export function getConsumerHome({ signal } = {}) {
+  return request("/api/consumer/home", { signal });
+}
+
 export function createPost(input, { signal } = {}) {
   return request("/api/posts", { method: "POST", signal, body: input });
 }

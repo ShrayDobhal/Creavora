@@ -12,7 +12,7 @@ export const CATEGORY_OPTIONS = [
   "Lifestyle",
 ];
 
-export const FEED_MODES = new Set(["latest", "following"]);
+export const FEED_MODES = new Set(["latest", "following", "trending"]);
 
 export const formatInr = (amount) =>
   new Intl.NumberFormat("en-IN", {
