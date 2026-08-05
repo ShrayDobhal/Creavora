@@ -426,10 +426,9 @@ npm run lint
 npx prisma validate
 npm run build
 git status --short
-git push origin main
 ~~~
 
-Document that Vercel environment pulls are operator-only and never committed. After GitHub/Vercel deploy is Ready, run importer once against production database, capture import counts, and verify /home, /feed, /explore, /live, /messages, /saved, /collections, /notifications, /profile, /settings.
+Document that Vercel environment pulls are operator-only and never committed. After final whole-branch review and integration into main, push main through the connected GitHub/Vercel workflow. Once the deployment is Ready, run importer once against production database, capture import counts, and verify /home, /feed, /explore, /live, /messages, /saved, /collections, /notifications, /profile, /settings.
 
 - [ ] **Step 4: Run final verification**
 
@@ -442,10 +441,9 @@ Expected: all tests pass, lint has zero warnings, Prisma validates, and build ex
 ~~~bash
 git add README.md .env.example tests/consumer/demo-importer.test.js
 git commit -m "docs: document Blindly consumer release operations"
-git push origin main
 ~~~
 
-After production deploy is Ready, execute explicitly confirmed importer and report deployed URL, commit SHA, importer counts, route checks, and verification results.
+After final integration and production deploy is Ready, execute explicitly confirmed importer and report deployed URL, commit SHA, importer counts, route checks, and verification results.
 
 ## Plan Self-Review
 
