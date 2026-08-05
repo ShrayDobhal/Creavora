@@ -18,7 +18,7 @@ async function request(path, { signal, method = "GET", body } = {}) {
 }
 
 export function getFeed({ mode = "latest", cursor, signal } = {}) {
-  const query = new URLSearchParams({ mode, limit: "12" });
+  const query = new URLSearchParams({ mode, limit: "8" });
   if (cursor) query.set("cursor", cursor);
   return request(`/api/posts?${query}`, { signal });
 }
@@ -47,13 +47,23 @@ export function signImageUpload(input, { signal } = {}) {
   return request("/api/uploads/sign", { method: "POST", signal, body: input });
 }
 
-export async function uploadSignedImage({ uploadUrl, headers }, file, { signal } = {}) {
-  const response = await fetch(uploadUrl, {
-    method: "PUT",
-    headers,
-    body: file,
-    signal,
-  });
+export async function uploadSignedImage({ uploadUrl, headers }, file, { signal, onProgress } = {}) {
+  if (typeof XMLHttpRequest !== "undefined" && onProgress) {
+    return new Promise((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      request.open("PUT", uploadUrl);
+      Object.entries(headers || {}).forEach(([name, value]) => request.setRequestHeader(name, value));
+      request.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
+      });
+      request.addEventListener("load", () => request.status >= 200 && request.status < 300 ? resolve() : reject(new Error("Image upload failed. Please try again.")));
+      request.addEventListener("error", () => reject(new Error("Image upload failed. Please try again.")));
+      request.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      signal?.addEventListener("abort", () => request.abort(), { once: true });
+      request.send(file);
+    });
+  }
+  const response = await fetch(uploadUrl, { method: "PUT", headers, body: file, signal });
   if (!response.ok) throw new Error("Image upload failed. Please try again.");
 }
 
@@ -133,12 +143,32 @@ export function getComments(postId, { signal } = {}) {
   return request(`/api/posts/${encodeURIComponent(postId)}/comment`, { signal });
 }
 
-export function createComment(postId, content, { signal } = {}) {
+export function createComment(postId, content, parentIdOrOptions = null, options = {}) {
+  const parentId = typeof parentIdOrOptions === "string" ? parentIdOrOptions : null;
+  const signal = typeof parentIdOrOptions === "object" && parentIdOrOptions !== null
+    ? parentIdOrOptions.signal
+    : options.signal;
   return request(`/api/posts/${encodeURIComponent(postId)}/comment`, {
     method: "POST",
     signal,
-    body: { content: content.trim() },
+    body: { content: content.trim(), ...(parentId ? { parentId } : {}) },
   });
+}
+
+export function updateComment(postId, commentId, content, { signal } = {}) {
+  return request(`/api/posts/${encodeURIComponent(postId)}/comment`, { method: "PATCH", signal, body: { commentId, content: content.trim() } });
+}
+
+export function deleteComment(postId, commentId, { signal } = {}) {
+  return request(`/api/posts/${encodeURIComponent(postId)}/comment`, { method: "DELETE", signal, body: { commentId } });
+}
+
+export function sharePost(postId, { signal } = {}) {
+  return request(`/api/posts/${encodeURIComponent(postId)}/share`, { method: "POST", signal });
+}
+
+export function getPost(postId, { signal } = {}) {
+  return request(`/api/posts/${encodeURIComponent(postId)}`, { signal });
 }
 
 export function getConversations({ signal } = {}) {

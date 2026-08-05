@@ -5,6 +5,13 @@ import { uploadCompleteSchema, validateBody } from "@/lib/validators";
 import * as r2Storage from "@/lib/storage/r2";
 
 const INVALID_UPLOAD = "Uploaded image did not match the signed metadata";
+const validSignature = (mimeType, bytes) => {
+  const value = Array.from(bytes || []);
+  if (mimeType === "image/jpeg") return value[0] === 0xff && value[1] === 0xd8 && value[2] === 0xff;
+  if (mimeType === "image/png") return [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((byte, index) => value[index] === byte);
+  if (mimeType === "image/webp") return String.fromCharCode(...value.slice(0, 4)) === "RIFF" && String.fromCharCode(...value.slice(8, 12)) === "WEBP";
+  return false;
+};
 
 const validationResponse = (details) =>
   NextResponse.json({ error: "Validation failed", details }, { status: 400 });
@@ -39,7 +46,10 @@ export function createUploadCompletePost({ storage = r2Storage, database = db } 
 
     try {
       const metadata = await storage.getObjectMetadata({ key: asset.key });
-      if (metadata.ContentLength !== asset.bytes || metadata.ContentType !== asset.mimeType) {
+      const prefix = metadata.ContentLength === asset.bytes && metadata.ContentType === asset.mimeType
+        ? await storage.getObjectPrefix({ key: asset.key })
+        : null;
+      if (metadata.ContentLength !== asset.bytes || metadata.ContentType !== asset.mimeType || !validSignature(asset.mimeType, prefix)) {
         await database.mediaAsset.updateMany({
           where: { id: asset.id, ownerId: user.id, deletedAt: null, verifiedAt: null },
           data: { deletedAt: new Date() },

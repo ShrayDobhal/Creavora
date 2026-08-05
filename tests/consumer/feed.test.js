@@ -100,7 +100,7 @@ describe("feed services", () => {
     });
 
     expect(fixture.calls.postFindMany[0].where.creator).toEqual({
-      is: { deletedAt: null },
+      is: { deletedAt: null, banned: false },
     });
   });
 

@@ -19,7 +19,7 @@ export const presentCreator = (row, viewerId) => ({
   isFollowing: includesViewer(row.creatorFollowers, viewerId),
 });
 
-export const presentComment = (row) => ({
+export const presentComment = (row, viewerId) => ({
   ...row,
   content: sanitizePublicCopy(row.content),
   user: row.user
@@ -29,6 +29,7 @@ export const presentComment = (row) => ({
         handle: sanitizePublicCopy(row.user.handle),
       }
     : row.user,
+  viewer: { canManage: row.userId === viewerId },
 });
 
 export const presentPost = (row, viewerId) => {
@@ -39,6 +40,7 @@ export const presentPost = (row, viewerId) => {
     content: isUnavailable ? null : sanitizePublicCopy(row.content),
     mediaUrl: isUnavailable ? null : row.mediaUrl,
     mediaType: isUnavailable ? null : row.mediaType,
+    category: row.category ?? row.creator?.creatorProfile?.category ?? null,
     isPremium: row.isPremium,
     availability: isUnavailable ? "coming_soon" : "available",
     publishedAt: row.publishedAt,

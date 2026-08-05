@@ -14,18 +14,24 @@ import EditorialImage from "@/components/consumer/EditorialImage";
 import { SearchPanel } from "@/components/consumer/SearchPanel";
 import {
   createComment,
+  deleteComment,
   getComments,
   getCreators,
   getDiscovery,
+  getFeed,
   saveSearchHistory,
   search,
   toggleBookmark,
   toggleFollow,
   toggleLike,
+  sharePost,
+  updateComment,
 } from "@/services/consumer-api";
 import { CATEGORY_OPTIONS } from "@/lib/consumer/constants";
 
 const emptySearch = { creators: [], posts: [], communities: [] };
+const hash = (value) => Array.from(value).reduce((result, character) => ((result * 31) + character.charCodeAt(0)) >>> 0, 2166136261);
+const shuffled = (items, seed) => [...items].sort((left, right) => hash(`${seed}:${left.id}`) - hash(`${seed}:${right.id}`));
 
 const subscribeToLocation = () => () => {};
 const readCategoryFromLocation = () => {
@@ -88,6 +94,57 @@ export default function ExplorePage() {
   const [searchSyncSignal, setSearchSyncSignal] = useState(0);
   const [searchState, setSearchState] = useState({ status: "idle", results: emptySearch, error: "" });
   const [historyError, setHistoryError] = useState("");
+  const [recommendationSeed, setRecommendationSeed] = useState(null);
+  const [postPage, setPostPage] = useState({ items: [], nextCursor: null });
+  const [postStatus, setPostStatus] = useState("loading");
+  const [postError, setPostError] = useState("");
+  const [postsLoadingMore, setPostsLoadingMore] = useState(false);
+
+  useEffect(() => {
+    const key = "blindly-explore-seed";
+    let seed = window.sessionStorage.getItem(key);
+    if (!seed) {
+      seed = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+      window.sessionStorage.setItem(key, seed);
+    }
+    const timer = window.setTimeout(() => setRecommendationSeed(seed), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!recommendationSeed) return undefined;
+    const controller = new AbortController();
+    getFeed({ mode: "trending", signal: controller.signal })
+      .then((result) => {
+        const items = Array.isArray(result?.items) ? shuffled(result.items, recommendationSeed) : [];
+        setPostPage({ items, nextCursor: result?.nextCursor || null });
+        setPostStatus(items.length ? "success" : "empty");
+      })
+      .catch((loadError) => {
+        if (loadError.name === "AbortError") return;
+        setPostError(loadError.message);
+        setPostStatus("error");
+      });
+    return () => controller.abort();
+  }, [recommendationSeed]);
+
+  const loadMorePosts = useCallback(async () => {
+    if (!postPage.nextCursor || postsLoadingMore || !recommendationSeed) return;
+    setPostsLoadingMore(true);
+    setPostError("");
+    try {
+      const result = await getFeed({ mode: "trending", cursor: postPage.nextCursor });
+      setPostPage((current) => {
+        const known = new Set(current.items.map((post) => post.id));
+        const incoming = shuffled(Array.isArray(result?.items) ? result.items : [], recommendationSeed).filter((post) => !known.has(post.id));
+        return { items: [...current.items, ...incoming], nextCursor: result?.nextCursor || null };
+      });
+    } catch (loadError) {
+      setPostError(loadError.message);
+    } finally {
+      setPostsLoadingMore(false);
+    }
+  }, [postPage.nextCursor, postsLoadingMore, recommendationSeed]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -276,6 +333,9 @@ export default function ExplorePage() {
                     onBookmark={toggleBookmark}
                     onLoadComments={getComments}
                     onCreateComment={createComment}
+                    onUpdateComment={updateComment}
+                    onDeleteComment={deleteComment}
+                    onShare={sharePost}
                   />
                 ))}</div></div>
               ) : null}
@@ -284,6 +344,22 @@ export default function ExplorePage() {
               ) : null}
             </div>
           )}
+          <div className="mt-10 border-t border-line pt-8">
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-600">Posts for you</p>
+              <h2 className="mt-1 text-2xl font-black">Fresh from the community</h2>
+              <p className="mt-1 text-sm text-muted">A different mix each time you open a new session</p>
+            </div>
+            {postStatus !== "success" ? <div className="mt-5"><AsyncState status={postStatus} error={postError} emptyTitle="No posts to explore yet" emptyMessage="New community posts will appear here" /></div> : (
+              <div className="mt-5">
+                <div className="grid items-start gap-5 xl:grid-cols-2">
+                  {postPage.items.map((post) => <FeedCard key={`explore:${post.id}`} post={post} onLike={toggleLike} onBookmark={toggleBookmark} onLoadComments={getComments} onCreateComment={createComment} onUpdateComment={updateComment} onDeleteComment={deleteComment} onShare={sharePost} />)}
+                </div>
+                {postError ? <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700" role="alert">{postError}</p> : null}
+                {postPage.nextCursor ? <button type="button" onClick={loadMorePosts} disabled={postsLoadingMore} className="mx-auto mt-6 flex min-h-11 items-center rounded-xl border border-line bg-white px-5 text-sm font-bold disabled:opacity-60">{postsLoadingMore ? "Loading more posts" : "Load more posts"}</button> : <p className="mt-6 text-center text-sm font-bold text-muted">You’re all caught up</p>}
+              </div>
+            )}
+          </div>
         </section>
       ) : (
         <section className="mt-8" aria-labelledby="discovery-title">

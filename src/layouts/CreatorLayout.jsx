@@ -61,8 +61,8 @@ export function CreatorTopBar({
   unreadNotifications = 0,
 }) {
   return (
-    <header className="sticky top-0 z-30 flex h-[76px] items-center gap-4 border-b border-line bg-white px-6">
-      <div className="w-[196px] shrink-0">
+    <header className="sticky top-0 z-30 flex h-[76px] min-w-0 items-center gap-2 border-b border-line bg-white px-3 sm:gap-4 sm:px-6">
+      <div className="min-w-0 shrink-0 sm:w-[196px]">
         {title ? (
           <div>
             <h1 className="text-[21px] font-extrabold tracking-tight">{title}</h1>
@@ -74,7 +74,7 @@ export function CreatorTopBar({
       </div>
 
       {!title && (
-        <div className="flex flex-1 justify-center">
+        <div className="hidden flex-1 justify-center md:flex">
           <label className="relative flex w-full max-w-[540px] items-center">
             <Search size={17} className="absolute left-4 text-muted" />
             <input
@@ -91,12 +91,12 @@ export function CreatorTopBar({
 
       <div className="flex shrink-0 items-center gap-3">
         {right ?? (
-          <button className="flex h-11 items-center gap-2 rounded-full bg-brand-600 px-5 text-[14px] font-bold text-white hover:bg-brand-700 cursor-pointer">
-            <Plus size={17} /> {createLabel}
-          </button>
+          <Link href="/feed#create-post" aria-label="Create post" className="flex h-11 items-center gap-2 rounded-full bg-brand-600 px-3 text-[14px] font-bold text-white hover:bg-brand-700 cursor-pointer sm:px-5">
+            <Plus size={17} /> <span className="hidden sm:inline">{createLabel}</span>
+          </Link>
         )}
         {coins != null && (
-          <span className="flex h-10 items-center gap-1.5 rounded-full bg-brand-50 px-3.5 text-[13px] font-bold text-brand-700">
+          <span className="hidden h-10 items-center gap-1.5 rounded-full bg-brand-50 px-3.5 text-[13px] font-bold text-brand-700 xl:flex">
             <Sparkles size={14} className="fill-brand-500 text-brand-500" />
             {coins}
           </span>
@@ -197,15 +197,15 @@ export default function CreatorLayout({ children, topbar }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-dvh overflow-x-clip bg-white">
       <CreatorTopBar
         {...topbar}
         coins={user ? Math.round(user.walletBalance) : 0}
         user={user}
         unreadNotifications={unreadNotifications}
       />
-      <div className="flex">
-        <aside className="sticky top-[76px] hidden h-[calc(100vh-76px)] w-[244px] shrink-0 flex-col overflow-y-auto border-r border-line px-4 py-4 lg:flex">
+      <div>
+        <aside className="no-scrollbar fixed bottom-0 left-0 top-[76px] z-20 hidden w-[244px] flex-col overflow-y-auto border-r border-line bg-white px-4 py-4 lg:flex">
           {user && (
             <Link href={`/creator/${user.handle}`} className="block rounded-2xl bg-brand-50/70 p-3.5 hover:bg-brand-50">
               <div className="flex items-center gap-3">
@@ -249,7 +249,7 @@ export default function CreatorLayout({ children, topbar }) {
             <PlanCard />
           </div>
         </aside>
-        <main className="min-w-0 flex-1 bg-canvas">{children}</main>
+        <main className="min-h-[calc(100dvh-76px)] min-w-0 overflow-x-hidden bg-canvas lg:ml-[244px]">{children}</main>
       </div>
     </div>
   );

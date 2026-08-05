@@ -185,6 +185,45 @@ describe("FeedCard", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Comments are unavailable");
     expect(screen.getByText(post.content)).toBeVisible();
   });
+
+  it("supports replies and owner-only comment editing and deletion", async () => {
+    const user = userEvent.setup();
+    const root = {
+      id: "comment-1",
+      parentId: null,
+      content: "Original comment",
+      createdAt: "2026-08-04T11:00:00.000Z",
+      user: { id: "viewer-1", name: "Viewer", handle: "viewer", avatar: null },
+      viewer: { canManage: true },
+    };
+    const onCreateComment = vi.fn().mockResolvedValue({
+      comment: { ...root, id: "comment-2", parentId: root.id, content: "A reply" },
+      commentsCount: 3,
+    });
+    const onUpdateComment = vi.fn().mockResolvedValue({ ...root, content: "Edited comment" });
+    const onDeleteComment = vi.fn().mockResolvedValue({ commentsCount: 2 });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<FeedCard post={post} onLike={vi.fn()} onBookmark={vi.fn()} onLoadComments={vi.fn().mockResolvedValue([root])} onCreateComment={onCreateComment} onUpdateComment={onUpdateComment} onDeleteComment={onDeleteComment} />);
+    await user.click(screen.getByRole("button", { name: "View 2 comments" }));
+    expect(await screen.findByText("Original comment")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+    await user.type(screen.getByPlaceholderText("Write a reply"), "A reply");
+    await user.click(screen.getByRole("button", { name: "Post reply" }));
+    expect(onCreateComment).toHaveBeenCalledWith("post-1", "A reply", "comment-1");
+
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+    await user.clear(screen.getByRole("textbox", { name: "Edit comment" }));
+    await user.type(screen.getByRole("textbox", { name: "Edit comment" }), "Edited comment");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onUpdateComment).toHaveBeenCalledWith("post-1", "comment-1", "Edited comment");
+    expect(await screen.findByText("Edited comment")).toBeVisible();
+
+    await user.click(screen.getAllByRole("button", { name: "Delete" })[0]);
+    expect(onDeleteComment).toHaveBeenCalledWith("post-1", "comment-1");
+    expect(screen.queryByText("Edited comment")).not.toBeInTheDocument();
+  });
 });
 
 describe("Feed page", () => {

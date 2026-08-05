@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Card, Chip, SectionHead, Tabs } from "@/ui/Bits.jsx";
 import { Photo } from "@/ui/Media.jsx";
+import { PostComposer } from "@/components/consumer/PostComposer";
 
 const uploadTypes = [
   { title: "Photo", sub: "JPG, PNG, HEIC", icon: ImageIcon, tint: "bg-brand-50 text-brand-600" },
@@ -150,11 +151,17 @@ export default function StudioContent() {
             </p>
           </div>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => document.getElementById("create-post")?.scrollIntoView({ behavior: "smooth", block: "start" })}
             className="flex h-11 items-center gap-2 rounded-xl bg-brand-600 px-5 text-[14px] font-bold text-white hover:bg-brand-700 cursor-pointer"
           >
             <Upload size={16} /> Upload New
           </button>
+        </div>
+
+        <div className="mt-5">
+          <PostComposer onPublished={(newPost) => {
+            setItems((current) => [{ id: newPost.id, seed: newPost.mediaUrl, title: newPost.content, kind: "Photo", tint: "bg-brand-50 text-brand-700", date: new Date(newPost.publishedAt).toLocaleString("en-IN"), vis: "Public", likes: "0", comments: 0, locked: false }, ...current]);
+          }} />
         </div>
 
         <Tabs
@@ -173,7 +180,7 @@ export default function StudioContent() {
               </p>
             </div>
             <button
-              onClick={() => setShowModal(true)}
+              onClick={() => document.getElementById("create-post")?.scrollIntoView({ behavior: "smooth", block: "start" })}
               className="flex h-10 items-center gap-2 rounded-xl border border-line bg-white px-4 text-[13px] font-bold hover:bg-canvas cursor-pointer"
             >
               <Upload size={15} /> Publish Form
@@ -186,7 +193,7 @@ export default function StudioContent() {
                 key={title}
                 onClick={() => {
                   setKind(title === "Reel / Short" ? "Reel" : title);
-                  setShowModal(true);
+                  document.getElementById("create-post")?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
                 className="flex items-center gap-3 rounded-xl border border-line bg-white p-3.5 text-left hover:border-brand-300 cursor-pointer"
               >

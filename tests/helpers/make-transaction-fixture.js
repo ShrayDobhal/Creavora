@@ -183,7 +183,9 @@ export function makeTransactionFixture({
         calls.commentFindFirst.push(where);
         return comments.find(
           (comment) =>
-            comment.id === where.id &&
+            (where.id === undefined || comment.id === where.id) &&
+            (where.userId === undefined || comment.userId === where.userId) &&
+            (where.content === undefined || comment.content === where.content) &&
             comment.postId === where.postId &&
             comment.deletedAt === null,
         ) ?? null;
@@ -191,11 +193,19 @@ export function makeTransactionFixture({
       create: async ({ data, include }) => {
         const comment = {
           id: `comment-${comments.length + 1}`,
+          deletedAt: null,
+          createdAt: new Date(),
           ...data,
           user: include ? { id: data.userId, name: "Viewer", handle: "viewer" } : undefined,
         };
         comments.push(comment);
         return comment;
+      },
+      updateMany: async ({ where, data }) => {
+        const comment = comments.find((item) => item.id === where.id && item.postId === where.postId && item.userId === where.userId && item.deletedAt === null);
+        if (!comment) return { count: 0 };
+        Object.assign(comment, data);
+        return { count: 1 };
       },
     },
   };

@@ -6,12 +6,12 @@ import { presentCreator } from "@/lib/consumer/presenters";
 const approvedImageHosts = new Set(["images.unsplash.com", "images.pexels.com"]);
 
 describe("Blindly social launch feed data", () => {
-  it.each(LAUNCH_CATEGORIES)("provides at least three public free posts for %s", (category) => {
+  it.each(LAUNCH_CATEGORIES)("provides five public free posts for %s", (category) => {
     const publicPosts = LAUNCH_FEED_FIXTURES.filter(
       (post) => post.category === category && post.isPremium === false && post.price === 0,
     );
 
-    expect(publicPosts).toHaveLength(3);
+    expect(publicPosts).toHaveLength(5);
     expect(publicPosts.every((post) => post.publishedAt)).toBe(true);
   });
 
@@ -19,6 +19,10 @@ describe("Blindly social launch feed data", () => {
     for (const post of LAUNCH_FEED_FIXTURES) {
       expect(approvedImageHosts.has(new URL(post.mediaUrl).hostname)).toBe(true);
     }
+  });
+
+  it("uses a different licensed image URL for every launch post", () => {
+    expect(new Set(LAUNCH_FEED_FIXTURES.map((post) => post.mediaUrl)).size).toBe(60);
   });
 
   it("returns an address only from the authenticated profile", async () => {

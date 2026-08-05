@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   createComment,
+  deleteComment,
   toggleBookmark,
   toggleFollow,
   toggleLike,
+  updateComment,
 } from "@/lib/consumer/social";
 import { makeTransactionFixture } from "../helpers/make-transaction-fixture";
 
@@ -160,6 +162,25 @@ describe("social services", () => {
     ).rejects.toThrow("Comment cannot be empty");
     expect(tx.comments).toHaveLength(0);
     expect(tx.posts[0].commentsCount).toBe(0);
+  });
+
+  it("rejects an immediate duplicate comment", async () => {
+    const tx = makeTransactionFixture();
+    const user = { id: "viewer-1", name: "Viewer" };
+    await createComment(tx.db, user, "post-1", { content: "Worth saving" });
+    await expect(createComment(tx.db, user, "post-1", { content: "Worth saving" })).rejects.toThrow("Duplicate comment");
+    expect(tx.comments).toHaveLength(1);
+    expect(tx.posts[0].commentsCount).toBe(1);
+  });
+
+  it("allows only the owner to edit and delete a comment", async () => {
+    const commentId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+    const tx = makeTransactionFixture({ comments: [{ id: commentId, postId: "post-1", userId: "viewer-1", content: "Before", deletedAt: null }] });
+    const user = { id: "viewer-1", name: "Viewer" };
+    await expect(updateComment(tx.db, user, "post-1", { commentId, content: "After" })).resolves.toMatchObject({ content: "After" });
+    tx.posts[0].commentsCount = 1;
+    await expect(deleteComment(tx.db, user, "post-1", commentId)).resolves.toEqual({ commentsCount: 0 });
+    expect(tx.comments[0].deletedAt).toBeInstanceOf(Date);
   });
 
   it("does not mutate a post whose creator was soft-deleted", async () => {

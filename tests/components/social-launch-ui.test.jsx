@@ -76,6 +76,10 @@ const managedPost = {
   viewer: { isLiked: false, isBookmarked: false, canManage: true },
 };
 
+const webpFile = (name = "look.webp") => new File([
+  new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]),
+], name, { type: "image/webp" });
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -99,7 +103,7 @@ describe("social launch UI", () => {
     await user.type(screen.getByRole("textbox", { name: "Write a post" }), "New street-style look");
     await user.upload(
       screen.getByLabelText("Add image"),
-      new File(["image"], "look.webp", { type: "image/webp" }),
+      webpFile(),
     );
     await screen.findByAltText("Selected image preview");
     await user.click(screen.getByRole("button", { name: "Publish post" }));
@@ -115,7 +119,7 @@ describe("social launch UI", () => {
       expect.anything(),
     );
     expect(completeImageUpload).toHaveBeenCalledWith("asset-1", expect.anything());
-    expect(createPost).toHaveBeenCalledWith({ content: "New street-style look", mediaAssetId: "asset-1" });
+    expect(createPost).toHaveBeenCalledWith({ content: "New street-style look", category: "Lifestyle", mediaAssetId: "asset-1" });
     expect(onPublished).toHaveBeenCalledOnce();
   });
 
@@ -128,7 +132,7 @@ describe("social launch UI", () => {
     await user.type(screen.getByRole("textbox", { name: "Write a post" }), "A text-only update");
     await user.upload(
       screen.getByLabelText("Add image"),
-      new File(["image"], "look.webp", { type: "image/webp" }),
+      webpFile(),
     );
     await screen.findByAltText("Selected image preview");
     await user.click(screen.getByRole("button", { name: "Publish post" }));
@@ -136,7 +140,7 @@ describe("social launch UI", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Image uploads are not configured yet");
     expect(screen.getByLabelText("Add image")).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Publish post" }));
-    expect(createPost).toHaveBeenCalledWith({ content: "A text-only update" });
+    expect(createPost).toHaveBeenCalledWith({ content: "A text-only update", category: "Lifestyle" });
   });
 
   it("omits mediaAssetId for a text-only post", async () => {
@@ -147,7 +151,7 @@ describe("social launch UI", () => {
     await user.type(screen.getByRole("textbox", { name: "Write a post" }), "A plain text update");
     await user.click(screen.getByRole("button", { name: "Publish post" }));
 
-    expect(createPost).toHaveBeenCalledWith({ content: "A plain text update" });
+    expect(createPost).toHaveBeenCalledWith({ content: "A plain text update", category: "Lifestyle" });
   });
 
   it("saves editable profile fields with the update API rather than an alert", async () => {

@@ -141,7 +141,7 @@ it("returns bounded viewer-safe Home data", async () => {
   expect(body.viewer).not.toHaveProperty("email");
   expect(findCreators.mock.calls[0][0].take).toBeLessThanOrEqual(12);
   expect(groupCreatorCategories).toHaveBeenCalledWith(expect.objectContaining({
-    where: { user: { is: { role: "CREATOR", deletedAt: null } } },
+    where: { user: { is: { role: "CREATOR", deletedAt: null, banned: false } } },
   }));
   expect(findPosts.mock.calls[0][0]).toMatchObject({ take: 5 });
   expect(findStories.mock.calls[0][0].take).toBeLessThanOrEqual(12);

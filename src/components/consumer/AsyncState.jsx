@@ -1,4 +1,4 @@
-import { AlertCircle, Inbox, LoaderCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, Inbox, RefreshCw } from "lucide-react";
 
 export function AsyncState({
   status,
@@ -9,11 +9,15 @@ export function AsyncState({
 }) {
   if (status === "loading") {
     return (
-      <div className="grid min-h-56 place-items-center text-center" role="status">
-        <div>
-          <LoaderCircle className="mx-auto animate-spin text-brand-600" size={28} />
-          <p className="mt-3 text-sm font-semibold">Loading</p>
-        </div>
+      <div className="space-y-4" role="status" aria-label="Loading content">
+        <span className="sr-only">Loading</span>
+        {[1, 2, 3].map((item) => (
+          <div key={item} className="animate-pulse rounded-2xl border border-line bg-white p-4">
+            <div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-brand-100" /><div className="space-y-2"><div className="h-3 w-32 rounded bg-neutral-200" /><div className="h-2.5 w-20 rounded bg-neutral-100" /></div></div>
+            <div className="mt-4 h-3 w-4/5 rounded bg-neutral-100" />
+            <div className="mt-3 aspect-[16/7] rounded-xl bg-neutral-100" />
+          </div>
+        ))}
       </div>
     );
   }

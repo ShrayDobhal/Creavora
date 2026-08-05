@@ -24,7 +24,7 @@ const validateUser = (user) => {
 
 const findPost = (database, postId) =>
   database.post.findFirst({
-    where: { id: postId, deletedAt: null, creator: { is: { deletedAt: null } } },
+    where: { id: postId, deletedAt: null, creator: { is: { deletedAt: null, banned: false } } },
   });
 
 const postMissing = () => {
@@ -221,6 +221,18 @@ export async function createComment(db, user, postId, input) {
       if (!parent) throw new Error(ERRORS.parentNotFound);
     }
 
+    const duplicate = await tx.comment.findFirst({
+      where: {
+        userId: user.id,
+        postId: post.id,
+        content: data.content,
+        deletedAt: null,
+        createdAt: { gte: new Date(Date.now() - 30_000) },
+      },
+      select: { id: true },
+    });
+    if (duplicate) throw new Error("Duplicate comment");
+
     const comment = await tx.comment.create({
       data: {
         userId: user.id,
@@ -261,4 +273,38 @@ export async function createComment(db, user, postId, input) {
 
   await notifySafely(db, outcome.notification);
   return outcome.result;
+}
+
+export async function updateComment(db, user, postId, input) {
+  validateUser(user);
+  requireNonEmptyString(postId, ERRORS.invalidPostId);
+  const result = await db.comment.updateMany({
+    where: { id: input.commentId, postId, userId: user.id, deletedAt: null },
+    data: { content: input.content },
+  });
+  if (result.count === 0) {
+    const existing = await db.comment.findFirst({ where: { id: input.commentId, postId, deletedAt: null }, select: { id: true } });
+    throw new Error(existing ? "Forbidden" : "Comment not found");
+  }
+  return db.comment.findFirst({
+    where: { id: input.commentId, postId, deletedAt: null },
+    include: { user: { select: { id: true, name: true, handle: true, avatar: true, verified: true } } },
+  });
+}
+
+export async function deleteComment(db, user, postId, commentId) {
+  validateUser(user);
+  requireNonEmptyString(postId, ERRORS.invalidPostId);
+  return db.$transaction(async (tx) => {
+    const result = await tx.comment.updateMany({
+      where: { id: commentId, postId, userId: user.id, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+    if (result.count === 0) {
+      const existing = await tx.comment.findFirst({ where: { id: commentId, postId, deletedAt: null }, select: { id: true } });
+      throw new Error(existing ? "Forbidden" : "Comment not found");
+    }
+    const post = await tx.post.update({ where: { id: postId }, data: { commentsCount: { decrement: 1 } } });
+    return { commentsCount: Math.max(0, post.commentsCount) };
+  });
 }

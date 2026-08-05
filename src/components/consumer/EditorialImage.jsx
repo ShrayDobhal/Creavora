@@ -18,5 +18,5 @@ export default function EditorialImage({ src, alt, className = "", fallbackLabel
     );
   }
 
-  return <img src={src} alt={alt} className={className} onError={() => setFailed(true)} />;
+  return <img src={src} alt={alt} className={className} loading="lazy" decoding="async" onError={() => setFailed(true)} />;
 }

@@ -5,6 +5,7 @@ import { withAuth } from "@/lib/middleware";
 import { socialPostCreateSchema, validateBody } from "@/lib/validators";
 import { getFeedPage, parseFeedQuery } from "@/lib/consumer/feed";
 import { consumerErrorResponse } from "@/lib/consumer/http";
+import { presentPost } from "@/lib/consumer/presenters";
 
 const createPostFromVerifiedMedia = async (database, user, data) => {
   const now = new Date();
@@ -21,11 +22,11 @@ const createPostFromVerifiedMedia = async (database, user, data) => {
       FOR SHARE
     )
     INSERT INTO "Post" (
-      "id", "creatorId", "content", "mediaUrl", "mediaType", "isPremium", "price",
+      "id", "creatorId", "content", "category", "mediaUrl", "mediaType", "isPremium", "price",
       "publishedAt", "createdAt", "updatedAt"
     )
     SELECT
-      ${randomUUID()}, ${user.id}, ${data.content}, "publicUrl", "mimeType", FALSE, 0,
+      ${randomUUID()}, ${user.id}, ${data.content}, ${data.category}, "publicUrl", "mimeType", FALSE, 0,
       ${now}, ${now}, ${now}
     FROM verified_asset
     RETURNING *
@@ -72,6 +73,7 @@ export function createPostPost({ database = db, logError = console.error } = {})
           data: {
             creatorId: user.id,
             content: data.content,
+            category: data.category,
             mediaUrl: null,
             mediaType: null,
             isPremium: false,
@@ -105,7 +107,16 @@ export function createPostPost({ database = db, logError = console.error } = {})
         });
       }
 
-      return NextResponse.json(post, { status: 201 });
+      return NextResponse.json(
+        presentPost({
+          ...post,
+          creator: { ...user, followers: [], _count: { followers: 0 } },
+          likes: [],
+          bookmarks: [],
+          creatorFollowers: [],
+        }, user.id),
+        { status: 201 },
+      );
     } catch (error) {
       return consumerErrorResponse(error, "Failed to upload post");
     }

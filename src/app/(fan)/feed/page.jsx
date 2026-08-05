@@ -9,13 +9,21 @@ import { PostComposer } from "@/components/consumer/PostComposer";
 import { StoryStrip } from "@/components/consumer/StoryStrip";
 import {
   createComment,
+  deleteComment,
   getComments,
   getConsumerHome,
   getFeed,
   getProfile,
   toggleBookmark,
   toggleLike,
+  sharePost,
+  updateComment,
 } from "@/services/consumer-api";
+
+const mergeUniquePosts = (current, incoming) => {
+  const seen = new Set(current.map((post) => post.id));
+  return [...current, ...incoming.filter((post) => !seen.has(post.id))];
+};
 
 const filters = [
   { label: "Latest", mode: "latest", icon: Clock3 },
@@ -81,7 +89,7 @@ export default function FeedPage() {
     setError("");
     try {
       const page = await getFeed({ mode, cursor: nextCursor, signal: controller.signal });
-      setPosts((current) => [...current, ...page.items]);
+      setPosts((current) => mergeUniquePosts(current, page.items));
       setNextCursor(page.nextCursor);
     } catch (loadError) {
       if (loadError.name !== "AbortError") setError(loadError.message);
@@ -151,7 +159,10 @@ export default function FeedPage() {
           </section>
 
           <div className="mb-5">
-            <PostComposer user={profile} onPublished={retry} />
+            <PostComposer user={profile} onPublished={(post) => {
+              setPosts((current) => [post, ...current.filter((item) => item.id !== post.id)]);
+              setStatus("success");
+            }} />
           </div>
 
           {status !== "success" ? (
@@ -172,6 +183,9 @@ export default function FeedPage() {
                   onBookmark={toggleBookmark}
                   onLoadComments={getComments}
                   onCreateComment={createComment}
+                  onUpdateComment={updateComment}
+                  onDeleteComment={deleteComment}
+                  onShare={sharePost}
                   onMutated={retry}
                 />
               ))}
@@ -185,7 +199,7 @@ export default function FeedPage() {
                 >
                   {loadingMore ? "Loading more" : "Load more"}
                 </button>
-              ) : null}
+              ) : <p className="py-3 text-center text-sm font-bold text-muted">You’re all caught up</p>}
             </div>
           )}
         </section>

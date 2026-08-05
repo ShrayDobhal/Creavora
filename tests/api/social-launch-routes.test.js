@@ -402,6 +402,7 @@ describe("Blindly social launch upload completion API", () => {
     const storage = {
       getR2Configuration: () => ({ configured: true }),
       getObjectMetadata: vi.fn().mockResolvedValue({ ContentLength: 1024, ContentType: "image/webp" }),
+      getObjectPrefix: vi.fn().mockResolvedValue(new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50])),
     };
 
     const response = await createUploadCompletePost({ storage, database })(
@@ -451,7 +452,6 @@ describe("Blindly social launch post API", () => {
       mediaUrl: "https://cdn.example.test/users/user-1/post.webp",
       mediaType: "image/webp",
       isPremium: false,
-      price: 0,
     }]);
     const response = await createPostPost({
       database: {
@@ -466,7 +466,6 @@ describe("Blindly social launch post API", () => {
       mediaUrl: "https://cdn.example.test/users/user-1/post.webp",
       mediaType: "image/webp",
       isPremium: false,
-      price: 0,
     });
     expect(queryRaw).toHaveBeenCalledOnce();
   });

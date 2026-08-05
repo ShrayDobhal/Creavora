@@ -3,6 +3,35 @@ import { db } from "@/lib/db";
 import { withAuth } from "@/lib/middleware";
 import { socialPostUpdateSchema, validateBody } from "@/lib/validators";
 import { consumerErrorResponse } from "@/lib/consumer/http";
+import { presentPost } from "@/lib/consumer/presenters";
+
+const postInclude = (viewerId) => ({
+  creator: {
+    include: {
+      creatorProfile: true,
+      followers: { where: { followerId: viewerId } },
+      _count: { select: { followers: true } },
+    },
+  },
+  likes: { where: { userId: viewerId } },
+  bookmarks: { where: { userId: viewerId } },
+});
+
+export function createPostGet(database = db) {
+  return async (_req, { user, params }) => {
+    try {
+      const { id } = await params;
+      const post = await database.post.findFirst({
+        where: { id, deletedAt: null, creator: { is: { deletedAt: null, banned: false } } },
+        include: postInclude(user.id),
+      });
+      if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      return NextResponse.json(presentPost({ ...post, creatorFollowers: post.creator.followers }, user.id));
+    } catch (error) {
+      return consumerErrorResponse(error, "Failed to load post");
+    }
+  };
+}
 
 const ownedPostWhere = (id, userId) => ({
   id,
@@ -59,5 +88,6 @@ export function createPostDelete({ database = db, post = database.post } = {}) {
   };
 }
 
+export const GET = withAuth(createPostGet());
 export const PATCH = withAuth(createPostPatch());
 export const DELETE = withAuth(createPostDelete());

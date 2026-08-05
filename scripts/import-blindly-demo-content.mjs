@@ -119,6 +119,7 @@ export async function importBlindlyDemoContent({ database, now }) {
     const postData = {
       creatorId: creator.user.id,
       content: fixture.content,
+      category: fixture.category,
       mediaUrl: fixture.mediaUrl,
       mediaType: "image",
       isPremium: false,

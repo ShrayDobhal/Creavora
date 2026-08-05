@@ -44,6 +44,15 @@ export async function authenticate(req) {
     };
   }
 
+  if (user.banned) {
+    return {
+      error: NextResponse.json(
+        { error: "This account is not permitted to perform this action" },
+        { status: 403 },
+      ),
+    };
+  }
+
   return { user: { ...user, role: normalizeRole(user.role) } };
 }
 

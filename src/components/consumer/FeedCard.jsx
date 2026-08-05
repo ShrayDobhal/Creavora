@@ -9,11 +9,13 @@ import {
   MessageCircle,
   Play,
   Share2,
+  Maximize2,
 } from "lucide-react";
 import Link from "next/link";
 import { ConsumerAvatar } from "./CreatorCard";
 import EditorialImage from "./EditorialImage";
 import { OwnedPostMenu } from "./OwnedPostMenu";
+import { CommentDrawer } from "./CommentDrawer";
 
 const formatDate = (value) => {
   const date = new Date(value);
@@ -24,12 +26,29 @@ const formatDate = (value) => {
 const numericCount = (value) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
+const copyLink = async (value) => {
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(value);
+  const input = document.createElement("textarea");
+  input.value = value;
+  input.setAttribute("readonly", "");
+  input.style.position = "fixed";
+  input.style.opacity = "0";
+  document.body.appendChild(input);
+  input.select();
+  const copied = document.execCommand("copy");
+  input.remove();
+  if (!copied) throw new Error("Unable to copy post link");
+};
+
 export function FeedCard({
   post,
   onLike,
   onBookmark,
   onLoadComments,
   onCreateComment,
+  onUpdateComment,
+  onDeleteComment,
+  onShare,
   onMutated,
 }) {
   const [editedContent, setEditedContent] = useState(null);
@@ -41,12 +60,8 @@ export function FeedCard({
   const [error, setError] = useState("");
   const [videoFailed, setVideoFailed] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [comments, setComments] = useState([]);
   const [commentCount, setCommentCount] = useState(numericCount(post.counts?.comments));
-  const [commentStatus, setCommentStatus] = useState("idle");
-  const [commentError, setCommentError] = useState("");
-  const [commentDraft, setCommentDraft] = useState("");
-  const [commentPending, setCommentPending] = useState(false);
+  const [shareCount, setShareCount] = useState(numericCount(post.counts?.shares));
 
   async function handleLike() {
     if (!onLike || pendingAction) return;
@@ -85,57 +100,33 @@ export function FeedCard({
     }
   }
 
-  async function handleCommentsToggle() {
-    if (commentsOpen) {
-      setCommentsOpen(false);
-      return;
-    }
-
-    setCommentsOpen(true);
-    if (commentStatus === "success" || !onLoadComments) return;
-    setCommentStatus("loading");
-    setCommentError("");
+  async function handleShare() {
+    if (pendingAction) return;
+    setPendingAction("share");
+    setError("");
     try {
-      const result = await onLoadComments(post.id);
-      setComments(Array.isArray(result) ? result : []);
-      setCommentStatus("success");
-    } catch (loadError) {
-      setCommentError(loadError.message || "Unable to load comments");
-      setCommentStatus("error");
-    }
-  }
-
-  async function handleCommentSubmit(event) {
-    event.preventDefault();
-    const content = commentDraft.trim();
-    if (!content || !onCreateComment || commentPending) return;
-
-    setCommentPending(true);
-    setCommentError("");
-    try {
-      const result = await onCreateComment(post.id, content);
-      setComments((current) => [result.comment, ...current]);
-      setCommentCount(
-        numericCount(result.commentsCount) ??
-          (commentCount === null ? null : commentCount + 1),
-      );
-      setCommentDraft("");
-      setCommentStatus("success");
-    } catch (createError) {
-      setCommentError(createError.message || "Unable to add comment");
+      const url = `${window.location.origin}/post/${post.id}`;
+      if (navigator.share) await navigator.share({ title: `Post by ${post.creator.name}`, url });
+      else await copyLink(url);
+      if (onShare) {
+        const result = await onShare(post.id);
+        setShareCount(numericCount(result.sharesCount));
+      }
+    } catch (shareError) {
+      if (shareError?.name !== "AbortError") setError(shareError.message || "Unable to share post");
     } finally {
-      setCommentPending(false);
+      setPendingAction(null);
     }
   }
 
   const mediaAlt = content || `Post by ${post.creator.name}`;
-  const shares = numericCount(post.counts?.shares);
   const unavailable = post.isPremium && post.availability === "coming_soon";
   const commentButtonLabel = commentsOpen
     ? `Hide ${commentCount ?? ""} comments`.replace(/\s+/g, " ")
     : `View ${commentCount ?? ""} comments`.replace(/\s+/g, " ");
 
   return (
+    <>
     <article className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
       <header className="flex items-center gap-3 p-4 sm:p-5">
         <Link href={`/creator/${post.creator.handle}`} aria-label={`View ${post.creator.name}'s profile`}>
@@ -188,7 +179,7 @@ export function FeedCard({
               <EditorialImage
                 src={post.mediaUrl}
                 alt={mediaAlt}
-                className="max-h-[680px] w-full bg-neutral-100 object-cover"
+                className="aspect-[4/3] max-h-[680px] w-full bg-neutral-100 object-cover"
                 fallbackLabel="Media unavailable"
               />
             )
@@ -212,7 +203,7 @@ export function FeedCard({
             type="button"
             aria-expanded={commentsOpen}
             aria-label={commentButtonLabel}
-            onClick={handleCommentsToggle}
+            onClick={() => setCommentsOpen(true)}
             className="inline-flex min-h-10 items-center gap-1.5 text-sm text-muted"
           >
             <MessageCircle size={18} /> {commentCount === null ? null : commentCount.toLocaleString("en-IN")}
@@ -222,11 +213,8 @@ export function FeedCard({
             <MessageCircle size={18} /> {commentCount.toLocaleString("en-IN")}
           </span>
         )}
-        {shares === null ? null : (
-          <span className="hidden items-center gap-1.5 text-sm text-muted sm:inline-flex" aria-label={`${shares} shares`}>
-            <Share2 size={17} /> {shares.toLocaleString("en-IN")}
-          </span>
-        )}
+        <button type="button" onClick={handleShare} disabled={Boolean(pendingAction)} aria-label="Share post" className="inline-flex min-h-10 items-center gap-1.5 text-sm text-muted disabled:opacity-60"><Share2 size={17} /> {shareCount === null ? null : shareCount.toLocaleString("en-IN")}</button>
+        <Link href={`/post/${post.id}`} aria-label="Open post" className="grid min-h-10 min-w-10 place-items-center rounded-full text-ink/65 hover:bg-canvas"><Maximize2 size={17} /></Link>
         <button
           type="button"
           aria-label={isBookmarked ? "Remove bookmark" : "Bookmark post"}
@@ -239,39 +227,20 @@ export function FeedCard({
         </button>
       </footer>
 
-      {commentsOpen ? (
-        <section className="mx-4 mb-4 border-t border-line pt-4 sm:mx-5" aria-label="Comments">
-          {commentStatus === "loading" ? <p className="text-sm text-muted" role="status">Loading comments</p> : null}
-          {commentError ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700" role="alert">{commentError}</p> : null}
-          {commentStatus === "success" ? (
-            <>
-              <form onSubmit={handleCommentSubmit} className="flex gap-2">
-                <label htmlFor={`comment-${post.id}`} className="sr-only">Add a comment</label>
-                <input
-                  id={`comment-${post.id}`}
-                  value={commentDraft}
-                  onChange={(event) => setCommentDraft(event.target.value)}
-                  maxLength={2000}
-                  placeholder="Add a comment"
-                  className="h-10 min-w-0 flex-1 rounded-xl border border-line px-3 text-sm outline-none focus:border-brand-300"
-                />
-                <button type="submit" disabled={commentPending || !commentDraft.trim()} className="h-10 rounded-xl bg-brand-600 px-4 text-sm font-bold text-white disabled:opacity-60">
-                  {commentPending ? "Posting" : "Post comment"}
-                </button>
-              </form>
-              <div className="mt-4 space-y-3">
-                {comments.length ? comments.map((comment) => (
-                  <article key={comment.id} className="rounded-xl bg-canvas p-3">
-                    <p className="text-xs font-bold">{comment.user?.name || `@${comment.user?.handle}`}</p>
-                    <p className="mt-1 text-sm leading-6 text-ink/80">{comment.content}</p>
-                  </article>
-                )) : <p className="text-sm text-muted">No comments yet.</p>}
-              </div>
-            </>
-          ) : null}
-        </section>
-      ) : null}
       {error ? <p className="mx-4 mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 sm:mx-5" role="alert">{error}</p> : null}
     </article>
+    {onLoadComments && onCreateComment ? (
+      <CommentDrawer
+        post={post}
+        open={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+        onLoad={onLoadComments}
+        onCreate={onCreateComment}
+        onUpdate={onUpdateComment || (() => Promise.reject(new Error("Comment editing is unavailable")))}
+        onDelete={onDeleteComment || (() => Promise.reject(new Error("Comment deletion is unavailable")))}
+        onCountChange={(count) => setCommentCount(numericCount(count))}
+      />
+    ) : null}
+    </>
   );
 }

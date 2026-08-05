@@ -36,7 +36,7 @@ export function parseCreatorQuery(params) {
 }
 
 export async function getCreatorPage(database, viewerId, query) {
-  const where = { role: "CREATOR", deletedAt: null };
+  const where = { role: "CREATOR", deletedAt: null, banned: false };
 
   if (query.category !== "All") {
     where.creatorProfile = { is: { category: query.category } };
@@ -72,7 +72,7 @@ export async function getCreatorProfile(database, viewerId, handle) {
   let creator = null;
   for (const candidate of getPublicHandleCandidates(handle)) {
     creator = await database.user.findFirst({
-      where: { handle: candidate, role: "CREATOR", deletedAt: null },
+      where: { handle: candidate, role: "CREATOR", deletedAt: null, banned: false },
       include: {
         ...creatorInclude(viewerId),
         posts: {
@@ -104,7 +104,7 @@ export async function getCreatorProfile(database, viewerId, handle) {
 
 export async function getDiscovery(database, viewerId) {
   const baseQuery = {
-    where: { role: "CREATOR", deletedAt: null },
+    where: { role: "CREATOR", deletedAt: null, banned: false },
     take: 8,
     include: creatorInclude(viewerId),
   };
@@ -112,7 +112,7 @@ export async function getDiscovery(database, viewerId) {
     database.creatorProfile.groupBy({
       by: ["category"],
       _count: { _all: true },
-      where: { user: { is: { role: "CREATOR", deletedAt: null } } },
+      where: { user: { is: { role: "CREATOR", deletedAt: null, banned: false } } },
     }),
     database.user.findMany({
       ...baseQuery,

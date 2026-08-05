@@ -1,4 +1,4 @@
-import { HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const required = ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "R2_PUBLIC_BASE_URL"];
@@ -62,4 +62,10 @@ export async function getObjectMetadata({ key, env = process.env, client }) {
   return (client ?? createR2Client(env)).send(
     new HeadObjectCommand({ Bucket: env.R2_BUCKET, Key: key }),
   );
+}
+
+export async function getObjectPrefix({ key, env = process.env, client }) {
+  if (!getR2Configuration(env).configured) throw new Error("R2 upload verification is not configured");
+  const response = await (client ?? createR2Client(env)).send(new GetObjectCommand({ Bucket: env.R2_BUCKET, Key: key, Range: "bytes=0-15" }));
+  return response.Body.transformToByteArray();
 }

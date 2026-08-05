@@ -127,7 +127,7 @@ describe("consumer API client", () => {
     await getFeed({ mode: "following", cursor: "next page" });
 
     expect(fetchMock.mock.calls[0][0]).toBe(
-      "/api/posts?mode=following&limit=12&cursor=next+page",
+      "/api/posts?mode=following&limit=8&cursor=next+page",
     );
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ credentials: "same-origin" });
   });
@@ -382,6 +382,14 @@ describe("Explore page", () => {
           );
         }
         if (String(url).startsWith("/api/creators")) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ items: [], nextCursor: null }), {
+              status: 200,
+              headers: { "content-type": "application/json" },
+            }),
+          );
+        }
+        if (String(url).startsWith("/api/posts")) {
           return Promise.resolve(
             new Response(JSON.stringify({ items: [], nextCursor: null }), {
               status: 200,

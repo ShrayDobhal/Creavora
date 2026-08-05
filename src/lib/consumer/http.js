@@ -4,6 +4,7 @@ const NOT_FOUND_MESSAGES = new Set([
   "Post not found",
   "Creator not found",
   "Parent comment not found",
+  "Comment not found",
 ]);
 
 const validationMessage = (error) => {
@@ -16,6 +17,13 @@ const validationMessage = (error) => {
 export function consumerErrorResponse(error, fallbackMessage) {
   if (NOT_FOUND_MESSAGES.has(error?.message)) {
     return NextResponse.json({ error: error.message }, { status: 404 });
+  }
+
+  if (error?.message === "Forbidden") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (error?.message === "Duplicate comment") {
+    return NextResponse.json({ error: "You already posted this comment" }, { status: 409 });
   }
 
   const message = validationMessage(error);

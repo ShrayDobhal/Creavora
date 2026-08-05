@@ -222,7 +222,7 @@ describe("consumer API contracts", () => {
         where: {
           postId: "post-1",
           deletedAt: null,
-          user: { is: { deletedAt: null } },
+          user: { is: { deletedAt: null, banned: false } },
         },
       }),
     );
@@ -317,7 +317,7 @@ describe("consumer API contracts", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(await json(response)).toEqual(post);
+    expect(await json(response)).toMatchObject({ id: post.id, content: post.content });
     expect(logError).toHaveBeenCalledOnce();
   });
 
@@ -457,7 +457,7 @@ describe("consumer API contracts", () => {
       { name: "Food", creatorCount: 2 },
     ]);
     expect(groupBy).toHaveBeenCalledWith(expect.objectContaining({
-      where: { user: { is: { role: "CREATOR", deletedAt: null } } },
+      where: { user: { is: { role: "CREATOR", deletedAt: null, banned: false } } },
     }));
     expect(result.creators).toMatchObject([
       { id: "creator-1", isFollowing: true, followerCount: 7 },

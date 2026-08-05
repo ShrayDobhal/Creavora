@@ -134,16 +134,16 @@ describe("Blindly production demo-content importer", () => {
     expect(counts).toEqual({
       users: 12,
       creatorProfiles: 12,
-      posts: 36,
+      posts: 60,
       stories: 12,
       liveSessions: 4,
       follows: 12,
-      likes: 36,
+      likes: 60,
       comments: 12,
     });
     expect(database.user.records.size).toBe(12);
     expect(database.creatorProfile.records.size).toBe(12);
-    expect(database.post.records.size).toBe(36);
+    expect(database.post.records.size).toBe(60);
     expect(database.story.records.size).toBe(12);
     expect(database.liveSession.records.size).toBe(4);
 
@@ -179,7 +179,7 @@ describe("Blindly production demo-content importer", () => {
     expect(posts.every(({ mediaUrl }) => (
       /^https:\/\/images\.unsplash\.com\/photo-\d+-[a-z0-9]+\?/.test(mediaUrl)
     ))).toBe(true);
-    expect(new Set(posts.map(({ mediaUrl }) => mediaUrl)).size).toBe(36);
+    expect(new Set(posts.map(({ mediaUrl }) => mediaUrl)).size).toBe(60);
     expect(stories.every(({ id, expiresAt }) => (
       id.startsWith("blindly-demo-story-") && expiresAt > now
     ))).toBe(true);
@@ -204,7 +204,7 @@ describe("Blindly production demo-content importer", () => {
       const story = stories.find(({ userId }) => userId === user.id);
       const liveSession = liveSessions.find(({ hostId }) => hostId === user.id);
 
-      expect(creatorMedia).toHaveLength(3);
+      expect(creatorMedia).toHaveLength(5);
       expect(creatorMedia).toContain(user.coverImage);
       expect(creatorMedia).toContain(story.mediaUrl);
       if (liveSession) {
@@ -227,7 +227,7 @@ describe("Blindly production demo-content importer", () => {
     expect(Object.fromEntries(
       Object.entries(database).map(([name, table]) => [name, table.records.size]),
     )).toEqual(firstSizes);
-    expect(database.post.upsert).toHaveBeenCalledTimes(72);
+    expect(database.post.upsert).toHaveBeenCalledTimes(120);
   });
 
   it("preserves seeded timestamps and live lifecycle state on a later rerun", async () => {

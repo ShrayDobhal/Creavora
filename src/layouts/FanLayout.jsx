@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Award, BadgeCheck, Bell, Bookmark, ChevronDown, Compass, FolderHeart, LogOut, MessageCircle, Radio, Settings, Sparkles, UserRound, WalletCards } from "lucide-react";
+import { Award, BadgeCheck, Bell, Bookmark, ChevronDown, Compass, FolderHeart, LogOut, MessageCircle, Plus, Radio, Settings, Sparkles, UserRound, WalletCards } from "lucide-react";
 import ConsumerWorkspaceNav from "@/components/consumer/ConsumerWorkspaceNav";
 import ResponsiveNav from "@/components/consumer/ResponsiveNav";
 
@@ -177,6 +177,7 @@ export function TopBar({ user, unreadNotifications }) {
         </Link>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+        <Link href="/feed#create-post" className="hidden min-h-10 items-center gap-2 rounded-full bg-brand-600 px-4 text-sm font-bold text-white hover:bg-brand-700 sm:inline-flex"><Plus size={17} /> Create post</Link>
         <Link
           href="/notifications"
           aria-label="Notifications"
@@ -247,13 +248,13 @@ export default function FanLayout({ children, topbar }) {
   }, []);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white">
+    <div className="min-h-dvh overflow-x-clip bg-white">
       <TopBar {...topbar} user={user} unreadNotifications={unreadNotifications} />
-      <div className="flex">
-        <aside className="sticky top-[72px] hidden h-[calc(100vh-72px)] w-[244px] shrink-0 overflow-y-auto border-r border-line px-4 py-4 lg:block">
+      <div>
+        <aside className="no-scrollbar fixed bottom-0 left-0 top-[72px] z-20 hidden w-[244px] overflow-y-auto border-r border-line bg-white px-4 py-4 lg:block">
           <ConsumerWorkspaceNav unreadNotifications={unreadNotifications} />
         </aside>
-        <main className="min-w-0 flex-1 overflow-x-hidden bg-canvas pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
+        <main className="min-h-[calc(100dvh-72px)] min-w-0 overflow-x-hidden bg-canvas pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:ml-[244px] lg:pb-0">{children}</main>
       </div>
       <ResponsiveNav variant="mobile" unreadNotifications={unreadNotifications} />
     </div>
