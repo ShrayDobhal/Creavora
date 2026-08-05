@@ -48,7 +48,7 @@ export function FeedRail({
         <h2 id="feed-topics-title" className="flex items-center gap-2 text-base font-black"><Sparkles size={16} className="text-brand-600" /> Explore topics</h2>
         {topics.length ? (
           <div className="mt-4 flex flex-wrap gap-2">
-            {topics.map((topic) => <Link key={topic} href={`/explore?category=${encodeURIComponent(topic)}`} className="rounded-full bg-brand-50 px-3 py-2 text-xs font-bold text-brand-800 hover:bg-brand-100">{topic}</Link>)}
+            {topics.map(({ name }) => <Link key={name} href={`/explore?category=${encodeURIComponent(name)}`} className="rounded-full bg-brand-50 px-3 py-2 text-xs font-bold text-brand-800 hover:bg-brand-100">{name}</Link>)}
           </div>
         ) : <p className="mt-4 text-sm text-muted">Topics will appear as creators join.</p>}
       </section>

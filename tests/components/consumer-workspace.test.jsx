@@ -125,7 +125,10 @@ it("uses real creator media in the reference Home hierarchy", () => {
   render(
     <HomeDashboard
       data={homeData({
-        categories: ["Art", "Fitness"],
+        categories: [
+          { name: "Art", creatorCount: 3 },
+          { name: "Fitness", creatorCount: 2 },
+        ],
         creators: [homeCreator],
       })}
     />,
@@ -323,7 +326,7 @@ it("composes Feed discovery from the consumer Home response", async () => {
           ? homeCreator
           : {
               ...homeData({
-                categories: ["Art"],
+                categories: [{ name: "Art", creatorCount: 3 }],
                 creators: [homeCreator],
                 stories: [{
                   id: "feed-story",

@@ -280,13 +280,13 @@ export default function HomeDashboard({
           ) : null}
 
           <nav className="mt-4 flex max-w-full gap-2 overflow-x-auto rounded-2xl border border-line bg-white p-2" aria-label="Explore creator categories">
-            {data.categories.length ? data.categories.map((category) => (
+            {data.categories.length ? data.categories.map(({ name }) => (
               <Link
-                key={category}
-                href={`/explore?category=${encodeURIComponent(category)}`}
+                key={name}
+                href={`/explore?category=${encodeURIComponent(name)}`}
                 className="inline-flex min-h-12 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-black hover:bg-brand-50 hover:text-brand-700"
               >
-                <Sparkles size={16} className="text-brand-500" /> {category}
+                <Sparkles size={16} className="text-brand-500" /> {name}
               </Link>
             )) : (
               <span className="px-3 py-2 text-sm text-muted">Categories will appear as creator profiles go live.</span>
