@@ -62,6 +62,7 @@ const creatorRow = (overrides = {}) => ({
   bio: "Fashion and craft",
   coverImage: null,
   roleTitle: "Fashion Creator",
+  location: null,
   verified: true,
   banned: false,
   banReason: null,
@@ -520,6 +521,51 @@ describe("consumer API contracts", () => {
         ]),
       }),
     }));
+  });
+
+  it("returns creators whose role title is their only search match", async () => {
+    const findMany = vi.fn(async ({ where }) =>
+      where.OR.some((branch) =>
+        branch.roleTitle?.contains === "Ceramicist" && branch.roleTitle.mode === "insensitive")
+        ? [creatorRow({
+            name: "Mira Das",
+            handle: "mira-das",
+            bio: null,
+            roleTitle: "Ceramicist",
+          })]
+        : [],
+    );
+
+    const result = await searchConsumer(
+      { user: { findMany } },
+      "viewer-1",
+      { q: "Ceramicist", type: "creators" },
+    );
+
+    expect(result.creators).toMatchObject([{ id: "creator-1", name: "Mira Das" }]);
+  });
+
+  it("returns creators whose location is their only search match", async () => {
+    const findMany = vi.fn(async ({ where }) =>
+      where.OR.some((branch) =>
+        branch.location?.contains === "Kochi" && branch.location.mode === "insensitive")
+        ? [creatorRow({
+            name: "Mira Das",
+            handle: "mira-das",
+            bio: null,
+            roleTitle: null,
+            location: "Kochi",
+          })]
+        : [],
+    );
+
+    const result = await searchConsumer(
+      { user: { findMany } },
+      "viewer-1",
+      { q: "Kochi", type: "creators" },
+    );
+
+    expect(result.creators).toMatchObject([{ id: "creator-1", name: "Mira Das" }]);
   });
 
   it("rejects unsupported search types without querying", async () => {

@@ -37,6 +37,8 @@ export async function searchConsumer(database, viewerId, query) {
               { name: contains },
               { handle: contains },
               { bio: contains },
+              { roleTitle: contains },
+              { location: contains },
               { creatorProfile: { is: { category: contains } } },
             ],
           },
