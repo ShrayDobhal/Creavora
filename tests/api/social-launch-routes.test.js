@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { S3Client } from "@aws-sdk/client-s3";
 
 vi.mock("@/lib/db", () => ({ db: {} }));
-vi.mock("@/lib/middleware", () => ({ withAuth: (handler) => handler }));
+vi.mock("@/lib/middleware", () => ({
+  withAuth: (handler) => handler,
+  withCreatorAuth: (handler) => handler,
+}));
 
 import {
   createProfileGet,
@@ -11,6 +14,12 @@ import {
 import { createUploadSignPost } from "@/app/api/uploads/sign/route";
 import { createUploadCompletePost } from "@/app/api/uploads/complete/route";
 import { createUploadIntent } from "@/lib/storage/r2";
+import { createPostPost } from "@/app/api/posts/route";
+import {
+  createPostDelete,
+  createPostPatch,
+} from "@/app/api/posts/[id]/route";
+import { presentPost } from "@/lib/consumer/presenters";
 
 const jsonRequest = (method, body) =>
   new Request("http://localhost/api/profile", {
@@ -410,5 +419,120 @@ describe("Blindly social launch upload completion API", () => {
     expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ deletedAt: expect.any(Date) }),
     }));
+  });
+});
+
+describe("Blindly social launch post API", () => {
+  const owner = { id: "user-1", name: "Neha Rao", role: "USER" };
+  const assetId = "9cd87ddd-5890-467d-8feb-17c83f432111";
+
+  it("lets a USER publish an owned signed image post", async () => {
+    const create = vi.fn(async ({ data }) => ({ id: "post-1", ...data }));
+    const response = await createPostPost({
+      database: {
+        mediaAsset: {
+          findFirst: vi.fn().mockResolvedValue({
+            id: assetId,
+            publicUrl: "https://cdn.example.test/users/user-1/post.webp",
+            mimeType: "image/webp",
+          }),
+        },
+        post: { create },
+        follow: { findMany: vi.fn().mockResolvedValue([]) },
+      },
+    })(jsonRequest("POST", { content: "A morning update", mediaAssetId: assetId }), { user: owner });
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({
+      content: "A morning update",
+      mediaUrl: "https://cdn.example.test/users/user-1/post.webp",
+      mediaType: "image/webp",
+      isPremium: false,
+      price: 0,
+    });
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        creatorId: owner.id,
+        publishedAt: expect.any(Date),
+      }),
+    });
+  });
+
+  it("rejects a foreign, unverified, or wrong-kind media asset", async () => {
+    const findFirst = vi.fn().mockResolvedValue(null);
+    const create = vi.fn();
+    const response = await createPostPost({
+      database: {
+        mediaAsset: { findFirst },
+        post: { create },
+      },
+    })(jsonRequest("POST", { content: "A morning update", mediaAssetId: assetId }), { user: owner });
+
+    expect(response.status).toBe(400);
+    expect(create).not.toHaveBeenCalled();
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        id: assetId,
+        ownerId: owner.id,
+        kind: "post",
+        mimeType: { in: ["image/jpeg", "image/png", "image/webp"] },
+        deletedAt: null,
+        verifiedAt: { not: null },
+      },
+      select: { publicUrl: true, mimeType: true },
+    });
+  });
+
+  it("returns 403 when another account attempts to edit a post", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 0 });
+    const response = await createPostPatch({ post: {
+      updateMany,
+      findFirst: vi.fn().mockResolvedValue({ id: "post-foreign" }),
+    } })(
+      jsonRequest("PATCH", { content: "Edited copy" }),
+      { user: owner, params: Promise.resolve({ id: "post-foreign" }) },
+    );
+
+    expect(response.status).toBe(403);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: "post-foreign", creatorId: owner.id, deletedAt: null },
+      data: { content: "Edited copy" },
+    });
+  });
+
+  it("soft-deletes an owned post and returns 204", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const response = await createPostDelete({ post: { updateMany } })(
+      new Request("http://localhost/api/posts/post-1", { method: "DELETE" }),
+      { user: owner, params: Promise.resolve({ id: "post-1" }) },
+    );
+
+    expect(response.status).toBe(204);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: "post-1", creatorId: owner.id, deletedAt: null },
+      data: { deletedAt: expect.any(Date) },
+    });
+  });
+
+  it("surfaces viewer management from actual post ownership", () => {
+    const post = presentPost({
+      id: "post-1",
+      creatorId: owner.id,
+      content: "A morning update",
+      mediaUrl: null,
+      mediaType: null,
+      isPremium: false,
+      publishedAt: new Date("2026-08-05T00:00:00.000Z"),
+      likesCount: 0,
+      commentsCount: 0,
+      viewsCount: 0,
+      sharesCount: 0,
+      creator: { ...owner, handle: "someone-else" },
+      likes: [],
+      bookmarks: [],
+      creatorFollowers: [],
+    }, owner.id);
+
+    expect(post.viewer.canManage).toBe(true);
   });
 });

@@ -23,6 +23,25 @@ export function getFeed({ mode = "latest", cursor, signal } = {}) {
   return request(`/api/posts?${query}`, { signal });
 }
 
+export function createPost(input, { signal } = {}) {
+  return request("/api/posts", { method: "POST", signal, body: input });
+}
+
+export function updatePost(postId, input, { signal } = {}) {
+  return request(`/api/posts/${encodeURIComponent(postId)}`, {
+    method: "PATCH",
+    signal,
+    body: input,
+  });
+}
+
+export function deletePost(postId, { signal } = {}) {
+  return request(`/api/posts/${encodeURIComponent(postId)}`, {
+    method: "DELETE",
+    signal,
+  });
+}
+
 export function getDiscovery({ signal } = {}) {
   return request("/api/discovery", { signal });
 }

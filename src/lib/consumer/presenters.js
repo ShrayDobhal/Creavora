@@ -39,6 +39,7 @@ export const presentPost = (row, viewerId) => {
       isLiked: includesViewer(row.likes, viewerId),
       isBookmarked: includesViewer(row.bookmarks, viewerId),
       isFollowing: includesViewer(row.creatorFollowers, viewerId),
+      canManage: row.creatorId === viewerId,
     },
   };
 };

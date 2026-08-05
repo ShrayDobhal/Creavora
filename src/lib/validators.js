@@ -64,6 +64,23 @@ export const createPostSchema = z.object({
   price: z.number().min(0).optional().default(0),
 });
 
+export const socialPostCreateSchema = z.object({
+  content: z
+    .string()
+    .min(1, "Post content is required")
+    .max(5000, "Post content must be at most 5000 characters")
+    .trim(),
+  mediaAssetId: z.string().uuid().optional(),
+}).strict();
+
+export const socialPostUpdateSchema = z.object({
+  content: z
+    .string()
+    .min(1, "Post content is required")
+    .max(5000, "Post content must be at most 5000 characters")
+    .trim(),
+}).strict();
+
 // ─── Comment Schemas ────────────────────────────────────────────────────────
 
 export const createCommentSchema = z.object({

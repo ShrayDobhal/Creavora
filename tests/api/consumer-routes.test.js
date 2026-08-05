@@ -188,7 +188,7 @@ describe("consumer API contracts", () => {
     expect(await json(response)).toEqual({ error: "Invalid JSON body" });
   });
 
-  it("rejects a post image that is not an owned verified active asset", async () => {
+  it("rejects a post media asset that is not owned, verified, active, and a post image", async () => {
     const create = vi.fn();
     const findFirst = vi.fn().mockResolvedValue(null);
     const response = await createPostPost({
@@ -203,8 +203,7 @@ describe("consumer API contracts", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           content: "New work",
-          mediaUrl: "https://cdn.example.test/users/creator-1/asset.webp",
-          mediaType: "image",
+          mediaAssetId: "9cd87ddd-5890-467d-8feb-17c83f432111",
         }),
       }),
       { user: { ...viewer, id: "creator-1", role: "CREATOR" } },
@@ -214,12 +213,14 @@ describe("consumer API contracts", () => {
     expect(create).not.toHaveBeenCalled();
     expect(findFirst).toHaveBeenCalledWith({
       where: {
+        id: "9cd87ddd-5890-467d-8feb-17c83f432111",
         ownerId: "creator-1",
-        publicUrl: "https://cdn.example.test/users/creator-1/asset.webp",
+        kind: "post",
+        mimeType: { in: ["image/jpeg", "image/png", "image/webp"] },
         deletedAt: null,
         verifiedAt: { not: null },
       },
-      select: { id: true },
+      select: { publicUrl: true, mimeType: true },
     });
   });
 
@@ -239,17 +240,17 @@ describe("consumer API contracts", () => {
       new Request("http://localhost/api/posts", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ content: "New work", isPremium: false }),
+        body: JSON.stringify({ content: "New work" }),
       }),
       { user: { ...viewer, role: "CREATOR" } },
     );
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
     expect(await json(response)).toEqual(post);
     expect(logError).toHaveBeenCalledOnce();
   });
 
-  it("keeps unavailable-post follower notifications free of paid-release claims", async () => {
+  it("uses neutral wording for follower notifications", async () => {
     const createMany = vi.fn().mockResolvedValue({ count: 1 });
     const response = await createPostPost({
       database: {
@@ -261,12 +262,12 @@ describe("consumer API contracts", () => {
       new Request("http://localhost/api/posts", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ content: "New work", isPremium: true }),
+        body: JSON.stringify({ content: "New work" }),
       }),
       { user: { ...viewer, name: "Creator", role: "CREATOR" } },
     );
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
     const messages = createMany.mock.calls[0][0].data.map(({ message }) => message).join(" ");
     expect(messages).not.toMatch(/premium|subscribe|unlock|upgrade|₹/i);
   });

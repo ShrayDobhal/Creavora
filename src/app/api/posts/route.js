@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { withAuth, withCreatorAuth } from "@/lib/middleware";
-import { createPostSchema, validateBody } from "@/lib/validators";
+import { withAuth } from "@/lib/middleware";
+import { socialPostCreateSchema, validateBody } from "@/lib/validators";
 import { getFeedPage, parseFeedQuery } from "@/lib/consumer/feed";
 import { consumerErrorResponse } from "@/lib/consumer/http";
 
@@ -21,10 +21,10 @@ export function createPostsGet({
 }
 
 export function createPostPost({ database = db, logError = console.error } = {}) {
-  return async (req, { user: creator }) => {
+  return async (req, { user }) => {
     try {
       const body = await req.json();
-      const { error, data } = validateBody(createPostSchema, body);
+      const { error, data } = validateBody(socialPostCreateSchema, body);
 
       if (error) {
         return NextResponse.json(
@@ -33,28 +33,32 @@ export function createPostPost({ database = db, logError = console.error } = {})
         );
       }
 
-      if (data.mediaUrl) {
+      let media = null;
+      if (data.mediaAssetId) {
         const asset = await database.mediaAsset.findFirst({
           where: {
-            ownerId: creator.id,
-            publicUrl: data.mediaUrl,
+            id: data.mediaAssetId,
+            ownerId: user.id,
+            kind: "post",
+            mimeType: { in: ["image/jpeg", "image/png", "image/webp"] },
             deletedAt: null,
             verifiedAt: { not: null },
           },
-          select: { id: true },
+          select: { publicUrl: true, mimeType: true },
         });
         if (!asset) {
           return NextResponse.json({ error: "Invalid post media" }, { status: 400 });
         }
+        media = asset;
       }
 
       const post = await database.post.create({
         data: {
-          creatorId: creator.id,
+          creatorId: user.id,
           content: data.content,
-          mediaUrl: data.mediaUrl || null,
-          mediaType: data.mediaType || null,
-          isPremium: data.isPremium || false,
+          mediaUrl: media?.publicUrl || null,
+          mediaType: media?.mimeType || null,
+          isPremium: false,
           price: 0,
           publishedAt: new Date(),
         },
@@ -62,15 +66,15 @@ export function createPostPost({ database = db, logError = console.error } = {})
 
       try {
         const follows = await database.follow.findMany({
-          where: { followingId: creator.id },
+          where: { followingId: user.id },
           select: { followerId: true },
         });
         if (follows.length > 0) {
           await database.notification.createMany({
             data: follows.map((follow) => ({
               userId: follow.followerId,
-              title: `New Post by ${creator.name}`,
-              message: `${creator.name} published: "${data.content.substring(0, 30)}..."`,
+              title: `New post by ${user.name}`,
+              message: `${user.name} shared a new post`,
               type: "SYSTEM",
               read: false,
             })),
@@ -78,13 +82,13 @@ export function createPostPost({ database = db, logError = console.error } = {})
         }
       } catch (notificationError) {
         logError("Post created but follower notification delivery failed", {
-          creatorId: creator.id,
+          creatorId: user.id,
           postId: post.id,
           message: notificationError?.message || "Unknown notification error",
         });
       }
 
-      return NextResponse.json(post);
+      return NextResponse.json(post, { status: 201 });
     } catch (error) {
       return consumerErrorResponse(error, "Failed to upload post");
     }
@@ -92,4 +96,4 @@ export function createPostPost({ database = db, logError = console.error } = {})
 }
 
 export const GET = withAuth(createPostsGet());
-export const POST = withCreatorAuth(createPostPost());
+export const POST = withAuth(createPostPost());
