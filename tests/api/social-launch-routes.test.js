@@ -106,6 +106,22 @@ describe("Blindly social launch profile API", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it("stores a whitespace-only address as null after request validation", async () => {
+    const findFirst = vi.fn()
+      .mockResolvedValueOnce(profileRow)
+      .mockResolvedValueOnce({ ...profileRow, address: null });
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const response = await createProfilePatch({
+      user: { findFirst, updateMany },
+    })(jsonRequest("PATCH", { address: "   " }), { user: { id: "user-1" } });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ address: null });
+    expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: { address: null },
+    }));
+  });
+
   it("returns a stable not-found response when the profile is soft-deleted", async () => {
     const response = await createProfileGet({
       user: { findFirst: vi.fn().mockResolvedValue(null) },

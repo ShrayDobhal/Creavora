@@ -23,7 +23,7 @@ export async function GET(req) {
     });
 
     // Strip sensitive fields
-    const { passwordHash, deletedAt, ...safeUser } = user;
+    const { passwordHash, deletedAt, address, ...safeUser } = user;
 
     return NextResponse.json({
       ...safeUser,

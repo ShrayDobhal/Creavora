@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { withAuth } from "@/lib/middleware";
 import { createComment } from "@/lib/consumer/social";
 import { consumerErrorResponse } from "@/lib/consumer/http";
+import { presentComment } from "@/lib/consumer/presenters";
 
 export function createCommentsGet(database = db) {
   return async (_req, { params }) => {
@@ -37,7 +38,7 @@ export function createCommentsGet(database = db) {
           },
         },
       });
-      return NextResponse.json(comments);
+      return NextResponse.json(comments.map(presentComment));
     } catch (error) {
       return consumerErrorResponse(error, "Failed to fetch comments");
     }
@@ -52,7 +53,10 @@ export function createCommentPost({
     try {
       const { id } = await params;
       const result = await addComment(database, user, id, await req.json());
-      return NextResponse.json(result, { status: 201 });
+      return NextResponse.json(
+        { ...result, comment: presentComment(result.comment) },
+        { status: 201 },
+      );
     } catch (error) {
       return consumerErrorResponse(error, "Failed to add comment");
     }

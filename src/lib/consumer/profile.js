@@ -63,9 +63,10 @@ export async function updateCurrentProfile(database, userId, input) {
     if (input[field]) await assertOwnedMedia(database, userId, input[field]);
   }
 
+  const normalizedInput = input.address === "" ? { ...input, address: null } : input;
   const result = await database.user.updateMany({
     where: { id: userId, deletedAt: null },
-    data: input,
+    data: normalizedInput,
   });
   if (result.count === 0) profileNotFound();
 

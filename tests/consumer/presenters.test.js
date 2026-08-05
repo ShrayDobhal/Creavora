@@ -81,7 +81,7 @@ describe("presentPost", () => {
     const creatorRow = {
       id: "c1",
       avatar: null,
-      roleTitle: "Fitness Creator",
+      roleTitle: "Fitness Demo Creator",
       verified: false,
       creatorProfile: { subscriberCount: 0 },
       creatorFollowers: [],

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CATEGORY_OPTIONS } from "./constants";
 import { presentCreator, presentPost } from "./presenters";
+import { getPublicHandleCandidates } from "./public-copy";
 
 const creatorQuerySchema = z.object({
   category: z.enum(["All", ...CATEGORY_OPTIONS]).default("All"),
@@ -68,22 +69,26 @@ export async function getCreatorProfile(database, viewerId, handle) {
     throw new Error("Invalid creator handle");
   }
 
-  const creator = await database.user.findFirst({
-    where: { handle, role: "CREATOR", deletedAt: null },
-    include: {
-      ...creatorInclude(viewerId),
-      posts: {
-        where: { deletedAt: null, publishedAt: { lte: new Date() } },
-        orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
-        take: 12,
-        include: {
-          creator: { include: creatorInclude(viewerId) },
-          likes: { where: { userId: viewerId } },
-          bookmarks: { where: { userId: viewerId } },
+  let creator = null;
+  for (const candidate of getPublicHandleCandidates(handle)) {
+    creator = await database.user.findFirst({
+      where: { handle: candidate, role: "CREATOR", deletedAt: null },
+      include: {
+        ...creatorInclude(viewerId),
+        posts: {
+          where: { deletedAt: null, publishedAt: { lte: new Date() } },
+          orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+          take: 12,
+          include: {
+            creator: { include: creatorInclude(viewerId) },
+            likes: { where: { userId: viewerId } },
+            bookmarks: { where: { userId: viewerId } },
+          },
         },
       },
-    },
-  });
+    });
+    if (creator) break;
+  }
   if (!creator) throw new Error("Creator not found");
 
   return {
@@ -115,8 +120,11 @@ export async function getDiscovery(database, viewerId) {
     }),
   ]);
   const categories = categoryRows
-    .map((row) => ({ name: row.category, creatorCount: row._count._all }))
-    .filter(({ name, creatorCount }) => name && creatorCount > 0)
+    .map((row) => ({
+      name: typeof row.category === "string" ? row.category.trim() : row.category,
+      creatorCount: row._count._all,
+    }))
+    .filter(({ name, creatorCount }) => typeof name === "string" && name && creatorCount > 0)
     .sort((a, b) => b.creatorCount - a.creatorCount || a.name.localeCompare(b.name));
 
   return {

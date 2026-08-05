@@ -57,6 +57,25 @@ describe("social services", () => {
     expect(tx.calls.transactions).toBe(1);
   });
 
+  it("follows a legacy persisted creator through its clean presented handle", async () => {
+    const tx = makeTransactionFixture({
+      users: [{
+        id: "creator-1",
+        handle: "blindly-demo-coach-kabir",
+        role: "CREATOR",
+        deletedAt: null,
+      }],
+    });
+
+    await expect(
+      toggleFollow(tx.db, { id: "viewer-1", name: "Viewer" }, "coach-kabir"),
+    ).resolves.toEqual({ isFollowing: true });
+    expect(tx.follows).toMatchObject([{
+      followerId: "viewer-1",
+      followingId: "creator-1",
+    }]);
+  });
+
   it("returns the existing liked state when a concurrent like wins the unique race", async () => {
     const tx = makeTransactionFixture({ likeCreateConflict: true });
 

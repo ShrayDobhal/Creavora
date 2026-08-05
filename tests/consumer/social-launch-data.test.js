@@ -57,6 +57,30 @@ describe("Blindly social launch feed data", () => {
     expect(presentCreator({ ...creatorRow, address: "private" }, "viewer-1")).not.toHaveProperty("address");
   });
 
+  it("normalizes an empty address to null for direct profile-service callers", async () => {
+    const profile = {
+      id: "user-1",
+      name: "Nisha Kapoor",
+      email: "nisha@example.test",
+      handle: "nisha-kapoor",
+      address: null,
+      _count: { followers: 0, following: 0, posts: 0 },
+    };
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const database = {
+      user: {
+        findFirst: vi.fn().mockResolvedValue(profile),
+        updateMany,
+      },
+    };
+
+    await updateCurrentProfile(database, "user-1", { address: "" });
+
+    expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: { address: null },
+    }));
+  });
+
   it("keeps source launch post copy free of importer namespace markers", () => {
     expect(LAUNCH_FEED_FIXTURES.map((post) => post.content).join(" ")).not.toMatch(
       /\[blindly-demo:|\(Blindly Demo\)|blindly-demo-/i,

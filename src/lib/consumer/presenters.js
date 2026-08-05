@@ -19,6 +19,18 @@ export const presentCreator = (row, viewerId) => ({
   isFollowing: includesViewer(row.creatorFollowers, viewerId),
 });
 
+export const presentComment = (row) => ({
+  ...row,
+  content: sanitizePublicCopy(row.content),
+  user: row.user
+    ? {
+        ...row.user,
+        name: sanitizePublicCopy(row.user.name),
+        handle: sanitizePublicCopy(row.user.handle),
+      }
+    : row.user,
+});
+
 export const presentPost = (row, viewerId) => {
   const isUnavailable = Boolean(row.isPremium);
 

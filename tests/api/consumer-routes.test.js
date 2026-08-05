@@ -26,7 +26,7 @@ import {
   createSearchHistoryPost,
 } from "@/app/api/search/history/route";
 import { createDiscoveryGet } from "@/app/api/discovery/route";
-import { getDiscovery } from "@/lib/consumer/directory";
+import { getCreatorProfile, getDiscovery } from "@/lib/consumer/directory";
 
 const viewer = { id: "viewer-1", name: "Viewer" };
 const authContext = { user: viewer, params: Promise.resolve({}) };
@@ -189,6 +189,36 @@ describe("consumer API contracts", () => {
     );
   });
 
+  it("sanitizes legacy comment and author copy in comment-read responses", async () => {
+    const response = await createCommentsGet({
+      post: { findFirst: vi.fn().mockResolvedValue({ id: "post-1" }) },
+      comment: {
+        findMany: vi.fn().mockResolvedValue([{
+          id: "comment-1",
+          postId: "post-1",
+          content: "[blindly-demo:fitness:comment] Strong progress",
+          user: {
+            id: "creator-1",
+            name: "Kabir (Blindly Demo)",
+            handle: "blindly-demo-coach-kabir",
+            avatar: null,
+            verified: true,
+          },
+        }]),
+      },
+    })(new Request("http://localhost/api/posts/post-1/comment"), {
+      user: viewer,
+      params: Promise.resolve({ id: "post-1" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await json(response)).toMatchObject([{
+      id: "comment-1",
+      content: "Strong progress",
+      user: { name: "Kabir", handle: "coach-kabir" },
+    }]);
+  });
+
   it("returns 400 for malformed JSON in creator post creation", async () => {
     const response = await createPost(
       new Request("http://localhost/api/posts", {
@@ -344,10 +374,38 @@ describe("consumer API contracts", () => {
     expect(await json(response)).toEqual({ error: "Creator not found" });
   });
 
+  it("loads a legacy persisted creator through its clean presented handle", async () => {
+    const legacyCreator = creatorRow({
+      name: "Kabir (Blindly Demo)",
+      handle: "blindly-demo-coach-kabir",
+      roleTitle: "Fitness Demo Creator",
+      posts: [],
+    });
+    const findFirst = vi.fn(async ({ where }) =>
+      where.handle === "blindly-demo-coach-kabir" ? legacyCreator : null,
+    );
+
+    const result = await getCreatorProfile({ user: { findFirst } }, "viewer-1", "coach-kabir");
+
+    expect(result.creator).toMatchObject({
+      name: "Kabir",
+      handle: "coach-kabir",
+      roleTitle: "Fitness Creator",
+    });
+    expect(findFirst.mock.calls.map(([{ where }]) => where.handle)).toEqual([
+      "coach-kabir",
+      "blindly-demo-coach-kabir",
+    ]);
+  });
+
   it("derives discovery categories from active creator profiles", async () => {
     const groupBy = vi.fn().mockResolvedValue([
       { category: "Fitness", _count: { _all: 4 } },
-      { category: "Technology", _count: { _all: 2 } },
+      { category: "Food", _count: { _all: 2 } },
+      { category: "", _count: { _all: 9 } },
+      { category: "   ", _count: { _all: 8 } },
+      { category: "Technology", _count: { _all: 0 } },
+      { category: "Art", _count: { _all: 2 } },
     ]);
     const result = await getDiscovery({
       creatorProfile: { groupBy },
@@ -356,7 +414,8 @@ describe("consumer API contracts", () => {
 
     expect(result.categories).toEqual([
       { name: "Fitness", creatorCount: 4 },
-      { name: "Technology", creatorCount: 2 },
+      { name: "Art", creatorCount: 2 },
+      { name: "Food", creatorCount: 2 },
     ]);
     expect(groupBy).toHaveBeenCalledWith(expect.objectContaining({
       where: { user: { is: { role: "CREATOR", deletedAt: null } } },

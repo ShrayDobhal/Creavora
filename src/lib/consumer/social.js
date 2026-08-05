@@ -1,4 +1,5 @@
 import { createCommentSchema } from "../validators";
+import { getPublicHandleCandidates } from "./public-copy";
 
 const ERRORS = Object.freeze({
   invalidUser: "Invalid user",
@@ -31,6 +32,16 @@ const postMissing = () => {
 };
 
 const isUniqueConflict = (error) => error?.code === "P2002";
+
+async function findCreatorByPublicHandle(database, handle) {
+  for (const candidate of getPublicHandleCandidates(handle)) {
+    const creator = await database.user.findFirst({
+      where: { handle: candidate, role: "CREATOR", deletedAt: null },
+    });
+    if (creator) return creator;
+  }
+  return null;
+}
 
 async function notifySafely(database, data) {
   if (!data) return;
@@ -140,9 +151,7 @@ export async function toggleFollow(db, user, handle) {
 
   try {
     const outcome = await db.$transaction(async (tx) => {
-      const creator = await tx.user.findFirst({
-        where: { handle, role: "CREATOR", deletedAt: null },
-      });
+      const creator = await findCreatorByPublicHandle(tx, handle);
       if (!creator) throw new Error(ERRORS.creatorNotFound);
 
       const existing = await tx.follow.findUnique({
@@ -181,9 +190,7 @@ export async function toggleFollow(db, user, handle) {
     return outcome.result;
   } catch (error) {
     if (!isUniqueConflict(error)) throw error;
-    const creator = await db.user.findFirst({
-      where: { handle, role: "CREATOR", deletedAt: null },
-    });
+    const creator = await findCreatorByPublicHandle(db, handle);
     if (!creator) throw new Error(ERRORS.creatorNotFound);
     const existing = await db.follow.findUnique({
       where: {
