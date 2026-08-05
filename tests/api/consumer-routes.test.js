@@ -27,6 +27,7 @@ import {
 } from "@/app/api/search/history/route";
 import { createDiscoveryGet } from "@/app/api/discovery/route";
 import { getCreatorProfile, getDiscovery } from "@/lib/consumer/directory";
+import { searchConsumer } from "@/lib/consumer/search";
 
 const viewer = { id: "viewer-1", name: "Viewer" };
 const authContext = { user: viewer, params: Promise.resolve({}) };
@@ -492,6 +493,33 @@ describe("consumer API contracts", () => {
     expect(response.status).toBe(200);
     expect(await json(response)).toEqual({ creators: [], posts: [], communities: [] });
     expect(mockDb.searchHistory.create).not.toHaveBeenCalled();
+  });
+
+  it("returns creators whose profile category matches the query", async () => {
+    const findMany = vi.fn(async ({ where }) =>
+      where.OR.some((branch) => branch.creatorProfile?.is?.category?.contains === "Fashion")
+        ? [creatorRow({ name: "Mira Das", handle: "mira-das", bio: null })]
+        : [],
+    );
+
+    const result = await searchConsumer(
+      { user: { findMany } },
+      "viewer-1",
+      { q: "Fashion", type: "creators" },
+    );
+
+    expect(result).toMatchObject({
+      creators: [{ id: "creator-1", name: "Mira Das" }],
+      posts: [],
+      communities: [],
+    });
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        OR: expect.arrayContaining([
+          { creatorProfile: { is: { category: { contains: "Fashion", mode: "insensitive" } } } },
+        ]),
+      }),
+    }));
   });
 
   it("rejects unsupported search types without querying", async () => {

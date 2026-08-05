@@ -7,6 +7,7 @@ import ConsumerWorkspaceNav from "@/components/consumer/ConsumerWorkspaceNav";
 import EditorialImage from "@/components/consumer/EditorialImage";
 import HomeDashboard from "@/components/consumer/HomeDashboard";
 import { StoryStrip } from "@/components/consumer/StoryStrip";
+import CreatorProfilePage from "@/app/(fan)/creator/[handle]/page";
 import WalletPage from "@/app/(fan)/wallet/page";
 import RewardsPage from "@/app/(fan)/rewards/page";
 import LivePage from "@/app/(fan)/live/page";
@@ -20,6 +21,7 @@ import { getLiveSessions } from "@/lib/consumer/workspace";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/home",
+  useParams: () => ({ handle: "asha-rao" }),
 }));
 
 afterEach(() => {
@@ -142,12 +144,27 @@ it("uses real creator media in the reference Home hierarchy", () => {
   expect(screen.getByRole("heading", { name: "Recommended for you" })).toBeVisible();
   expect(screen.getByRole("heading", { name: "Live right now" })).toBeVisible();
   expect(screen.getByRole("heading", { name: "Your subscriptions" })).toBeVisible();
-  expect(screen.getByRole("heading", { name: "Upcoming sessions" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Hangout rooms" })).toBeVisible();
   expect(screen.getByRole("heading", { name: "Account activity" })).toBeVisible();
   expect(screen.getByRole("link", { name: "Art" })).toHaveAttribute(
     "href",
     "/explore?category=Art",
   );
+});
+
+it("keeps the creator avatar in front of the profile cover", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      creator: homeCreator,
+      posts: [],
+    }), { status: 200, headers: { "content-type": "application/json" } })),
+  );
+
+  render(<CreatorProfilePage />);
+
+  const avatar = await screen.findByLabelText("Asha Rao avatar");
+  expect(avatar.parentElement).toHaveClass("relative", "z-10");
 });
 
 it("wires featured post actions to their real handlers", async () => {

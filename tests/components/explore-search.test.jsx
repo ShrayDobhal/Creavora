@@ -421,6 +421,33 @@ describe("Explore page", () => {
     expect(searchCalls).toBe(2);
   });
 
+  it("submits an Enter search without navigating away and retains the query in the URL", async () => {
+    const fetchMock = vi.fn((url) => Promise.resolve(new Response(
+      JSON.stringify(
+        String(url) === "/api/discovery"
+          ? { categories: [], creators: [] }
+          : String(url).startsWith("/api/creators")
+            ? { items: [], nextCursor: null }
+            : String(url) === "/api/search/history"
+              ? { id: "history-1", query: "Asha" }
+              : { creators: [], posts: [], communities: [] },
+      ),
+      { status: String(url) === "/api/search/history" ? 201 : 200, headers: { "content-type": "application/json" } },
+    )));
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<ExplorePage />);
+
+    await user.type(screen.getByRole("searchbox"), "Asha{enter}");
+
+    expect(await screen.findByText("No matching results")).toBeVisible();
+    expect(window.location.search).toBe("?q=Asha");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/search?q=Asha&type=all",
+      expect.objectContaining({ credentials: "same-origin" }),
+    );
+  });
+
   it("does not persist debounced reads and saves history after explicit submit", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn((url) =>

@@ -96,7 +96,7 @@ export default function CreatorProfilePage() {
         </div>
         <div className="px-5 pb-6 sm:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="-mt-12 flex min-w-0 items-end gap-4 sm:-mt-14">
+            <div className="relative z-10 -mt-12 flex min-w-0 items-end gap-4 sm:-mt-14">
               <ConsumerAvatar creator={creator} size="h-24 w-24 ring-4 ring-white sm:h-28 sm:w-28" />
               <div className="min-w-0 pb-1">
                 <h1 id="creator-name" className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">

@@ -33,7 +33,12 @@ export async function searchConsumer(database, viewerId, query) {
           where: {
             role: "CREATOR",
             deletedAt: null,
-            OR: [{ name: contains }, { handle: contains }, { bio: contains }],
+            OR: [
+              { name: contains },
+              { handle: contains },
+              { bio: contains },
+              { creatorProfile: { is: { category: contains } } },
+            ],
           },
           take: 10,
           include: {

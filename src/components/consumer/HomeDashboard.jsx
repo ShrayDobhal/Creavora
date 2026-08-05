@@ -188,7 +188,7 @@ function RightRail({ subscriptions, upcoming, unreadNotifications }) {
 
       <section className="rounded-2xl border border-line bg-white p-5" aria-labelledby="upcoming-title">
         <div className="flex items-center justify-between gap-3">
-          <h2 id="upcoming-title" className="text-base font-black">Upcoming sessions</h2>
+          <h2 id="upcoming-title" className="text-base font-black">Hangout rooms</h2>
           <Link href="/live" className="text-xs font-bold text-brand-700 hover:underline">View all</Link>
         </div>
         {upcoming.length ? (

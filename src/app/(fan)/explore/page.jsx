@@ -132,6 +132,9 @@ export default function ExplorePage() {
   }, []);
   const handleSearchSubmit = useCallback((query) => {
     setHistoryError("");
+    const params = new URLSearchParams(window.location.search);
+    params.set("q", query);
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
     runSearch(query);
     saveSearchHistory({ query }).catch((saveError) => {
       setHistoryError(saveError.message || "Search history could not be saved");
