@@ -79,3 +79,44 @@ it("opens, reads, and sends from the thread pane at a 375px viewport", async () 
     }),
   ));
 });
+
+it("keeps mobile thread recovery controls available while a selected conversation loads or fails", async () => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 375 });
+  const participant = { id: "creator-1", name: "Asha Rao", handle: "asha", avatar: null, roleTitle: "Artist" };
+  let rejectThread;
+  const fetchMock = vi.fn((url) => {
+    if (String(url).includes("userId=")) {
+      return new Promise((_, reject) => {
+        rejectThread = reject;
+      });
+    }
+    return Promise.resolve(new Response(JSON.stringify({
+      items: [{
+        participant,
+        lastMessage: {
+          id: "last-creator-1",
+          content: "Persisted message",
+          mine: false,
+          status: "READ",
+          createdAt: "2026-08-05T09:55:00.000Z",
+        },
+      }],
+    }), { status: 200 }));
+  });
+  vi.stubGlobal("fetch", fetchMock);
+
+  render(<MessagesPage />);
+
+  fireEvent.click(await screen.findByRole("button", { name: /Asha Rao/ }));
+  expect(screen.getByRole("status", { name: "" })).toHaveTextContent("Loading messages");
+  expect(screen.getByRole("button", { name: "Back to conversations" })).toBeVisible();
+
+  rejectThread(new Error("Thread request failed"));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Thread request failed");
+  expect(screen.getByRole("button", { name: "Back to conversations" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to conversations" }));
+  expect(screen.queryByRole("button", { name: "Back to conversations" })).not.toBeInTheDocument();
+});

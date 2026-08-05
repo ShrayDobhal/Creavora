@@ -39,6 +39,7 @@ export default function MessagesPage() {
   const [sendError, setSendError] = useState("");
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [threadReloadKey, setThreadReloadKey] = useState(0);
   const threadRequestRef = useRef(0);
 
   useEffect(() => {
@@ -78,7 +79,7 @@ export default function MessagesPage() {
       controller.abort();
       if (threadRequestRef.current === requestId) threadRequestRef.current += 1;
     };
-  }, [activeId]);
+  }, [activeId, threadReloadKey]);
 
   const retryConversations = () => {
     setLoading(true);
@@ -94,6 +95,13 @@ export default function MessagesPage() {
     setThreadLoading(true);
     setError("");
     setActiveId(participantId);
+  };
+
+  const retryThread = () => {
+    setThread(null);
+    setThreadLoading(true);
+    setError("");
+    setThreadReloadKey((current) => current + 1);
   };
 
   const filtered = useMemo(() => {
@@ -178,6 +186,18 @@ export default function MessagesPage() {
       </Card>
 
       <Card className={`${mobileThreadOpen ? "flex" : "hidden md:flex"} min-w-0 w-full flex-1 flex-col overflow-hidden`}>
+        {mobileThreadOpen && !thread && (
+          <header className="border-b border-line px-5 py-4 md:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileThreadOpen(false)}
+              aria-label="Back to conversations"
+              className="grid h-10 w-10 place-items-center rounded-xl border border-line text-ink"
+            >
+              <ArrowLeft size={17} />
+            </button>
+          </header>
+        )}
         {!activeId ? (
           <div className="grid flex-1 place-items-center p-8 text-center text-sm text-muted">
             Select a conversation to read your messages.
@@ -238,7 +258,12 @@ export default function MessagesPage() {
             </form>
           </>
         ) : (
-          <div className="grid flex-1 place-items-center p-8 text-sm text-rose-600" role="alert">{error || "Unable to load this conversation."}</div>
+          <div className="grid flex-1 place-items-center gap-3 p-8 text-sm text-rose-600" role="alert">
+            <p>{error || "Unable to load this conversation."}</p>
+            <button onClick={retryThread} className="inline-flex items-center gap-2 font-bold text-brand-700">
+              <RefreshCw size={14} /> Try again
+            </button>
+          </div>
         )}
       </Card>
     </main>
