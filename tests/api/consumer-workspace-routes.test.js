@@ -21,6 +21,7 @@ import { createRewardPost } from "@/app/api/rewards/route";
 import { createCancelSubscriptionPost } from "@/app/api/subscriptions/cancel/route";
 import { POST as createPaymentOrderPost } from "@/app/api/payments/create-order/route";
 import { POST as verifyPaymentPost } from "@/app/api/payments/verify/route";
+import { databaseIdSchema, sendMessageSchema } from "@/lib/validators";
 
 const fixtureUser = { id: "viewer-1", name: "Riya", role: "USER" };
 
@@ -318,6 +319,54 @@ it("lists persisted conversations and sends by receiver id", async () => {
       content: "Hello",
     },
   });
+  expect(database.user.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+    where: expect.objectContaining({ banned: false }),
+  }));
+});
+
+it("sends to a safe imported creator id and rejects unsafe database ids", async () => {
+  const importedId = "blindly-demo-user-fitness-1";
+  const recipient = {
+    id: importedId,
+    name: "Neha Kulkarni",
+    handle: "everyday-neha",
+    avatar: null,
+    roleTitle: "Fitness creator",
+    verified: true,
+  };
+  const findFirst = vi.fn().mockResolvedValue(recipient);
+  const create = vi.fn().mockResolvedValue({
+    id: "message-imported-1",
+    senderId: fixtureUser.id,
+    receiverId: importedId,
+    content: "Hello Neha",
+    status: "SENT",
+    createdAt: new Date("2026-08-06T00:00:00.000Z"),
+  });
+  const handler = createMessagesPost({ database: {
+    user: { findFirst },
+    message: { create },
+  } });
+
+  const response = await handler(new Request("http://localhost/api/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ receiverId: importedId, content: "Hello Neha" }),
+  }), { user: fixtureUser });
+
+  expect(response.status).toBe(201);
+  expect(create).toHaveBeenCalledWith({
+    data: { senderId: fixtureUser.id, receiverId: importedId, content: "Hello Neha" },
+  });
+  expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
+    where: { id: importedId, deletedAt: null, banned: false },
+  }));
+
+  expect(databaseIdSchema.safeParse(importedId).success).toBe(true);
+  for (const unsafeId of ["has space", "path/segment", "dot.id", "x".repeat(192)]) {
+    expect(databaseIdSchema.safeParse(unsafeId).success).toBe(false);
+    expect(sendMessageSchema.safeParse({ receiverId: unsafeId, content: "No" }).success).toBe(false);
+  }
 });
 
 it("returns followed creators without messages as suggestions and omits unsafe or existing participants", async () => {

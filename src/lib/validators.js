@@ -111,8 +111,14 @@ export const feedQuerySchema = z.object({
 
 // ─── Message Schemas ────────────────────────────────────────────────────────
 
+export const databaseIdSchema = z
+  .string()
+  .min(1, "Database ID is required")
+  .max(191, "Database ID is too long")
+  .regex(/^[A-Za-z0-9_-]+$/, "Invalid database ID");
+
 export const sendMessageSchema = z.object({
-  receiverId: z.string().uuid("Invalid receiver ID").optional(),
+  receiverId: databaseIdSchema.optional(),
   conversationId: z.string().uuid("Invalid conversation ID").optional(),
   content: z.string().max(5000).nullable().optional(),
   isAudio: z.boolean().optional().default(false),

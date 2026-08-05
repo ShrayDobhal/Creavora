@@ -46,7 +46,7 @@ export function createMessagesGet({ database = db } = {}) {
 
       if (participantId) {
         const participant = await database.user.findFirst({
-          where: { id: participantId, deletedAt: null },
+          where: { id: participantId, deletedAt: null, banned: false },
           select: participantSelect,
         });
         if (!participant || participant.id === user.id) {
@@ -135,7 +135,7 @@ export function createMessagesPost({ database = db } = {}) {
       }
 
       const participant = await database.user.findFirst({
-        where: { id: data.receiverId, deletedAt: null },
+        where: { id: data.receiverId, deletedAt: null, banned: false },
         select: participantSelect,
       });
       if (!participant || participant.id === user.id) {
