@@ -267,8 +267,11 @@ git commit -m "feat: enrich Blindly feed and discovery"
 - Modify: src/app/(fan)/saved/page.jsx
 - Modify: src/app/(fan)/subscriptions/page.jsx
 - Modify: src/app/api/subscriptions/route.js
+- Modify: src/app/api/subscriptions/cancel/route.js
 - Modify: src/app/api/wallet/deposit/route.js
 - Modify: src/app/api/rewards/route.js
+- Modify: src/app/api/payments/create-order/route.js
+- Modify: src/app/api/payments/verify/route.js
 - Modify: src/services/consumer-api.js
 - Test: tests/api/consumer-workspace-routes.test.js
 - Test: tests/components/consumer-workspace.test.jsx
@@ -276,7 +279,7 @@ git commit -m "feat: enrich Blindly feed and discovery"
 **Interfaces:**
 - GET /api/messages returns conversation summaries; GET /api/messages?userId=uuid returns participant and MessageView items; POST accepts receiverId and content
 - GET /api/bookmarks returns presented post items for current user
-- Subscription purchase, wallet deposit, reward claim each return 501 with error This feature is not available yet
+- Subscription purchase/cancellation, payment order/verification, wallet deposit, reward claim each return 501 with error This feature is not available yet before reading request body or mutating data
 
 - [ ] **Step 1: Write failing persisted-data and disabled-mutation tests**
 
@@ -308,7 +311,7 @@ const rows = await database.message.findMany({
 });
 ~~~
 
-Deduplicate threads by participant ID. Collections use existing create/delete API. Saved Posts uses bookmarks endpoint. Replace arrays, alert, confirm, and silent fallback chats with accessible loading, error, pending, and empty states. Subscription displays actual read-only data only and removes purchase actions. Wallet and Rewards remain the safe unavailable pages completed in Task 1 until a separate provider and eligibility release is approved.
+Deduplicate threads by participant ID. Collections use existing create/delete API. Saved Posts uses bookmarks endpoint. Replace arrays, alert, confirm, and silent fallback chats with accessible loading, error, pending, and empty states. Error and empty states are mutually exclusive; an active collection modal exposes its own mutation error. A thread request clears pending state only while it is still the selected request. Subscription displays actual read-only data only and removes purchase actions. Wallet and Rewards remain the safe unavailable pages completed in Task 1 until a separate provider and eligibility release is approved.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -319,7 +322,7 @@ Expected: PASS; static user names and payment-success copy are absent from user 
 - [ ] **Step 5: Commit**
 
 ~~~bash
-git add src/app/api/messages/route.js src/app/api/bookmarks/route.js src/app/api/live/route.js src/app/(fan)/messages/page.jsx src/app/(fan)/collections/page.jsx src/app/(fan)/saved/page.jsx src/app/(fan)/live/page.jsx src/app/(fan)/subscriptions/page.jsx src/app/(fan)/wallet/page.jsx src/app/(fan)/rewards/page.jsx src/app/api/subscriptions/route.js src/app/api/wallet/deposit/route.js src/app/api/rewards/route.js src/services/consumer-api.js tests/api/consumer-workspace-routes.test.js tests/components/consumer-workspace.test.jsx
+git add src/app/api/messages/route.js src/app/api/bookmarks/route.js src/app/(fan)/messages/page.jsx src/app/(fan)/collections/page.jsx src/app/(fan)/saved/page.jsx src/app/(fan)/subscriptions/page.jsx src/app/api/subscriptions/route.js src/app/api/subscriptions/cancel/route.js src/app/api/wallet/deposit/route.js src/app/api/rewards/route.js src/app/api/payments/create-order/route.js src/app/api/payments/verify/route.js src/services/consumer-api.js tests/api/consumer-workspace-routes.test.js tests/components/consumer-workspace.test.jsx
 git commit -m "feat: connect Blindly consumer destinations"
 ~~~
 
