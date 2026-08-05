@@ -212,15 +212,19 @@ git commit -m "feat: add Blindly consumer home dashboard"
 - Modify: src/app/(fan)/feed/page.jsx
 - Modify: src/app/(fan)/explore/page.jsx
 - Modify: src/components/consumer/FeedCard.jsx
+- Modify: src/components/consumer/FeedRail.jsx
+- Modify: src/components/consumer/CreatorCard.jsx
 - Test: tests/consumer/feed.test.js
 - Test: tests/components/consumer-workspace.test.jsx
+- Test: tests/components/feed-card.test.jsx
+- Test: tests/components/explore-search.test.jsx
 
 **Interfaces:**
 - Feed uses the completed latest, following, trending mode contract from Task 2
 - StoryStrip accepts only real stories and has a no-stories state
 - FeedRail accepts real creators, topics, live sessions
 
- - [ ] **Step 1: Write failing composition and failed-media tests**
+- [ ] **Step 1: Write failing composition, failed-media, and discovery-cover tests**
 
 ~~~jsx
 it("keeps Feed actions usable after media failure", () => {
@@ -232,13 +236,13 @@ it("keeps Feed actions usable after media failure", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: npm test -- tests/consumer/feed.test.js tests/components/consumer-workspace.test.jsx
+Run: npm test -- tests/consumer/feed.test.js tests/components/consumer-workspace.test.jsx tests/components/feed-card.test.jsx tests/components/explore-search.test.jsx
 
 Expected: FAIL because Feed has no story or contextual-rail composition.
 
 - [ ] **Step 3: Write minimal implementation**
 
-Add Trending control, StoryStrip, and FeedRail to Feed. FeedRail receives creator/topic/live data from the Home API. Explore renders API photo URLs through EditorialImage while retaining its search/history behavior.
+Render the completed Trending mode in Feed, then add StoryStrip and FeedRail. FeedRail receives creator/topic/live data from the Home API. Explore renders API photo URLs through EditorialImage while retaining its search/history behavior.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -249,7 +253,7 @@ Expected: PASS with no blank media rectangle after error event.
 - [ ] **Step 5: Commit**
 
 ~~~bash
-git add src/components/consumer/StoryStrip.jsx src/app/(fan)/feed/page.jsx src/app/(fan)/explore/page.jsx src/components/consumer/FeedCard.jsx tests/components/consumer-workspace.test.jsx
+git add src/components/consumer/StoryStrip.jsx src/components/consumer/FeedRail.jsx src/components/consumer/CreatorCard.jsx src/app/(fan)/feed/page.jsx src/app/(fan)/explore/page.jsx src/components/consumer/FeedCard.jsx tests/consumer/feed.test.js tests/components/consumer-workspace.test.jsx tests/components/feed-card.test.jsx tests/components/explore-search.test.jsx
 git commit -m "feat: enrich Blindly feed and discovery"
 ~~~
 
