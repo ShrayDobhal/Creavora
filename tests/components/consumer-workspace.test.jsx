@@ -21,6 +21,12 @@ it("shows the complete desktop user navigation", () => {
   expect(screen.getByRole("link", { name: "Saved Posts" })).toHaveAttribute("href", "/saved");
 });
 
+it("keeps the mobile primary navigation available through tablet widths", () => {
+  render(<ConsumerWorkspaceNav pathname="/home" variant="mobile" />);
+
+  expect(screen.getByRole("navigation", { name: "Mobile primary navigation" })).toHaveClass("lg:hidden");
+});
+
 it("replaces failed editorial media with an accessible fallback", async () => {
   render(
     <EditorialImage

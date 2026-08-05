@@ -107,7 +107,7 @@ describe("Fan navigation", () => {
     expect(screen.getByText("@leela")).toBeVisible();
   });
 
-  it("advertises only database-backed release routes in consumer navigation", () => {
+  it("advertises the consumer workspace destinations without premium upsells", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -119,26 +119,25 @@ describe("Fan navigation", () => {
     );
     const { container } = render(<FanLayout><p>Release content</p></FanLayout>);
 
-    screen.getAllByRole("link", { name: "Feed" }).forEach((link) =>
-      expect(link).toHaveAttribute("href", "/feed"),
-    );
-    screen.getAllByRole("link", { name: "Explore" }).forEach((link) =>
-      expect(link).toHaveAttribute("href", "/explore"),
-    );
-    screen.getAllByRole("link", { name: "Notifications" }).forEach((link) =>
-      expect(link).toHaveAttribute("href", "/notifications"),
-    );
     [
-      "Live Now",
-      "Subscriptions",
-      "Messages",
-      "Collections",
-      "My Wallet",
-      "Earn Rewards",
-      "Saved Posts",
-      "Go Premium",
-      "Upgrade Now",
-    ].forEach((label) => expect(screen.queryByText(label)).not.toBeInTheDocument());
+      ["Home", "/home"],
+      ["Feed", "/feed"],
+      ["Explore", "/explore"],
+      ["Live", "/live"],
+      ["Subscriptions", "/subscriptions"],
+      ["Messages", "/messages"],
+      ["Notifications", "/notifications"],
+      ["Collections", "/collections"],
+      ["Wallet", "/wallet"],
+      ["Rewards", "/rewards"],
+      ["Saved Posts", "/saved"],
+      ["Settings", "/settings"],
+    ].forEach(([label, href]) => {
+      screen.getAllByRole("link", { name: label }).forEach((link) =>
+        expect(link).toHaveAttribute("href", href),
+      );
+    });
+    ["Go Premium", "Upgrade Now"].forEach((label) => expect(screen.queryByText(label)).not.toBeInTheDocument());
     expect(container).not.toHaveTextContent(/premium|subscribe|unlock|upgrade|₹/i);
   });
 

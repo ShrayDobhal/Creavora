@@ -26,7 +26,7 @@ export default function ResponsiveNav({
     <nav
       aria-label={isMobile ? "Mobile primary navigation" : "Primary navigation"}
       className={isMobile
-        ? "fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 backdrop-blur sm:hidden"
+        ? "fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 backdrop-blur lg:hidden"
         : "space-y-1"}
     >
       <div className={isMobile ? "mx-auto flex max-w-md items-center justify-around" : "space-y-1"}>

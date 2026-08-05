@@ -253,7 +253,7 @@ export default function FanLayout({ children, topbar }) {
         <aside className="sticky top-[72px] hidden h-[calc(100vh-72px)] w-[244px] shrink-0 overflow-y-auto border-r border-line px-4 py-4 lg:block">
           <ConsumerWorkspaceNav unreadNotifications={unreadNotifications} />
         </aside>
-        <main className="min-w-0 flex-1 bg-canvas pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:pb-0">{children}</main>
+        <main className="min-w-0 flex-1 bg-canvas pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
       </div>
       <ResponsiveNav variant="mobile" unreadNotifications={unreadNotifications} />
     </div>
