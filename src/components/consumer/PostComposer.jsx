@@ -10,7 +10,7 @@ import {
 } from "@/services/consumer-api";
 import { CATEGORY_OPTIONS } from "@/lib/consumer/constants";
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const UNAVAILABLE_MESSAGE = "Image uploads are not configured yet";
 const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -116,7 +116,7 @@ export function PostComposer({ user, onPublished }) {
     const prepared = await compressImage(selected);
     if (prepared.size > MAX_IMAGE_BYTES) {
       clearImage();
-      setError("Image must be 5 MiB or smaller after compression");
+      setError("Image must be 4 MiB or smaller after compression");
       return;
     }
     if (!(await hasValidImageSignature(selected))) {

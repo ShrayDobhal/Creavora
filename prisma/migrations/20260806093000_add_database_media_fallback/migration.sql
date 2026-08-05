@@ -1,0 +1,3 @@
+ALTER TABLE "MediaAsset"
+ADD COLUMN "storageProvider" TEXT NOT NULL DEFAULT 'R2',
+ADD COLUMN "data" BYTEA;

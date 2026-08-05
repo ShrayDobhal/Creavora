@@ -13,6 +13,8 @@ import {
 } from "@/app/api/profile/route";
 import { createUploadSignPost } from "@/app/api/uploads/sign/route";
 import { createUploadCompletePost } from "@/app/api/uploads/complete/route";
+import { createDatabaseUploadPut } from "@/app/api/uploads/[id]/data/route";
+import { createMediaGet } from "@/app/api/media/[id]/route";
 import { createUploadIntent } from "@/lib/storage/r2";
 import { createPostPost } from "@/app/api/posts/route";
 import {
@@ -218,18 +220,27 @@ describe("Blindly social launch profile API", () => {
 });
 
 describe("Blindly social launch upload signing API", () => {
-  it("fails closed when R2 configuration is absent", async () => {
-    const response = await createUploadSignPost({ storage: unavailableStorage })(
+  it("falls back to owned database storage when R2 configuration is absent", async () => {
+    const database = { mediaAsset: { create: vi.fn(async ({ data }) => data) } };
+    const response = await createUploadSignPost({ storage: unavailableStorage, database })(
       jsonRequest("POST", imageInput), { user: { id: "user-1" } },
     );
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: "Image uploads are not configured yet" });
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({
+      storageProvider: "DATABASE",
+      uploadUrl: expect.stringMatching(/\/api\/uploads\/.+\/data$/),
+      publicUrl: expect.stringMatching(/\/api\/media\/.+$/),
+      headers: { "content-type": "image/webp" },
+    });
+    expect(database.mediaAsset.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ ownerId: "user-1", storageProvider: "DATABASE" }),
+    }));
   });
 
-  it("creates an owned post-image asset only for a 5 MiB-or-smaller image", async () => {
+  it("creates an owned post-image asset only for a 4 MiB-or-smaller image", async () => {
     const database = { mediaAsset: { create: vi.fn(async ({ data }) => ({ id: data.id, ...data })) } };
     const response = await createUploadSignPost({ storage: configuredStorage, database })(
-      jsonRequest("POST", { ...imageInput, bytes: 5242880, mimeType: "image/webp" }),
+      jsonRequest("POST", { ...imageInput, bytes: 4194304, mimeType: "image/webp" }),
       { user: { id: "user-1" } },
     );
     expect(response.status).toBe(201);
@@ -359,10 +370,10 @@ describe("Blindly social launch upload signing API", () => {
     expect(signedHeaders).toEqual(expect.arrayContaining(["content-type", "if-none-match"]));
   });
 
-  it("rejects an image larger than 5 MiB before persisting an asset", async () => {
+  it("rejects an image larger than 4 MiB before persisting an asset", async () => {
     const database = { mediaAsset: { create: vi.fn() } };
     const response = await createUploadSignPost({ storage: configuredStorage, database })(
-      jsonRequest("POST", { ...imageInput, bytes: 5242881 }),
+      jsonRequest("POST", { ...imageInput, bytes: 4194305 }),
       { user: { id: "user-1" } },
     );
     expect(response.status).toBe(413);
@@ -377,6 +388,74 @@ describe("Blindly social launch upload signing API", () => {
     );
     expect(response.status).toBe(400);
     expect(database.mediaAsset.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("Blindly database image upload API", () => {
+  const assetId = "9cd87ddd-5890-467d-8feb-17c83f432111";
+  const webp = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
+
+  it("stores a valid owned image and marks it verified", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const database = { mediaAsset: {
+      findFirst: vi.fn().mockResolvedValue({ id: assetId, bytes: webp.byteLength, mimeType: "image/webp" }),
+      updateMany,
+    } };
+    const response = await createDatabaseUploadPut(database)(
+      new Request(`http://localhost/api/uploads/${assetId}/data`, {
+        method: "PUT",
+        headers: { "content-type": "image/webp" },
+        body: webp,
+      }),
+      { user: { id: "user-1" }, params: Promise.resolve({ id: assetId }) },
+    );
+    expect(response.status).toBe(200);
+    expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ data: expect.any(Uint8Array), verifiedAt: expect.any(Date) }),
+    }));
+  });
+
+  it("rejects bytes whose image signature does not match", async () => {
+    const updateMany = vi.fn();
+    const database = { mediaAsset: {
+      findFirst: vi.fn().mockResolvedValue({ id: assetId, bytes: webp.byteLength, mimeType: "image/webp" }),
+      updateMany,
+    } };
+    const response = await createDatabaseUploadPut(database)(
+      new Request(`http://localhost/api/uploads/${assetId}/data`, {
+        method: "PUT",
+        headers: { "content-type": "image/webp" },
+        body: new Uint8Array(webp.byteLength),
+      }),
+      { user: { id: "user-1" }, params: Promise.resolve({ id: assetId }) },
+    );
+    expect(response.status).toBe(400);
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it("does not expose an unowned or unavailable upload", async () => {
+    const database = { mediaAsset: { findFirst: vi.fn().mockResolvedValue(null) } };
+    const response = await createDatabaseUploadPut(database)(
+      new Request(`http://localhost/api/uploads/${assetId}/data`, {
+        method: "PUT",
+        headers: { "content-type": "image/webp" },
+        body: webp,
+      }),
+      { user: { id: "user-1" }, params: Promise.resolve({ id: assetId }) },
+    );
+    expect(response.status).toBe(404);
+  });
+
+  it("serves only a verified database image with immutable headers", async () => {
+    const database = { mediaAsset: { findFirst: vi.fn().mockResolvedValue({ data: webp, mimeType: "image/webp" }) } };
+    const response = await createMediaGet(database)(
+      new Request(`http://localhost/api/media/${assetId}`),
+      { params: Promise.resolve({ id: assetId }) },
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/webp");
+    expect(response.headers.get("cache-control")).toContain("immutable");
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(webp);
   });
 });
 

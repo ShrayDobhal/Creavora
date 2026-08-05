@@ -5,7 +5,7 @@ import { withAuth } from "@/lib/middleware";
 import { uploadSignSchema, validateBody } from "@/lib/validators";
 import * as r2Storage from "@/lib/storage/r2";
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const extensions = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -28,20 +28,17 @@ export function createUploadSignPost({ storage = r2Storage, database = db } = {}
     }
 
     if (typeof body?.bytes === "number" && body.bytes > MAX_IMAGE_BYTES) {
-      return validationResponse([{ field: "bytes", message: "Image must be 5 MiB or smaller" }], 413);
+      return validationResponse([{ field: "bytes", message: "Image must be 4 MiB or smaller" }], 413);
     }
 
     const { error, data } = validateBody(uploadSignSchema, body);
     if (error) return validationResponse(error);
 
-    if (!storage.getR2Configuration().configured) {
-      return NextResponse.json({ error: "Image uploads are not configured yet" }, { status: 503 });
-    }
-
+    const useDatabaseStorage = !storage.getR2Configuration().configured;
     const assetId = randomUUID();
     const extension = extensions[data.mimeType];
-    const key = storage.buildObjectKey({ ownerId: user.id, assetId, extension });
-    const publicUrl = storage.buildPublicUrl(key);
+    const key = useDatabaseStorage ? `database/${assetId}.${extension}` : storage.buildObjectKey({ ownerId: user.id, assetId, extension });
+    const publicUrl = useDatabaseStorage ? new URL(`/api/media/${assetId}`, req.url).toString() : storage.buildPublicUrl(key);
 
     let persisted = false;
     try {
@@ -56,9 +53,21 @@ export function createUploadSignPost({ storage = r2Storage, database = db } = {}
           width: data.width,
           height: data.height,
           kind: data.kind,
+          storageProvider: useDatabaseStorage ? "DATABASE" : "R2",
         },
       });
       persisted = true;
+
+      if (useDatabaseStorage) {
+        return NextResponse.json({
+          assetId,
+          key,
+          uploadUrl: new URL(`/api/uploads/${assetId}/data`, req.url).toString(),
+          publicUrl,
+          headers: { "content-type": data.mimeType },
+          storageProvider: "DATABASE",
+        }, { status: 201 });
+      }
 
       const intent = await storage.createUploadIntent({
         ownerId: user.id,
