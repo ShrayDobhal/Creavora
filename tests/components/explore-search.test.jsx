@@ -3,6 +3,7 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SearchPanel } from "@/components/consumer/SearchPanel";
 import { CreatorCard } from "@/components/consumer/CreatorCard";
@@ -26,6 +27,11 @@ const discoveryCreator = {
   isFollowing: false,
 };
 
+function SearchPanelHarness(props) {
+  const [query, setQuery] = useState(props.query || "");
+  return <SearchPanel {...props} query={query} onInputChange={setQuery} />;
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -35,7 +41,7 @@ afterEach(() => {
 
 describe("SearchPanel", () => {
   it("identifies the Blindly search surface", () => {
-    render(<SearchPanel onQueryChange={vi.fn()} onSubmit={vi.fn()} />);
+    render(<SearchPanelHarness onQueryChange={vi.fn()} onSubmit={vi.fn()} />);
 
     expect(screen.getByRole("searchbox")).toHaveAttribute(
       "placeholder",
@@ -47,7 +53,7 @@ describe("SearchPanel", () => {
     vi.useFakeTimers();
     const onQueryChange = vi.fn();
     const onSubmit = vi.fn();
-    render(<SearchPanel onQueryChange={onQueryChange} onSubmit={onSubmit} />);
+    render(<SearchPanelHarness onQueryChange={onQueryChange} onSubmit={onSubmit} />);
 
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "  Asha" } });
     expect(onQueryChange).not.toHaveBeenCalled();
@@ -63,7 +69,7 @@ describe("SearchPanel", () => {
     const user = userEvent.setup();
     const onQueryChange = vi.fn();
     const onSubmit = vi.fn();
-    render(<SearchPanel onQueryChange={onQueryChange} onSubmit={onSubmit} />);
+    render(<SearchPanelHarness onQueryChange={onQueryChange} onSubmit={onSubmit} />);
 
     const input = screen.getByRole("searchbox");
     await user.type(input, "   ");
@@ -82,7 +88,7 @@ describe("SearchPanel", () => {
     vi.useFakeTimers();
     const onQueryChange = vi.fn();
     const onSubmit = vi.fn();
-    render(<SearchPanel onQueryChange={onQueryChange} onSubmit={onSubmit} />);
+    render(<SearchPanelHarness onQueryChange={onQueryChange} onSubmit={onSubmit} />);
 
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Asha" } });
     fireEvent.submit(screen.getByRole("search"));
@@ -94,13 +100,17 @@ describe("SearchPanel", () => {
   });
 
   it("synchronizes its visible value when the URL-backed query changes", () => {
+    const onInputChange = vi.fn();
     const { rerender } = render(
-      <SearchPanel key="Asha" query="Asha" onQueryChange={vi.fn()} onSubmit={vi.fn()} />,
+      <SearchPanel query="Asha" onInputChange={onInputChange} onQueryChange={vi.fn()} onSubmit={vi.fn()} />,
     );
+    const input = screen.getByRole("searchbox");
     expect(screen.getByRole("searchbox")).toHaveValue("Asha");
 
-    rerender(<SearchPanel key="empty" query="" onQueryChange={vi.fn()} onSubmit={vi.fn()} />);
+    rerender(<SearchPanel query="" onInputChange={onInputChange} onQueryChange={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByRole("searchbox")).toBe(input);
     expect(screen.getByRole("searchbox")).toHaveValue("");
+    expect(onInputChange).not.toHaveBeenCalled();
   });
 });
 
@@ -495,6 +505,40 @@ describe("Explore page", () => {
       "/api/search?q=Kochi&type=all",
       expect.objectContaining({ credentials: "same-origin" }),
     ));
+  });
+
+  it("keeps one focused search input mounted after a debounce pause so typing can continue", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((url) => Promise.resolve(new Response(
+      JSON.stringify(
+        String(url) === "/api/discovery"
+          ? { categories: [], creators: [] }
+          : String(url).startsWith("/api/creators")
+            ? { items: [], nextCursor: null }
+            : { creators: [], posts: [], communities: [] },
+      ),
+      { status: 200, headers: { "content-type": "application/json" } },
+    )));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ExplorePage />);
+    const input = screen.getByRole("searchbox");
+    input.focus();
+
+    fireEvent.change(input, { target: { value: "Asha" } });
+    await act(() => vi.advanceTimersByTimeAsync(350));
+
+    expect(screen.getByRole("searchbox")).toBe(input);
+    expect(document.activeElement).toBe(input);
+    fireEvent.change(input, { target: { value: "Asha Rao" } });
+    await act(() => vi.advanceTimersByTimeAsync(350));
+
+    expect(screen.getByRole("searchbox")).toBe(input);
+    expect(input).toHaveValue("Asha Rao");
+    expect(document.activeElement).toBe(input);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/search?q=Asha+Rao&type=all",
+      expect.objectContaining({ credentials: "same-origin" }),
+    );
   });
 
   it("does not persist debounced reads and saves history after explicit submit", async () => {

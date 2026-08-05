@@ -94,6 +94,26 @@ export default function SubscriptionsPage() {
     }
   };
 
+  const rejoin = async (subscription) => {
+    const creator = subscription.creator;
+    setPendingCreatorId(creator.id);
+    setActionError("");
+    setFeedback("");
+    try {
+      const data = await joinFreeSubscription(creator.id);
+      setSubscriptions((current) => current.map((item) => (
+        item.id === subscription.id
+          ? { ...data.subscription, creator: data.subscription.creator || item.creator }
+          : item
+      )));
+      setFeedback(`You now have free access to ${creator.name}.`);
+    } catch (actionFailure) {
+      setActionError(actionFailure.message);
+    } finally {
+      setPendingCreatorId("");
+    }
+  };
+
   return (
     <div className="min-h-[calc(100vh-72px)] min-w-0 overflow-x-hidden bg-canvas px-3 py-6 sm:px-6">
       <h1 className="flex items-center gap-2 text-[25px] font-extrabold tracking-tight">
@@ -154,6 +174,20 @@ export default function SubscriptionsPage() {
                       {pendingCreatorId === subscription.creator.id ? "Cancelling…" : "Cancel subscription"}
                     </button>
                   )}
+                  {subscription.status === "CANCELLED"
+                    && subscription.tier === "Community access"
+                    && Number(subscription.price) === 0
+                    && subscription.method === "FREE" ? (
+                      <button
+                        type="button"
+                        onClick={() => rejoin(subscription)}
+                        disabled={pendingCreatorId === subscription.creator.id}
+                        className="mt-4 rounded-lg bg-brand-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"
+                        aria-label={`Rejoin ${subscription.creator.name} for free`}
+                      >
+                        {pendingCreatorId === subscription.creator.id ? "Rejoining…" : "Rejoin free"}
+                      </button>
+                    ) : null}
                 </Card>
               ))}
             </div>

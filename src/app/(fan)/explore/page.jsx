@@ -84,6 +84,7 @@ export default function ExplorePage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [discoveryReloadKey, setDiscoveryReloadKey] = useState(0);
   const [searchRequest, setSearchRequest] = useState(null);
+  const [searchInput, setSearchInput] = useState("");
   const [searchState, setSearchState] = useState({ status: "idle", results: emptySearch, error: "" });
   const [historyError, setHistoryError] = useState("");
 
@@ -139,10 +140,12 @@ export default function ExplorePage() {
     const synchronizeSearch = () => {
       const query = readSearchFromLocation();
       if (!query) {
+        setSearchInput("");
         setSearchRequest(null);
         setSearchState({ status: "idle", results: emptySearch, error: "" });
         return;
       }
+      setSearchInput(query);
       runSearch(query);
     };
     synchronizeSearch();
@@ -160,6 +163,7 @@ export default function ExplorePage() {
   }, []);
   const handleSearchSubmit = useCallback((query) => {
     setHistoryError("");
+    setSearchInput(query);
     if (readSearchFromLocation() !== query) writeSearchUrl(query);
     runSearch(query);
     saveSearchHistory({ query }).catch((saveError) => {
@@ -168,6 +172,7 @@ export default function ExplorePage() {
   }, [runSearch, writeSearchUrl]);
   const clearSearch = useCallback(() => {
     writeSearchUrl("");
+    setSearchInput("");
     setSearchRequest(null);
     setSearchState({ status: "idle", results: emptySearch, error: "" });
   }, [writeSearchUrl]);
@@ -230,8 +235,8 @@ export default function ExplorePage() {
         </div>
         <div>
           <SearchPanel
-            key={searchQuery}
-            query={searchQuery}
+            query={searchInput}
+            onInputChange={setSearchInput}
             onQueryChange={runSearch}
             onSubmit={handleSearchSubmit}
             busy={searchState.status === "loading"}

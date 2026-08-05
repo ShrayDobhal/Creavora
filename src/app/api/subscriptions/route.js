@@ -37,8 +37,11 @@ export function createSubscriptionsGet({ database = db } = {}) {
         select: {
           id: true,
           tier: true,
+          price: true,
+          method: true,
           renewsOn: true,
           status: true,
+          cancelledAt: true,
           creator: {
             select: {
               id: true,
@@ -83,6 +86,12 @@ const freeSubscriptionValues = {
   cancelledAt: null,
 };
 
+const isFreeCommunitySubscription = (subscription) => (
+  subscription?.tier === freeSubscriptionValues.tier
+  && Number(subscription.price) === freeSubscriptionValues.price
+  && subscription.method === freeSubscriptionValues.method
+);
+
 const subscriptionSelect = {
   id: true,
   userId: true,
@@ -107,9 +116,10 @@ const subscriptionSelect = {
 
 export function createSubscriptionPost({ database = db } = {}) {
   return async (req, { user }) => {
+    let creatorId = "";
     try {
       const body = await req.json();
-      const creatorId = typeof body?.creatorId === "string" ? body.creatorId.trim() : "";
+      creatorId = typeof body?.creatorId === "string" ? body.creatorId.trim() : "";
       if (!creatorId) {
         return NextResponse.json({ error: "Creator is required" }, { status: 400 });
       }
@@ -136,10 +146,7 @@ export function createSubscriptionPost({ database = db } = {}) {
           return { subscription, created: true };
         }
 
-        const isFreeCommunity = existing.tier === freeSubscriptionValues.tier
-          && Number(existing.price) === freeSubscriptionValues.price
-          && existing.method === freeSubscriptionValues.method;
-        if (!isFreeCommunity) return { conflict: true };
+        if (!isFreeCommunitySubscription(existing)) return { conflict: true };
         if (existing.status === "ACTIVE") return { subscription: existing, created: false };
 
         const subscription = await transaction.subscription.update({
@@ -159,6 +166,25 @@ export function createSubscriptionPost({ database = db } = {}) {
       }
       return NextResponse.json(result, { status: result.created ? 201 : 200 });
     } catch (error) {
+      if (error?.code === "P2002" && creatorId) {
+        try {
+          const winner = await database.subscription.findUnique({
+            where: { userId_creatorId: { userId: user.id, creatorId } },
+            select: subscriptionSelect,
+          });
+          if (winner && isFreeCommunitySubscription(winner)) {
+            return NextResponse.json({ subscription: winner, created: false });
+          }
+          if (winner) {
+            return NextResponse.json(
+              { error: "A recorded subscription already exists for this creator" },
+              { status: 409 },
+            );
+          }
+        } catch (refetchError) {
+          return consumerErrorResponse(refetchError, "Failed to create subscription");
+        }
+      }
       return consumerErrorResponse(error, "Failed to create subscription");
     }
   };

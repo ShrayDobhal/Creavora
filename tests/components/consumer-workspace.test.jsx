@@ -551,6 +551,37 @@ it("joins a real recommended creator and cancels the persisted subscription", as
   expect(screen.getByText("CANCELLED")).toBeVisible();
 });
 
+it("rejoins a compatible cancelled free subscription through the real join endpoint", async () => {
+  const cancelled = {
+    id: "subscription-free-cancelled",
+    tier: "Community access",
+    price: 0,
+    method: "FREE",
+    renewsOn: "No renewal",
+    status: "CANCELLED",
+    creator: homeCreator,
+  };
+  const active = { ...cancelled, status: "ACTIVE", cancelledAt: null };
+  const fetch = vi.fn((url, options = {}) => Promise.resolve(new Response(
+    JSON.stringify(options.method === "POST"
+      ? { subscription: active, created: false }
+      : { items: [cancelled], recommendations: [] }),
+    { status: 200 },
+  )));
+  vi.stubGlobal("fetch", fetch);
+
+  render(<SubscriptionsPage />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "Rejoin Asha Rao for free" }));
+  await waitFor(() => expect(fetch).toHaveBeenCalledWith(
+    "/api/subscriptions",
+    expect.objectContaining({ method: "POST", body: JSON.stringify({ creatorId: homeCreator.id }) }),
+  ));
+  expect(await screen.findByText("You now have free access to Asha Rao.")).toBeVisible();
+  expect(screen.getByText("ACTIVE")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "Rejoin Asha Rao for free" })).not.toBeInTheDocument();
+});
+
 it.each([
   ["collections", CollectionsPage],
   ["saved posts", SavedPage],

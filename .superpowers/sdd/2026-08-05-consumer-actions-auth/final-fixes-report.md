@@ -30,3 +30,12 @@
 
 - None for these review findings
 - External Google and email provider credentials remain intentionally unconfigured and were not changed
+
+## Re-review follow-up
+
+- Removed the keyed Explore search remount and converted the input to one controlled instance whose user-change handler owns debouncing; direct URL loads, clear, and `popstate` update the value without starting feedback searches, while focus survives a typing pause
+- Added `Rejoin free` only for recorded cancelled rows that exactly match zero-cost `Community access` plus `FREE`; the real join endpoint replaces the row with its returned active record, while paid history exposes no rejoin action
+- Restored concurrent first-join idempotency by detecting a transaction-ending `P2002`, refetching the winner outside the aborted transaction, validating the exact free-community contract, and returning it as `created: false`
+- Re-review RED: 4 focused assertions failed for keyed focus loss, one-instance synchronization, unreachable free rejoin, and the unique race
+- Re-review GREEN: 3 focused files / 72 tests passed
+- Re-review full regression: 27 files / 297 tests passed; full ESLint and diff check passed

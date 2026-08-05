@@ -1,26 +1,31 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Search } from "lucide-react";
 
-export function SearchPanel({ query: externalQuery = "", onQueryChange, onSubmit, busy = false }) {
-  const [query, setQuery] = useState(externalQuery);
+export function SearchPanel({ query = "", onInputChange, onQueryChange, onSubmit, busy = false }) {
   const debounceTimer = useRef(null);
 
   useEffect(() => {
-    const normalized = query.trim();
-    if (!normalized || normalized === externalQuery.trim()) return undefined;
+    return () => {
+      if (debounceTimer.current) window.clearTimeout(debounceTimer.current);
+    };
+  }, []);
 
-    const timer = window.setTimeout(() => {
+  function handleChange(event) {
+    const nextQuery = event.target.value;
+    onInputChange(nextQuery);
+    if (debounceTimer.current) window.clearTimeout(debounceTimer.current);
+    const normalized = nextQuery.trim();
+    if (!normalized) {
+      debounceTimer.current = null;
+      return;
+    }
+    debounceTimer.current = window.setTimeout(() => {
       debounceTimer.current = null;
       onQueryChange(normalized);
     }, 300);
-    debounceTimer.current = timer;
-    return () => {
-      window.clearTimeout(timer);
-      if (debounceTimer.current === timer) debounceTimer.current = null;
-    };
-  }, [externalQuery, onQueryChange, query]);
+  }
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -41,7 +46,7 @@ export function SearchPanel({ query: externalQuery = "", onQueryChange, onSubmit
         id="explore-search"
         type="search"
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={handleChange}
         placeholder="Search Blindly creators, posts, and communities"
         className="h-10 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted"
       />

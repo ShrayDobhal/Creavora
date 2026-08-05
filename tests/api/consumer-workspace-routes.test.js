@@ -651,6 +651,41 @@ it("preserves cancelled paid subscription history instead of converting it to fr
   expect(create).not.toHaveBeenCalled();
 });
 
+it("returns the compatible winning subscription when concurrent first join loses a unique race", async () => {
+  const uniqueRace = Object.assign(new Error("Unique constraint"), { code: "P2002" });
+  const winner = {
+    id: "subscription-winner",
+    userId: fixtureUser.id,
+    creatorId: creator.id,
+    tier: "Community access",
+    price: 0,
+    method: "FREE",
+    status: "ACTIVE",
+    renewsOn: "No renewal",
+    cancelledAt: null,
+    creator,
+  };
+  const refetch = vi.fn().mockResolvedValue(winner);
+  const response = await createSubscriptionPost({ database: {
+    $transaction: (callback) => callback({
+      user: { findFirst: vi.fn().mockResolvedValue(creator) },
+      subscription: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockRejectedValue(uniqueRace),
+      },
+    }),
+    subscription: { findUnique: refetch },
+  } })(new Request("http://localhost/api/subscriptions", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ creatorId: creator.id }),
+  }), { user: fixtureUser });
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ created: false, subscription: { id: winner.id, status: "ACTIVE" } });
+  expect(refetch).toHaveBeenCalledWith(expect.objectContaining({
+    where: { userId_creatorId: { userId: fixtureUser.id, creatorId: creator.id } },
+  }));
+});
+
 it.each([
   ["self", fixtureUser],
   ["non-creator", { ...creator, role: "USER" }],
