@@ -227,7 +227,7 @@ export default function MessagesPage() {
                   <ParticipantAvatar participant={conversation.participant} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-bold text-ink">{conversation.participant.name}</span>
-                    <span className="block text-xs text-muted">{formatTime(conversation.lastMessage.createdAt)}</span>
+                    <span className="block text-xs text-muted">{formatTime(conversation.lastMessage?.createdAt)}</span>
                   </span>
                 </button>
               ))}

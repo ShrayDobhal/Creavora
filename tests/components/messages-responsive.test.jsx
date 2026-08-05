@@ -168,3 +168,15 @@ it("opens a followed creator locally and promotes the starter after its first su
   fireEvent.click(screen.getByRole("button", { name: "Back to conversations" }));
   expect(screen.getByRole("button", { name: /Mina Das/ })).toBeVisible();
 });
+
+it("renders a legacy conversation that has no last message", async () => {
+  const participant = { id: "creator-legacy", name: "Noor Ali", handle: "noor", avatar: null, roleTitle: "Poet", verified: false };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    items: [{ participant }],
+    suggestions: [],
+  }), { status: 200 })));
+
+  render(<MessagesPage />);
+
+  expect(await screen.findByRole("button", { name: /Noor Ali/ })).toBeVisible();
+});

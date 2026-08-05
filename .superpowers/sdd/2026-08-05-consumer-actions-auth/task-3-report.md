@@ -42,3 +42,30 @@ npm test -- tests/api/consumer-workspace-routes.test.js tests/components/message
 Result: 2 test files passed, 22 tests passed, 0 failures (exit 0). The existing mobile back/recovery tests remained green, and the new UI test verified one initial GET only before submit followed by exactly one POST with `{ receiverId: "creator-3", content: "Hi Mina" }`.
 
 `git diff --check` also completed without whitespace errors.
+
+## Fix round 1 — Legacy conversations without a last message
+
+### RED
+
+Added `renders a legacy conversation that has no last message` to the focused messages component suite. The fixture returns a normal `participant` conversation entry but intentionally omits `lastMessage`.
+
+Ran:
+
+```text
+npm test -- tests/components/messages-responsive.test.jsx
+```
+
+Result: exit 1, with the new test failing and React reporting the expected `TypeError: Cannot read properties of undefined (reading 'createdAt')` at the conversation timestamp render. The test therefore reproduced the production crash rather than a fixture failure.
+
+### GREEN
+
+Changed only the conversation timestamp expression to safely read `conversation.lastMessage?.createdAt`; `formatTime` already returns an empty string for a missing value.
+
+Ran:
+
+```text
+npm test -- tests/api/consumer-workspace-routes.test.js tests/components/messages-responsive.test.jsx
+npx eslint 'src/app/(fan)/messages/page.jsx' 'tests/components/messages-responsive.test.jsx'
+```
+
+Results: the focused Task 3 suite passed 2 files / 23 tests with exit 0, and targeted ESLint completed with exit 0 and no output.
