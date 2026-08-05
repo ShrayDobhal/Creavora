@@ -207,13 +207,15 @@ describe("social launch UI", () => {
     expect(screen.getByRole("button", { name: "Privacy" })).toBeVisible();
   });
 
-  it("only renders Feed, Explore, and Notifications in the mobile primary navigation", () => {
+  it("renders Home, Feed, Explore, Notifications, and Profile in the mobile primary navigation", () => {
     render(<ResponsiveNav variant="mobile" unreadNotifications={2} />);
 
     const navigation = screen.getByRole("navigation", { name: "Mobile primary navigation" });
+    expect(navigation).toHaveTextContent("Home");
     expect(navigation).toHaveTextContent("Feed");
     expect(navigation).toHaveTextContent("Explore");
     expect(navigation).toHaveTextContent("Notifications");
+    expect(navigation).toHaveTextContent("Profile");
     expect(navigation).not.toHaveTextContent(/collections|messages|wallet|rewards/i);
   });
 

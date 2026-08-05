@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Compass, LayoutGrid } from "lucide-react";
+import { Bell, Compass, House, LayoutGrid, UserRound } from "lucide-react";
 
 export const releaseNav = [
+  { href: "/home", label: "Home", icon: House },
   { href: "/feed", label: "Feed", icon: LayoutGrid },
   { href: "/explore", label: "Explore", icon: Compass },
   { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/profile", label: "Profile", icon: UserRound },
 ];
 
 export default function ResponsiveNav({

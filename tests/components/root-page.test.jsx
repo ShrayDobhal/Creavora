@@ -15,9 +15,9 @@ afterEach(() => {
   redirect.mockReset();
 });
 
-it("redirects the root page to the database-backed feed without rendering legacy data", () => {
+it("redirects the signed-in root page to home without rendering legacy data", () => {
   const { container } = render(<RootPage />);
 
-  expect(redirect).toHaveBeenCalledWith("/feed");
+  expect(redirect).toHaveBeenCalledWith("/home");
   expect(container).toBeEmptyDOMElement();
 });
