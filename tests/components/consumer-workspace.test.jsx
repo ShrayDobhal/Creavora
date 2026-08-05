@@ -10,6 +10,7 @@ import WalletPage from "@/app/(fan)/wallet/page";
 import RewardsPage from "@/app/(fan)/rewards/page";
 import LivePage from "@/app/(fan)/live/page";
 import { CommunityCard } from "@/app/(fan)/explore/page";
+import { getLiveSessions } from "@/lib/consumer/workspace";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/home",
@@ -174,6 +175,55 @@ it("loads the Live page from the read-only API without static activity", async (
   expect(screen.getByText("Asha Rao")).toBeVisible();
   expect(screen.queryByText("Ananya Sharma")).not.toBeInTheDocument();
   expect(screen.queryByRole("textbox", { name: /chat/i })).not.toBeInTheDocument();
+});
+
+it("keeps Home upcoming sessions truthful when live rows fill their own limit", async () => {
+  const rawCreator = {
+    ...homeCreator,
+    followers: [],
+    creatorProfile: { category: "Art" },
+    _count: { followers: 24 },
+  };
+  const liveRows = Array.from({ length: 5 }, (_, index) => ({
+    id: `home-live-${index + 1}`,
+    title: `Live ${index + 1}`,
+    description: null,
+    thumbnailUrl: null,
+    status: "LIVE",
+    scheduledAt: null,
+    startedAt: new Date(`2026-08-05T0${index}:00:00.000Z`),
+    viewerCount: index,
+    host: rawCreator,
+  }));
+  const scheduled = {
+    ...liveRows[0],
+    id: "home-scheduled",
+    title: "Scheduled studio tour",
+    status: "SCHEDULED",
+    scheduledAt: new Date("2026-08-06T10:00:00.000Z"),
+    startedAt: null,
+    viewerCount: 0,
+  };
+  const rows = [...liveRows, scheduled];
+  const sessions = await getLiveSessions(
+    {
+      liveSession: {
+        findMany: ({ where, take }) => {
+          const statuses = typeof where.status === "string" ? [where.status] : where.status.in;
+          return Promise.resolve(
+            rows.filter((row) => statuses.includes(row.status)).slice(0, take),
+          );
+        },
+      },
+    },
+    "viewer-1",
+    { limit: 4 },
+  );
+
+  render(<HomeDashboard data={homeData({ liveSessions: sessions })} />);
+
+  expect(screen.getByText("Scheduled studio tour")).toBeVisible();
+  expect(screen.queryByText("No sessions are scheduled yet.")).not.toBeInTheDocument();
 });
 
 it("shows wallet as unavailable without fabricated balances or payment controls", () => {

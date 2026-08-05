@@ -70,22 +70,25 @@ export const getLiveSessions = async (
   viewerId,
   { limit = 12 } = {},
 ) => {
-  const rows = await database.liveSession.findMany({
-    where: {
-      status: { in: ["LIVE", "SCHEDULED"] },
-      host: { is: { deletedAt: null } },
-    },
-    orderBy: [
-      { status: "asc" },
-      { scheduledAt: "asc" },
-      { startedAt: "desc" },
-      { id: "desc" },
-    ],
-    take: Math.min(limit, 12),
-    include: { host: { include: creatorInclude(viewerId) } },
-  });
+  const take = Math.min(limit, 12);
+  const include = { host: { include: creatorInclude(viewerId) } };
+  const hostIsActive = { is: { deletedAt: null } };
+  const [liveRows, scheduledRows] = await Promise.all([
+    database.liveSession.findMany({
+      where: { status: "LIVE", host: hostIsActive },
+      orderBy: [{ startedAt: "desc" }, { id: "desc" }],
+      take,
+      include,
+    }),
+    database.liveSession.findMany({
+      where: { status: "SCHEDULED", host: hostIsActive },
+      orderBy: [{ scheduledAt: "asc" }, { id: "desc" }],
+      take,
+      include,
+    }),
+  ]);
 
-  return rows.map((session) => ({
+  return [...liveRows, ...scheduledRows].map((session) => ({
     id: session.id,
     title: session.title,
     description: session.description,

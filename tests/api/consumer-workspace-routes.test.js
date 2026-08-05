@@ -124,8 +124,7 @@ it("returns bounded viewer-safe Home data", async () => {
 });
 
 it("returns bounded live and scheduled sessions from database rows", async () => {
-  const findMany = vi.fn().mockResolvedValue([
-    {
+  const liveSession = {
       id: "live-real",
       title: "Studio check-in",
       description: "A read-only broadcast listing",
@@ -135,8 +134,10 @@ it("returns bounded live and scheduled sessions from database rows", async () =>
       startedAt: new Date("2026-08-05T10:00:00.000Z"),
       viewerCount: 14,
       host: creator,
-    },
-  ]);
+    };
+  const findMany = vi.fn(({ where }) =>
+    Promise.resolve(where.status === "LIVE" ? [liveSession] : []),
+  );
 
   const response = await createLiveGet({
     database: { liveSession: { findMany } },
@@ -153,13 +154,54 @@ it("returns bounded live and scheduled sessions from database rows", async () =>
       },
     ],
   });
-  expect(findMany).toHaveBeenCalledWith(
-    expect.objectContaining({
-      where: {
-        status: { in: ["LIVE", "SCHEDULED"] },
-        host: { is: { deletedAt: null } },
-      },
-      take: 12,
-    }),
+  expect(findMany).toHaveBeenCalledTimes(2);
+  expect(findMany.mock.calls.map(([query]) => query.where.status)).toEqual([
+    "LIVE",
+    "SCHEDULED",
+  ]);
+  expect(findMany.mock.calls.map(([query]) => query.take)).toEqual([12, 12]);
+  expect(findMany.mock.calls[0][0].where.host).toEqual({ is: { deletedAt: null } });
+});
+
+it("keeps a scheduled session when live rows exceed the live API limit", async () => {
+  const liveRows = Array.from({ length: 13 }, (_, index) => ({
+    id: `live-${index + 1}`,
+    title: `Live session ${index + 1}`,
+    description: null,
+    thumbnailUrl: null,
+    status: "LIVE",
+    scheduledAt: null,
+    startedAt: new Date(`2026-08-05T${String(index).padStart(2, "0")}:00:00.000Z`),
+    viewerCount: index,
+    host: creator,
+  }));
+  const scheduled = {
+    ...liveRows[0],
+    id: "scheduled-real",
+    title: "Tomorrow's studio session",
+    status: "SCHEDULED",
+    scheduledAt: new Date("2026-08-06T10:00:00.000Z"),
+    startedAt: null,
+    viewerCount: 0,
+  };
+  const rows = [...liveRows, scheduled];
+  const findMany = vi.fn(({ where, take }) => {
+    const statuses = typeof where.status === "string" ? [where.status] : where.status.in;
+    return Promise.resolve(rows.filter((row) => statuses.includes(row.status)).slice(0, take));
+  });
+
+  const response = await createLiveGet({
+    database: { liveSession: { findMany } },
+  })(new Request("http://localhost/api/live"), { user: fixtureUser });
+  const body = await response.json();
+
+  expect(body.items.filter((session) => session.status === "LIVE")).toHaveLength(12);
+  expect(body.items).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        id: "scheduled-real",
+        status: "SCHEDULED",
+      }),
+    ]),
   );
 });
