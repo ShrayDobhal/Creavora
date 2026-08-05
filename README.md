@@ -45,6 +45,7 @@ Blindly is a Next.js creator-discovery product with separate fan and creator aut
 | `SEED_DATABASE_URL` | Seed only | Separate local PostgreSQL database that may receive development fixtures. |
 | `SEED_DEVELOPMENT_CONFIRMATION` | Seed only | Must be `local-development` before the seed command will run. |
 | `SEED_PASSWORD` | No | Password for seeded accounts; defaults to `Test1234`. |
+| `BLINDLY_DEMO_CONTENT_CONFIRMATION` | Operator only | Explicit, one-time confirmation required to import fictional Blindly demo content. |
 | `RAZORPAY_KEY_ID` | No | Reserved for payment integration. |
 | `RAZORPAY_KEY_SECRET` | No | Reserved for payment integration. |
 
@@ -67,6 +68,18 @@ npm run db:seed
 ```
 
 The command rejects production mode, remote seed hosts, missing confirmation, and a seed URL that matches `DATABASE_URL`. To inspect the fixtures after the seed completes, start the local app with `DATABASE_URL` pointed at that seeded database. Never run `npm run db:seed` in Vercel or against production data.
+
+## Production demo-content import (operator-only)
+
+The fictional Blindly demo-content importer is an operator-only, one-time release operation. It is **not part of the Vercel build** and must not be configured as a Vercel build step, deployment hook, or automatic seed. Do not add the confirmation variable to Vercel environment variables.
+
+Only after the whole branch has been reviewed, integrated into `main`, and the connected GitHub/Vercel deployment is Ready, an authorized operator may pull the production environment into an uncommitted local shell session. Vercel environment pulls are operator-only and never committed. The exact confirmation is `BLINDLY_DEMO_CONTENT_CONFIRMATION=blindly-production-demo-content`. Confirm that `DATABASE_URL` is the intended production PostgreSQL database, then run this exact command once:
+
+```powershell
+$env:BLINDLY_DEMO_CONTENT_CONFIRMATION="blindly-production-demo-content"; npm run db:import-demo-content
+```
+
+Capture the importer counts printed by the command. Then verify `/home`, `/feed`, `/explore`, `/live`, `/messages`, `/saved`, `/collections`, `/notifications`, `/profile`, and `/settings` on the deployed application. Do not push, deploy, or import production data as part of local development or pull-request verification.
 
 ## Verification
 

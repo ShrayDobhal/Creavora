@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import {
   assertDemoImportEnvironment,
@@ -78,6 +79,13 @@ function createDatabase() {
 }
 
 describe("Blindly production demo-content importer", () => {
+  it("documents the explicit importer guard", () => {
+    const readme = readFileSync("README.md", "utf8");
+
+    expect(readme).toContain("BLINDLY_DEMO_CONTENT_CONFIRMATION=blindly-production-demo-content");
+    expect(readme).toContain("not part of the Vercel build");
+  });
+
   it("requires exact production confirmation", () => {
     expect(() => assertDemoImportEnvironment({
       DATABASE_URL: "postgresql://host/db",
