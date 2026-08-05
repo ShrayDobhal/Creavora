@@ -16,6 +16,7 @@ import {
   createComment,
   getComments,
   getCreators,
+  getDiscovery,
   saveSearchHistory,
   search,
   toggleBookmark,
@@ -63,6 +64,9 @@ export default function ExplorePage() {
   const [directory, setDirectory] = useState({ category: null, items: [], nextCursor: null });
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [discoveryStatus, setDiscoveryStatus] = useState("loading");
+  const [discoveryError, setDiscoveryError] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState("");
   const categoryFromUrl = useSyncExternalStore(
@@ -73,6 +77,7 @@ export default function ExplorePage() {
   const [categoryOverride, setCategoryOverride] = useState(null);
   const category = categoryOverride ?? categoryFromUrl;
   const [reloadKey, setReloadKey] = useState(0);
+  const [discoveryReloadKey, setDiscoveryReloadKey] = useState(0);
   const [searchRequest, setSearchRequest] = useState(null);
   const [searchState, setSearchState] = useState({ status: "idle", results: emptySearch, error: "" });
   const [historyError, setHistoryError] = useState("");
@@ -92,6 +97,21 @@ export default function ExplorePage() {
     });
     return () => controller.abort();
   }, [category, reloadKey]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getDiscovery({ signal: controller.signal })
+      .then((result) => {
+        setCategories(Array.isArray(result?.categories) ? result.categories : []);
+        setDiscoveryStatus("success");
+      })
+      .catch((loadError) => {
+        if (loadError.name === "AbortError") return;
+        setDiscoveryError(loadError.message);
+        setDiscoveryStatus("error");
+      });
+    return () => controller.abort();
+  }, [discoveryReloadKey]);
 
   useEffect(() => {
     if (!searchRequest) return undefined;
@@ -126,7 +146,15 @@ export default function ExplorePage() {
     setStatus("loading");
     setError("");
     setLoadMoreError("");
+    setDiscoveryStatus("loading");
+    setDiscoveryError("");
     setReloadKey((value) => value + 1);
+    setDiscoveryReloadKey((value) => value + 1);
+  }, []);
+  const retryCategories = useCallback(() => {
+    setDiscoveryStatus("loading");
+    setDiscoveryError("");
+    setDiscoveryReloadKey((value) => value + 1);
   }, []);
   const selectCategory = useCallback((item) => {
     if (item === category) return;
@@ -222,11 +250,17 @@ export default function ExplorePage() {
             <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-600">Categories</p>
             <h2 id="discovery-title" className="mt-1 text-2xl font-black">Discover creators</h2>
           </div>
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Creator categories">
-            {["All", ...CATEGORY_OPTIONS].map((item) => (
-              <button key={item} type="button" aria-pressed={category === item} onClick={() => selectCategory(item)} className={`h-9 shrink-0 rounded-full px-4 text-sm font-bold ${category === item ? "bg-brand-600 text-white" : "border border-line bg-white"}`}>{item}</button>
-            ))}
-          </div>
+          {discoveryStatus === "error" ? (
+            <div className="mt-4"><AsyncState status="error" error={discoveryError} onRetry={retryCategories} /></div>
+          ) : (
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Creator categories" aria-busy={discoveryStatus === "loading"}>
+              <button type="button" aria-pressed={category === "All"} onClick={() => selectCategory("All")} className={`h-9 shrink-0 rounded-full px-4 text-sm font-bold ${category === "All" ? "bg-brand-600 text-white" : "border border-line bg-white"}`}>All</button>
+              {categories.map(({ name, creatorCount }) => (
+                <button key={name} type="button" aria-label={`${name}, ${creatorCount} creators`} aria-pressed={category === name} onClick={() => selectCategory(name)} className={`h-9 shrink-0 rounded-full px-4 text-sm font-bold ${category === name ? "bg-brand-600 text-white" : "border border-line bg-white"}`}>{name}</button>
+              ))}
+              {discoveryStatus === "loading" ? <p className="self-center text-sm text-muted">Loading categories…</p> : null}
+            </div>
+          )}
           {status !== "success" ? (
             <div className="mt-5"><AsyncState status={status} error={error} onRetry={retryDiscovery} emptyTitle="No creators to discover yet" emptyMessage="The directory will update as creator profiles go live." /></div>
           ) : directory.items.length ? (

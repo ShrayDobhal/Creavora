@@ -103,13 +103,24 @@ export async function getDiscovery(database, viewerId) {
     take: 8,
     include: creatorInclude(viewerId),
   };
-  const creators = await database.user.findMany({
-    ...baseQuery,
-    orderBy: [{ verified: "desc" }, { createdAt: "desc" }],
-  });
+  const [categoryRows, creators] = await Promise.all([
+    database.creatorProfile.groupBy({
+      by: ["category"],
+      _count: { _all: true },
+      where: { user: { is: { role: "CREATOR", deletedAt: null } } },
+    }),
+    database.user.findMany({
+      ...baseQuery,
+      orderBy: [{ verified: "desc" }, { createdAt: "desc" }],
+    }),
+  ]);
+  const categories = categoryRows
+    .map((row) => ({ name: row.category, creatorCount: row._count._all }))
+    .filter(({ name, creatorCount }) => name && creatorCount > 0)
+    .sort((a, b) => b.creatorCount - a.creatorCount || a.name.localeCompare(b.name));
 
   return {
-    categories: CATEGORY_OPTIONS,
+    categories,
     creators: creators.map((row) => presentDirectoryCreator(row, viewerId)),
   };
 }

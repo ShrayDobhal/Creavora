@@ -26,6 +26,7 @@ import {
   createSearchHistoryPost,
 } from "@/app/api/search/history/route";
 import { createDiscoveryGet } from "@/app/api/discovery/route";
+import { getDiscovery } from "@/lib/consumer/directory";
 
 const viewer = { id: "viewer-1", name: "Viewer" };
 const authContext = { user: viewer, params: Promise.resolve({}) };
@@ -343,19 +344,41 @@ describe("consumer API contracts", () => {
     expect(await json(response)).toEqual({ error: "Creator not found" });
   });
 
-  it("builds discovery category and creator rails from database rows", async () => {
-    const response = await createDiscoveryGet({
-      user: {
-        findMany: vi.fn().mockResolvedValue([creatorRow()]),
-      },
-    })(new Request("http://localhost/api/discovery"), authContext);
-    const body = await json(response);
+  it("derives discovery categories from active creator profiles", async () => {
+    const groupBy = vi.fn().mockResolvedValue([
+      { category: "Fitness", _count: { _all: 4 } },
+      { category: "Technology", _count: { _all: 2 } },
+    ]);
+    const result = await getDiscovery({
+      creatorProfile: { groupBy },
+      user: { findMany: vi.fn().mockResolvedValue([creatorRow()]) },
+    }, "viewer-1");
 
-    expect(body.categories).toContain("Fashion");
-    expect(body.creators).toMatchObject([
+    expect(result.categories).toEqual([
+      { name: "Fitness", creatorCount: 4 },
+      { name: "Technology", creatorCount: 2 },
+    ]);
+    expect(groupBy).toHaveBeenCalledWith(expect.objectContaining({
+      where: { user: { is: { role: "CREATOR", deletedAt: null } } },
+    }));
+    expect(result.creators).toMatchObject([
       { id: "creator-1", isFollowing: true, followerCount: 7 },
     ]);
-    expect(body).not.toHaveProperty("trending");
+  });
+
+  it("returns database-derived discovery metadata through the API", async () => {
+    const response = await createDiscoveryGet({
+      creatorProfile: {
+        groupBy: vi.fn().mockResolvedValue([
+          { category: "Fitness", _count: { _all: 1 } },
+        ]),
+      },
+      user: { findMany: vi.fn().mockResolvedValue([creatorRow()]) },
+    })(new Request("http://localhost/api/discovery"), authContext);
+
+    expect(await json(response)).toMatchObject({
+      categories: [{ name: "Fitness", creatorCount: 1 }],
+    });
   });
 
   it("does not write search history while the user is typing an empty query", async () => {
