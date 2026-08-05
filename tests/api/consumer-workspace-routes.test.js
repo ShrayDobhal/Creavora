@@ -12,10 +12,13 @@ import {
   createMessagesPost,
 } from "@/app/api/messages/route";
 import { createBookmarksGet } from "@/app/api/bookmarks/route";
-import { createSubscriptionPost } from "@/app/api/subscriptions/route";
+import {
+  createSubscriptionPost,
+  createSubscriptionsGet,
+} from "@/app/api/subscriptions/route";
 import { createWalletDepositPost } from "@/app/api/wallet/deposit/route";
 import { createRewardPost } from "@/app/api/rewards/route";
-import { POST as cancelSubscriptionPost } from "@/app/api/subscriptions/cancel/route";
+import { createCancelSubscriptionPost } from "@/app/api/subscriptions/cancel/route";
 import { POST as createPaymentOrderPost } from "@/app/api/payments/create-order/route";
 import { POST as verifyPaymentPost } from "@/app/api/payments/verify/route";
 
@@ -377,7 +380,6 @@ it("excludes saved posts owned by a soft-deleted creator", async () => {
 });
 
 it.each([
-  ["subscription purchase", createSubscriptionPost],
   ["wallet deposit", createWalletDepositPost],
   ["reward claim", createRewardPost],
 ])("rejects unconfigured %s without mutating data", async (_name, createHandler) => {
@@ -403,7 +405,6 @@ it.each([
 });
 
 it.each([
-  ["subscription cancellation", cancelSubscriptionPost],
   ["payment order creation", createPaymentOrderPost],
   ["payment verification", verifyPaymentPost],
 ])("disables the direct %s endpoint before reading its body", async (_name, handler) => {
@@ -416,4 +417,169 @@ it.each([
   expect(response.status).toBe(501);
   expect(await response.json()).toEqual({ error: "This feature is not available yet" });
   expect(readBody).not.toHaveBeenCalled();
+});
+
+it("returns active non-subscribed creators as subscription recommendations", async () => {
+  const activeSubscription = {
+    id: "subscription-1",
+    tier: "Community access",
+    renewsOn: "No renewal",
+    status: "ACTIVE",
+    creator,
+  };
+  const findSubscriptions = vi.fn().mockResolvedValue([activeSubscription]);
+  const findCreators = vi.fn().mockResolvedValue([{ ...creator, id: "creator-2", name: "Dev" }]);
+
+  const response = await createSubscriptionsGet({
+    database: {
+      subscription: { findMany: findSubscriptions },
+      user: { findMany: findCreators },
+    },
+  })(new Request("http://localhost/api/subscriptions"), { user: fixtureUser });
+
+  expect(await response.json()).toMatchObject({
+    items: [{ id: "subscription-1", creator: { id: creator.id } }],
+    recommendations: [{ id: "creator-2", name: "Dev" }],
+  });
+  expect(findCreators).toHaveBeenCalledWith(expect.objectContaining({
+    where: {
+      id: { not: fixtureUser.id },
+      role: "CREATOR",
+      deletedAt: null,
+      creatorSubs: { none: { userId: fixtureUser.id, status: "ACTIVE" } },
+    },
+    take: 12,
+  }));
+});
+
+it("creates a free community subscription with server-controlled values", async () => {
+  const findUnique = vi.fn().mockResolvedValue(null);
+  const upsert = vi.fn().mockResolvedValue({
+    id: "subscription-2",
+    userId: fixtureUser.id,
+    creatorId: creator.id,
+    tier: "Community access",
+    price: 0,
+    method: "FREE",
+    status: "ACTIVE",
+    renewsOn: "No renewal",
+    cancelledAt: null,
+    creator,
+  });
+  const transaction = vi.fn((callback) => callback({
+    user: { findFirst: vi.fn().mockResolvedValue(creator) },
+    subscription: { findUnique, upsert },
+  }));
+
+  const response = await createSubscriptionPost({ database: { $transaction: transaction } })(
+    new Request("http://localhost/api/subscriptions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ creatorId: creator.id, tier: "Paid plan", price: 999 }),
+    }),
+    { user: fixtureUser },
+  );
+
+  expect(response.status).toBe(201);
+  expect(await response.json()).toMatchObject({ created: true, subscription: { id: "subscription-2" } });
+  expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
+    where: { userId_creatorId: { userId: fixtureUser.id, creatorId: creator.id } },
+    create: expect.objectContaining({
+      tier: "Community access",
+      price: 0,
+      method: "FREE",
+      status: "ACTIVE",
+      renewsOn: "No renewal",
+      cancelledAt: null,
+    }),
+    update: expect.objectContaining({
+      tier: "Community access",
+      price: 0,
+      method: "FREE",
+      status: "ACTIVE",
+      renewsOn: "No renewal",
+      cancelledAt: null,
+    }),
+  }));
+});
+
+it("keeps an active free subscription idempotent and reactivates a cancelled row", async () => {
+  const existing = { id: "subscription-1", status: "ACTIVE" };
+  const cancelled = { id: "subscription-2", status: "CANCELLED", cancelledAt: new Date() };
+  const createHandler = (row) => {
+    const upsert = vi.fn().mockResolvedValue({ ...row, status: "ACTIVE", cancelledAt: null, creator });
+    return {
+      handler: createSubscriptionPost({
+        database: {
+          $transaction: (callback) => callback({
+            user: { findFirst: vi.fn().mockResolvedValue(creator) },
+            subscription: { findUnique: vi.fn().mockResolvedValue(row), upsert },
+          }),
+        },
+      }),
+      upsert,
+    };
+  };
+  const request = () => new Request("http://localhost/api/subscriptions", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ creatorId: creator.id }),
+  });
+
+  const active = createHandler(existing);
+  const activeResponse = await active.handler(request(), { user: fixtureUser });
+  expect(await activeResponse.json()).toMatchObject({ created: false, subscription: { id: existing.id, status: "ACTIVE" } });
+
+  const reactivated = createHandler(cancelled);
+  const reactivatedResponse = await reactivated.handler(request(), { user: fixtureUser });
+  expect(await reactivatedResponse.json()).toMatchObject({ created: false, subscription: { id: cancelled.id, status: "ACTIVE", cancelledAt: null } });
+  expect(reactivated.upsert).toHaveBeenCalledTimes(1);
+});
+
+it.each([
+  ["self", fixtureUser],
+  ["non-creator", { ...creator, role: "USER" }],
+  ["deleted creator", { ...creator, deletedAt: new Date() }],
+])("rejects a %s subscription target", async (_name, target) => {
+  const findFirst = vi.fn().mockResolvedValue(target.id === fixtureUser.id ? null : null);
+  const response = await createSubscriptionPost({
+    database: {
+      $transaction: (callback) => callback({
+        user: { findFirst },
+        subscription: { findUnique: vi.fn(), upsert: vi.fn() },
+      }),
+    },
+  })(new Request("http://localhost/api/subscriptions", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ creatorId: target.id }),
+  }), { user: fixtureUser });
+
+  expect(response.status).toBe(target.id === fixtureUser.id ? 400 : 404);
+});
+
+it("cancels only the viewer's subscription without deleting it", async () => {
+  const findUnique = vi.fn().mockResolvedValue({ id: "subscription-1", userId: fixtureUser.id, creatorId: creator.id, status: "ACTIVE" });
+  const update = vi.fn().mockResolvedValue({ id: "subscription-1", userId: fixtureUser.id, creatorId: creator.id, status: "CANCELLED", cancelledAt: new Date() });
+  const response = await createCancelSubscriptionPost({ database: { subscription: { findUnique, update } } })(
+    new Request("http://localhost/api/subscriptions/cancel", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ creatorId: creator.id }),
+    }),
+    { user: fixtureUser },
+  );
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ subscription: { id: "subscription-1", status: "CANCELLED" } });
+  expect(update).toHaveBeenCalledWith(expect.objectContaining({
+    where: { userId_creatorId: { userId: fixtureUser.id, creatorId: creator.id } },
+    data: expect.objectContaining({ status: "CANCELLED", cancelledAt: expect.any(Date) }),
+  }));
+});
+
+it("does not cancel a subscription belonging to another viewer", async () => {
+  const update = vi.fn();
+  const response = await createCancelSubscriptionPost({
+    database: { subscription: { findUnique: vi.fn().mockResolvedValue(null), update } },
+  })(new Request("http://localhost/api/subscriptions/cancel", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ creatorId: creator.id }),
+  }), { user: fixtureUser });
+
+  expect(response.status).toBe(404);
+  expect(update).not.toHaveBeenCalled();
 });

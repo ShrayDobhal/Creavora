@@ -498,23 +498,48 @@ it("loads saved posts and removes a bookmark through the persisted endpoint", as
   await waitFor(() => expect(screen.queryByText("A new studio piece")).not.toBeInTheDocument());
 });
 
-it("shows persisted subscriptions as read-only without purchase or cancel actions", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
-    items: [{
-      id: "subscription-1",
-      tier: "Studio",
-      renewsOn: "2026-09-05",
-      status: "ACTIVE",
-      creator: homeCreator,
-    }],
-  }), { status: 200 })));
+it("joins a real recommended creator and cancels the persisted subscription", async () => {
+  const subscription = {
+    id: "subscription-1",
+    tier: "Community access",
+    renewsOn: "No renewal",
+    status: "ACTIVE",
+    creator: homeCreator,
+  };
+  const fetch = vi.fn((url, options = {}) => {
+    const path = String(url);
+    if (path === "/api/subscriptions" && options.method === "POST") {
+      return Promise.resolve(new Response(JSON.stringify({ subscription, created: true }), { status: 201 }));
+    }
+    if (path === "/api/subscriptions/cancel") {
+      return Promise.resolve(new Response(JSON.stringify({
+        subscription: { ...subscription, status: "CANCELLED", cancelledAt: "2026-08-05T10:00:00.000Z" },
+      }), { status: 200 }));
+    }
+    return Promise.resolve(new Response(JSON.stringify({ items: [], recommendations: [homeCreator] }), { status: 200 }));
+  });
+  vi.stubGlobal("fetch", fetch);
 
   render(<SubscriptionsPage />);
 
   expect(await screen.findByText("Asha Rao")).toBeVisible();
-  expect(screen.getByText("Studio")).toBeVisible();
-  expect(screen.queryByRole("button", { name: /subscribe|cancel|purchase/i })).not.toBeInTheDocument();
-  expect(screen.queryByText("Recommended Creators for You")).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Recommended Creators for You" })).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Join Asha Rao for free" }));
+
+  await waitFor(() => expect(fetch).toHaveBeenCalledWith(
+    "/api/subscriptions",
+    expect.objectContaining({ method: "POST", body: JSON.stringify({ creatorId: "creator-1" }) }),
+  ));
+  expect(await screen.findByText("You now have free access to Asha Rao.")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "Join Asha Rao for free" })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Cancel subscription to Asha Rao" }));
+  await waitFor(() => expect(fetch).toHaveBeenCalledWith(
+    "/api/subscriptions/cancel",
+    expect.objectContaining({ method: "POST", body: JSON.stringify({ creatorId: "creator-1" }) }),
+  ));
+  expect(await screen.findByText("Subscription to Asha Rao cancelled.")).toBeVisible();
+  expect(screen.getByText("CANCELLED")).toBeVisible();
 });
 
 it.each([

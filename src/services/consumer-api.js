@@ -180,6 +180,22 @@ export function getSubscriptions({ signal } = {}) {
   return request("/api/subscriptions", { signal });
 }
 
+export function joinFreeSubscription(creatorId, { signal } = {}) {
+  return request("/api/subscriptions", {
+    method: "POST",
+    signal,
+    body: { creatorId },
+  });
+}
+
+export function cancelSubscription(creatorId, { signal } = {}) {
+  return request("/api/subscriptions/cancel", {
+    method: "POST",
+    signal,
+    body: { creatorId },
+  });
+}
+
 export function getNotifications({ signal } = {}) {
   return request("/api/notifications", { signal });
 }
