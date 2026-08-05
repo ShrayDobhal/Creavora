@@ -121,12 +121,16 @@ git commit -m "feat: restore Blindly consumer navigation"
 - Create: src/components/consumer/FeedRail.jsx
 - Create: src/components/consumer/HomeDashboard.jsx
 - Create: src/app/(fan)/home/page.jsx
+- Modify: src/lib/consumer/constants.js
+- Modify: src/lib/consumer/feed.js
 - Modify: src/services/consumer-api.js
 - Test: tests/api/consumer-workspace-routes.test.js
+- Test: tests/consumer/feed.test.js
 - Test: tests/components/consumer-workspace.test.jsx
 
 **Interfaces:**
 - getConsumerHome(database, viewerId) returns viewer, categories, creators, featuredPosts, stories, liveSessions, subscriptions, unreadNotifications
+- Feed modes include latest, following, trending before Home requests featured trending posts
 - GET /api/consumer/home returns that view model through withAuth
 - getConsumerHome in consumer-api requests the endpoint
 - HomeDashboard accepts data and onFollow and has no fixed people, money, or activity
@@ -154,7 +158,7 @@ it("uses an honest Home empty state", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: npm test -- tests/api/consumer-workspace-routes.test.js tests/components/consumer-workspace.test.jsx
+Run: npm test -- tests/api/consumer-workspace-routes.test.js tests/consumer/feed.test.js tests/components/consumer-workspace.test.jsx
 
 Expected: FAIL because the Home query, endpoint, and UI do not exist.
 
@@ -175,27 +179,25 @@ export async function getConsumerHome(database, viewerId) {
 }
 ~~~
 
-Use existing presentCreator and presentPost helpers, filter deleted records, and cap every query. HomeDashboard uses EditorialImage, CreatorCard, FeedCard, and FeedRail. Every visual card links to a real route; unavailable lists show concise empty states.
+Add trending to the feed mode set and order it by likesCount, commentsCount, publishedAt, id. Encode and validate a mode-specific opaque cursor before Home requests featured trending posts. Use existing presentCreator and presentPost helpers, filter deleted records, and cap every query. HomeDashboard uses EditorialImage, CreatorCard, FeedCard, and FeedRail. Every visual card links to a real route; unavailable lists show concise empty states.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: npm test -- tests/api/consumer-workspace-routes.test.js tests/components/consumer-workspace.test.jsx && npm run lint
+Run: npm test -- tests/api/consumer-workspace-routes.test.js tests/consumer/feed.test.js tests/components/consumer-workspace.test.jsx && npm run lint
 
 Expected: PASS with no Home overflow at 375px and 1440px.
 
 - [ ] **Step 5: Commit**
 
 ~~~bash
-git add src/lib/consumer/workspace.js src/app/api/consumer/home/route.js src/components/consumer/FeedRail.jsx src/components/consumer/HomeDashboard.jsx src/app/(fan)/home/page.jsx src/services/consumer-api.js tests/api/consumer-workspace-routes.test.js tests/components/consumer-workspace.test.jsx
+git add src/lib/consumer/workspace.js src/app/api/consumer/home/route.js src/components/consumer/FeedRail.jsx src/components/consumer/HomeDashboard.jsx src/app/(fan)/home/page.jsx src/lib/consumer/constants.js src/lib/consumer/feed.js src/services/consumer-api.js tests/api/consumer-workspace-routes.test.js tests/consumer/feed.test.js tests/components/consumer-workspace.test.jsx
 git commit -m "feat: add Blindly consumer home dashboard"
 ~~~
 
-### Task 3: Upgrade Feed and Explore with real stories and trending data
+### Task 3: Upgrade Feed and Explore with real stories and contextual discovery
 
 **Files:**
 - Create: src/components/consumer/StoryStrip.jsx
-- Modify: src/lib/consumer/constants.js
-- Modify: src/lib/consumer/feed.js
 - Modify: src/app/(fan)/feed/page.jsx
 - Modify: src/app/(fan)/explore/page.jsx
 - Modify: src/components/consumer/FeedCard.jsx
@@ -203,19 +205,11 @@ git commit -m "feat: add Blindly consumer home dashboard"
 - Test: tests/components/consumer-workspace.test.jsx
 
 **Interfaces:**
-- Feed modes are latest, following, trending
-- Trending order is engagement then publication time, with opaque mode-specific cursor
+- Feed uses the completed latest, following, trending mode contract from Task 2
 - StoryStrip accepts only real stories and has a no-stories state
 - FeedRail accepts real creators, topics, live sessions
 
-- [ ] **Step 1: Write failing trending and failed-media tests**
-
-~~~js
-it("orders trending posts by engagement and then recency", async () => {
-  const page = await getFeedPage(database, viewerId, { mode: "trending", limit: 12, cursor: null });
-  expect(page.items.map((post) => post.id)).toEqual(["high-engagement", "newer-low-engagement"]);
-});
-~~~
+ - [ ] **Step 1: Write failing composition and failed-media tests**
 
 ~~~jsx
 it("keeps Feed actions usable after media failure", () => {
@@ -229,22 +223,11 @@ it("keeps Feed actions usable after media failure", () => {
 
 Run: npm test -- tests/consumer/feed.test.js tests/components/consumer-workspace.test.jsx
 
-Expected: FAIL because trending is unsupported.
+Expected: FAIL because Feed has no story or contextual-rail composition.
 
 - [ ] **Step 3: Write minimal implementation**
 
-~~~js
-if (query.mode === "trending") {
-  orderBy = [
-    { likesCount: "desc" },
-    { commentsCount: "desc" },
-    { publishedAt: "desc" },
-    { id: "desc" },
-  ];
-}
-~~~
-
-Encode fields matching the order in the cursor and reject a cursor used in another mode. Add Trending control, StoryStrip, and FeedRail to Feed. FeedRail receives creator/topic/live data from the Home API. Explore renders API photo URLs through EditorialImage while retaining its search/history behavior.
+Add Trending control, StoryStrip, and FeedRail to Feed. FeedRail receives creator/topic/live data from the Home API. Explore renders API photo URLs through EditorialImage while retaining its search/history behavior.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -255,7 +238,7 @@ Expected: PASS with no blank media rectangle after error event.
 - [ ] **Step 5: Commit**
 
 ~~~bash
-git add src/components/consumer/StoryStrip.jsx src/lib/consumer/constants.js src/lib/consumer/feed.js src/app/(fan)/feed/page.jsx src/app/(fan)/explore/page.jsx src/components/consumer/FeedCard.jsx tests/consumer/feed.test.js tests/components/consumer-workspace.test.jsx
+git add src/components/consumer/StoryStrip.jsx src/app/(fan)/feed/page.jsx src/app/(fan)/explore/page.jsx src/components/consumer/FeedCard.jsx tests/components/consumer-workspace.test.jsx
 git commit -m "feat: enrich Blindly feed and discovery"
 ~~~
 
