@@ -127,6 +127,8 @@ git commit -m "feat: restore Blindly consumer navigation"
 - Create: src/components/consumer/FeedRail.jsx
 - Create: src/components/consumer/HomeDashboard.jsx
 - Create: src/app/(fan)/home/page.jsx
+- Create: src/app/api/live/route.js
+- Modify: src/app/(fan)/live/page.jsx
 - Modify: src/lib/consumer/constants.js
 - Modify: src/lib/consumer/feed.js
 - Modify: src/services/consumer-api.js
@@ -140,6 +142,9 @@ git commit -m "feat: restore Blindly consumer navigation"
 - GET /api/consumer/home returns that view model through withAuth
 - getConsumerHome in consumer-api requests the endpoint
 - HomeDashboard accepts data and onFollow and has no fixed people, money, or activity
+- GET /api/live returns real scheduled/live-session data before Home links a card to /live
+
+**Reference visual contract:** Desktop Home follows the supplied reference hierarchy: existing left rail; broad centre column with welcome, dark editorial hero collage, category-action strip, creator card row, and live row; 300px right column with subscriptions, upcoming sessions, and account activity. The hero renders 3-5 real creator images returned by the Home API, never fixed people. Creator cards use photo-first covers, identity, real metrics, and follow actions rather than static price claims. Right-rail panels retain their shape with truthful empty copy when data is absent. Categories link to Explore with category query, featured Like and Bookmark controls call their real APIs, video stories render as video, and no Home card links to a static/fabricated destination.
 
 - [ ] **Step 1: Write failing endpoint and empty-dashboard tests**
 
@@ -185,7 +190,7 @@ export async function getConsumerHome(database, viewerId) {
 }
 ~~~
 
-Add trending to the feed mode set and order it by likesCount, commentsCount, publishedAt, id. Encode and validate a mode-specific opaque cursor before Home requests featured trending posts. Use existing presentCreator and presentPost helpers, filter deleted records, and cap every query. HomeDashboard uses EditorialImage, CreatorCard, FeedCard, and FeedRail. Every visual card links to a real route; unavailable lists show concise empty states.
+Add trending to the feed mode set and order it by likesCount, commentsCount, publishedAt, id. Encode and validate a mode-specific opaque cursor before Home requests featured trending posts. Use existing presentCreator and presentPost helpers, filter deleted records, and cap every query. Add the read-only Live API/page in this task. HomeDashboard uses EditorialImage, CreatorCard, FeedCard, and FeedRail in the reference visual hierarchy. Every visual card links to a real route; unavailable lists show concise empty states. Wire featured Like/Bookmark controls to their existing APIs, render video stories with video-capable media, and generate Explore category href values with category query.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -196,7 +201,7 @@ Expected: PASS with no Home overflow at 375px and 1440px.
 - [ ] **Step 5: Commit**
 
 ~~~bash
-git add src/lib/consumer/workspace.js src/app/api/consumer/home/route.js src/components/consumer/FeedRail.jsx src/components/consumer/HomeDashboard.jsx src/app/(fan)/home/page.jsx src/lib/consumer/constants.js src/lib/consumer/feed.js src/services/consumer-api.js tests/api/consumer-workspace-routes.test.js tests/consumer/feed.test.js tests/components/consumer-workspace.test.jsx
+git add src/lib/consumer/workspace.js src/app/api/consumer/home/route.js src/app/api/live/route.js src/components/consumer/FeedRail.jsx src/components/consumer/HomeDashboard.jsx src/app/(fan)/home/page.jsx src/app/(fan)/live/page.jsx src/lib/consumer/constants.js src/lib/consumer/feed.js src/services/consumer-api.js tests/api/consumer-workspace-routes.test.js tests/consumer/feed.test.js tests/components/consumer-workspace.test.jsx
 git commit -m "feat: add Blindly consumer home dashboard"
 ~~~
 
@@ -253,11 +258,9 @@ git commit -m "feat: enrich Blindly feed and discovery"
 **Files:**
 - Modify: src/app/api/messages/route.js
 - Create: src/app/api/bookmarks/route.js
-- Create: src/app/api/live/route.js
 - Modify: src/app/(fan)/messages/page.jsx
 - Modify: src/app/(fan)/collections/page.jsx
 - Modify: src/app/(fan)/saved/page.jsx
-- Modify: src/app/(fan)/live/page.jsx
 - Modify: src/app/(fan)/subscriptions/page.jsx
 - Modify: src/app/api/subscriptions/route.js
 - Modify: src/app/api/wallet/deposit/route.js
@@ -269,7 +272,6 @@ git commit -m "feat: enrich Blindly feed and discovery"
 **Interfaces:**
 - GET /api/messages returns conversation summaries; GET /api/messages?userId=uuid returns participant and MessageView items; POST accepts receiverId and content
 - GET /api/bookmarks returns presented post items for current user
-- GET /api/live returns scheduled/live session items
 - Subscription purchase, wallet deposit, reward claim each return 501 with error This feature is not available yet
 
 - [ ] **Step 1: Write failing persisted-data and disabled-mutation tests**
@@ -302,7 +304,7 @@ const rows = await database.message.findMany({
 });
 ~~~
 
-Deduplicate threads by participant ID. Collections use existing create/delete API. Saved Posts uses bookmarks endpoint. Live uses live endpoint. Replace arrays, alert, confirm, and silent fallback chats with accessible loading, error, pending, and empty states. Subscription displays actual read-only data only and removes purchase actions. Wallet and Rewards remain the safe unavailable pages completed in Task 1 until a separate provider and eligibility release is approved.
+Deduplicate threads by participant ID. Collections use existing create/delete API. Saved Posts uses bookmarks endpoint. Replace arrays, alert, confirm, and silent fallback chats with accessible loading, error, pending, and empty states. Subscription displays actual read-only data only and removes purchase actions. Wallet and Rewards remain the safe unavailable pages completed in Task 1 until a separate provider and eligibility release is approved.
 
 - [ ] **Step 4: Run test to verify it passes**
 
