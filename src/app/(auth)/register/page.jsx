@@ -63,7 +63,7 @@ function RegisterForm() {
         <div className="flex items-center justify-between">
           <Link href="/landing" className="flex items-center gap-2.5">
             <Sparkles size={26} className="fill-brand-500 text-brand-500" />
-            <span className="text-[22px] font-extrabold tracking-tight">Creavora</span>
+            <span className="text-[22px] font-extrabold tracking-tight">Blindly</span>
           </Link>
           <Link
             href="/login"
@@ -194,7 +194,7 @@ function RegisterForm() {
 
         {/* Bottom */}
         <p className="text-center text-[12px] text-muted">
-          © {new Date().getFullYear()} Creavora. All rights reserved.
+          © {new Date().getFullYear()} Blindly. All rights reserved
         </p>
       </div>
 

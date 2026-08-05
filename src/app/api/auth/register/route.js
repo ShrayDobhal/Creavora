@@ -71,7 +71,7 @@ export async function POST(req) {
     await db.notification.create({
       data: {
         userId: user.id,
-        title: "Welcome to Creavora",
+        title: "Welcome to Blindly",
         message:
           data.role === "CREATOR"
             ? "Your creator account is ready. Start uploading content and building your community!"

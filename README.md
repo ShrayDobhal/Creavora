@@ -1,6 +1,6 @@
-# Creavora
+# Blindly
 
-Creavora is a Next.js creator-discovery product with separate fan and creator authentication paths, a consumer feed, discovery, creator profiles, and social actions.
+Blindly is a Next.js creator-discovery product with separate fan and creator authentication paths, a consumer feed, discovery, creator profiles, and social actions.
 
 ## Requirements
 

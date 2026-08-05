@@ -53,7 +53,7 @@ function LoginForm() {
         <div className="flex items-center justify-between">
           <Link href="/landing" className="flex items-center gap-2.5">
             <Sparkles size={26} className="fill-brand-500 text-brand-500" />
-            <span className="text-[22px] font-extrabold tracking-tight">Creavora</span>
+            <span className="text-[22px] font-extrabold tracking-tight">Blindly</span>
           </Link>
           <Link
             href="/creator-login"
@@ -129,14 +129,14 @@ function LoginForm() {
           <p className="mt-6 text-center text-[13.5px] text-muted">
             Don&apos;t have an account?{" "}
             <Link href="/register" className="font-bold text-brand-600 hover:underline">
-              Join Creavora
+              Join Blindly
             </Link>
           </p>
         </div>
 
         {/* Bottom */}
         <p className="text-center text-[12px] text-muted">
-          Copyright {new Date().getFullYear()} Creavora.
+          Copyright {new Date().getFullYear()} Blindly
         </p>
       </div>
 

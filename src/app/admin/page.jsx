@@ -66,7 +66,7 @@ export default function AdminDashboard() {
       <header className="h-[72px] border-b border-white/5 bg-[#09090b] flex items-center justify-between px-8">
         <div className="flex items-center gap-2.5">
           <Shield size={24} className="text-brand-500 fill-brand-500/10" />
-          <span className="text-[20px] font-extrabold tracking-tight">Creavora Admin Security Control</span>
+          <span className="text-[20px] font-extrabold tracking-tight">Blindly Admin Security Control</span>
         </div>
       </header>
 

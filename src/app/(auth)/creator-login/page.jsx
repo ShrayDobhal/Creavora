@@ -53,7 +53,7 @@ function CreatorLoginForm() {
         <div className="flex items-center justify-between">
           <Link href="/landing" className="flex items-center gap-2.5">
             <Sparkles size={26} className="fill-brand-500 text-brand-500" />
-            <span className="text-[22px] font-extrabold tracking-tight">Creavora</span>
+            <span className="text-[22px] font-extrabold tracking-tight">Blindly</span>
           </Link>
           <Link
             href="/login"
@@ -88,7 +88,7 @@ function CreatorLoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="creator@creavora.com"
+                placeholder="creator@example.com"
                 className="h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-[14px] outline-none placeholder:text-neutral-500 focus:border-brand-500 focus:bg-white/10 transition text-white"
               />
             </div>
@@ -139,7 +139,7 @@ function CreatorLoginForm() {
 
         {/* Bottom */}
         <p className="text-center text-[12px] text-neutral-500">
-          Copyright {new Date().getFullYear()} Creavora.
+          Copyright {new Date().getFullYear()} Blindly
         </p>
       </div>
 
