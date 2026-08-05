@@ -152,6 +152,43 @@ describe("consumer API contracts", () => {
     expect(await json(response)).toEqual({ error: "Comment cannot be empty" });
   });
 
+  it("sanitizes legacy comment and author copy in comment-create responses", async () => {
+    const response = await createCommentPost({
+      database: {},
+      createComment: vi.fn().mockResolvedValue({
+        comment: {
+          id: "comment-1",
+          content: "[blindly-demo:fitness:comment] Strong progress",
+          user: {
+            id: "creator-1",
+            name: "Kabir (Blindly Demo)",
+            handle: "blindly-demo-coach-kabir",
+            avatar: null,
+            verified: true,
+          },
+        },
+        commentsCount: 4,
+      }),
+    })(new Request("http://localhost/api/posts/post-1/comment", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "Strong progress" }),
+    }), {
+      user: viewer,
+      params: Promise.resolve({ id: "post-1" }),
+    });
+
+    expect(response.status).toBe(201);
+    expect(await json(response)).toMatchObject({
+      comment: {
+        id: "comment-1",
+        content: "Strong progress",
+        user: { name: "Kabir", handle: "coach-kabir" },
+      },
+      commentsCount: 4,
+    });
+  });
+
   it("returns 404 before loading comments when the parent post is unavailable", async () => {
     const findMany = vi.fn().mockResolvedValue([{ id: "comment-1" }]);
     const response = await createCommentsGet({

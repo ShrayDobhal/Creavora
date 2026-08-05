@@ -63,7 +63,9 @@ export async function updateCurrentProfile(database, userId, input) {
     if (input[field]) await assertOwnedMedia(database, userId, input[field]);
   }
 
-  const normalizedInput = input.address === "" ? { ...input, address: null } : input;
+  const normalizedInput = typeof input.address === "string" && !input.address.trim()
+    ? { ...input, address: null }
+    : input;
   const result = await database.user.updateMany({
     where: { id: userId, deletedAt: null },
     data: normalizedInput,

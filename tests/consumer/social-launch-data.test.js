@@ -57,7 +57,7 @@ describe("Blindly social launch feed data", () => {
     expect(presentCreator({ ...creatorRow, address: "private" }, "viewer-1")).not.toHaveProperty("address");
   });
 
-  it("normalizes an empty address to null for direct profile-service callers", async () => {
+  it("normalizes a whitespace-only address to null for direct profile-service callers", async () => {
     const profile = {
       id: "user-1",
       name: "Nisha Kapoor",
@@ -74,7 +74,7 @@ describe("Blindly social launch feed data", () => {
       },
     };
 
-    await updateCurrentProfile(database, "user-1", { address: "" });
+    await updateCurrentProfile(database, "user-1", { address: "   " });
 
     expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
       data: { address: null },
