@@ -50,12 +50,18 @@
 - Modify: src/components/consumer/ResponsiveNav.jsx
 - Modify: src/layouts/FanLayout.jsx
 - Modify: src/app/(fan)/page.jsx
+- Create: src/app/(fan)/home/page.jsx
+- Modify: src/app/(fan)/wallet/page.jsx
+- Modify: src/app/(fan)/rewards/page.jsx
+- Modify: src/app/(fan)/explore/page.jsx
+- Modify: src/app/(fan)/creator/[handle]/page.jsx
 - Test: tests/components/consumer-workspace.test.jsx
 
 **Interfaces:**
 - consumerNavigation contains href, label, icon entries for Home, Feed, Explore, Live, Subscriptions, Messages, Notifications, Collections, Wallet, Rewards, Saved Posts, Settings
 - EditorialImage accepts src, alt, className, fallbackLabel; it preserves card footprint and shows an accessible fallback after image error
-- Signed-in root redirects to /home
+- Signed-in root and every exposed navigation href resolves without a 404
+- Wallet and Rewards may never expose a fabricated balance, payment, reward, or claim action while their real data task remains pending
 
 - [ ] **Step 1: Write failing navigation and image-fallback tests**
 
@@ -98,7 +104,7 @@ export const consumerNavigation = [
 ];
 ~~~
 
-Implement image failure state with onError. Use ConsumerWorkspaceNav in FanLayout and use Home, Feed, Explore, Notifications, Profile for mobile. Keep all remaining destinations in the account menu. Redirect root to /home.
+Implement image failure state with onError and apply it to consumer editorial image cards already reached by the new navigation. Use ConsumerWorkspaceNav in FanLayout and use Home, Feed, Explore, Notifications, Profile for mobile. Keep all remaining destinations in the account menu. Redirect root to a safe /home route that delegates to Feed until Task 2 replaces it with the Home dashboard. Replace Wallet and Rewards legacy placeholders with concise unavailable states that have no mutation controls, fixed balances, leaderboard, badges, or reward claims.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -109,7 +115,7 @@ Expected: PASS with no lint warnings.
 - [ ] **Step 5: Commit**
 
 ~~~bash
-git add src/components/consumer/EditorialImage.jsx src/components/consumer/ConsumerWorkspaceNav.jsx src/components/consumer/ResponsiveNav.jsx src/layouts/FanLayout.jsx src/app/(fan)/page.jsx tests/components/consumer-workspace.test.jsx
+git add src/components/consumer/EditorialImage.jsx src/components/consumer/ConsumerWorkspaceNav.jsx src/components/consumer/ResponsiveNav.jsx src/layouts/FanLayout.jsx src/app/(fan)/page.jsx src/app/(fan)/home/page.jsx src/app/(fan)/wallet/page.jsx src/app/(fan)/rewards/page.jsx src/app/(fan)/explore/page.jsx src/app/(fan)/creator/[handle]/page.jsx tests/components/consumer-workspace.test.jsx
 git commit -m "feat: restore Blindly consumer navigation"
 ~~~
 
@@ -253,8 +259,6 @@ git commit -m "feat: enrich Blindly feed and discovery"
 - Modify: src/app/(fan)/saved/page.jsx
 - Modify: src/app/(fan)/live/page.jsx
 - Modify: src/app/(fan)/subscriptions/page.jsx
-- Modify: src/app/(fan)/wallet/page.jsx
-- Modify: src/app/(fan)/rewards/page.jsx
 - Modify: src/app/api/subscriptions/route.js
 - Modify: src/app/api/wallet/deposit/route.js
 - Modify: src/app/api/rewards/route.js
@@ -298,7 +302,7 @@ const rows = await database.message.findMany({
 });
 ~~~
 
-Deduplicate threads by participant ID. Collections use existing create/delete API. Saved Posts uses bookmarks endpoint. Live uses live endpoint. Replace arrays, alert, confirm, and silent fallback chats with accessible loading, error, pending, and empty states. Subscription, Wallet, Rewards display actual read-only data only and remove purchase, deposit, and claim actions.
+Deduplicate threads by participant ID. Collections use existing create/delete API. Saved Posts uses bookmarks endpoint. Live uses live endpoint. Replace arrays, alert, confirm, and silent fallback chats with accessible loading, error, pending, and empty states. Subscription displays actual read-only data only and removes purchase actions. Wallet and Rewards remain the safe unavailable pages completed in Task 1 until a separate provider and eligibility release is approved.
 
 - [ ] **Step 4: Run test to verify it passes**
 
