@@ -541,6 +541,77 @@ describe("Explore page", () => {
     );
   });
 
+  it("cancels an abandoned typed search when clear externally synchronizes the input", async () => {
+    window.history.replaceState({}, "", "/explore?q=Asha");
+    const fetchMock = vi.fn((url) => Promise.resolve(new Response(
+      JSON.stringify(
+        String(url).startsWith("/api/search?")
+          ? { creators: [], posts: [], communities: [] }
+          : String(url) === "/api/discovery"
+            ? { categories: [], creators: [] }
+            : { items: [], nextCursor: null },
+      ),
+      { status: 200, headers: { "content-type": "application/json" } },
+    )));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ExplorePage />);
+    expect(await screen.findByRole("heading", { name: "“Asha”" })).toBeVisible();
+    const input = screen.getByRole("searchbox");
+    input.focus();
+    vi.useFakeTimers();
+
+    fireEvent.change(input, { target: { value: "Abandoned" } });
+    fireEvent.click(screen.getByRole("button", { name: "Back to discovery" }));
+    await act(() => vi.advanceTimersByTimeAsync(350));
+
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/search?q=Abandoned&type=all",
+      expect.anything(),
+    );
+    expect(window.location.search).toBe("");
+    expect(screen.getByRole("searchbox")).toBe(input);
+    expect(input).toHaveValue("");
+    expect(document.activeElement).toBe(input);
+    expect(screen.queryByRole("heading", { name: "“Abandoned”" })).not.toBeInTheDocument();
+  });
+
+  it("cancels an abandoned typed search when popstate restores another URL query", async () => {
+    window.history.replaceState({}, "", "/explore?q=Asha");
+    const fetchMock = vi.fn((url) => Promise.resolve(new Response(
+      JSON.stringify(
+        String(url).startsWith("/api/search?")
+          ? { creators: [], posts: [], communities: [] }
+          : String(url) === "/api/discovery"
+            ? { categories: [], creators: [] }
+            : { items: [], nextCursor: null },
+      ),
+      { status: 200, headers: { "content-type": "application/json" } },
+    )));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ExplorePage />);
+    expect(await screen.findByRole("heading", { name: "“Asha”" })).toBeVisible();
+    const input = screen.getByRole("searchbox");
+    input.focus();
+    vi.useFakeTimers();
+
+    fireEvent.change(input, { target: { value: "Abandoned" } });
+    window.history.replaceState({}, "", "/explore?q=Kochi");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await act(() => Promise.resolve());
+    await act(() => vi.advanceTimersByTimeAsync(350));
+
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/search?q=Abandoned&type=all",
+      expect.anything(),
+    );
+    expect(window.location.search).toBe("?q=Kochi");
+    expect(screen.getByRole("searchbox")).toBe(input);
+    expect(input).toHaveValue("Kochi");
+    expect(document.activeElement).toBe(input);
+    expect(screen.getByRole("heading", { name: "“Kochi”" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "“Abandoned”" })).not.toBeInTheDocument();
+  });
+
   it("does not persist debounced reads and saves history after explicit submit", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn((url) =>

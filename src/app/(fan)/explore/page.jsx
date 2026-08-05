@@ -85,6 +85,7 @@ export default function ExplorePage() {
   const [discoveryReloadKey, setDiscoveryReloadKey] = useState(0);
   const [searchRequest, setSearchRequest] = useState(null);
   const [searchInput, setSearchInput] = useState("");
+  const [searchSyncSignal, setSearchSyncSignal] = useState(0);
   const [searchState, setSearchState] = useState({ status: "idle", results: emptySearch, error: "" });
   const [historyError, setHistoryError] = useState("");
 
@@ -139,6 +140,7 @@ export default function ExplorePage() {
   useEffect(() => {
     const synchronizeSearch = () => {
       const query = readSearchFromLocation();
+      setSearchSyncSignal((value) => value + 1);
       if (!query) {
         setSearchInput("");
         setSearchRequest(null);
@@ -172,6 +174,7 @@ export default function ExplorePage() {
   }, [runSearch, writeSearchUrl]);
   const clearSearch = useCallback(() => {
     writeSearchUrl("");
+    setSearchSyncSignal((value) => value + 1);
     setSearchInput("");
     setSearchRequest(null);
     setSearchState({ status: "idle", results: emptySearch, error: "" });
@@ -236,6 +239,7 @@ export default function ExplorePage() {
         <div>
           <SearchPanel
             query={searchInput}
+            syncSignal={searchSyncSignal}
             onInputChange={setSearchInput}
             onQueryChange={runSearch}
             onSubmit={handleSearchSubmit}

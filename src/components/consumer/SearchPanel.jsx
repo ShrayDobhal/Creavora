@@ -3,14 +3,18 @@
 import { useEffect, useRef } from "react";
 import { Search } from "lucide-react";
 
-export function SearchPanel({ query = "", onInputChange, onQueryChange, onSubmit, busy = false }) {
+export function SearchPanel({ query = "", syncSignal = 0, onInputChange, onQueryChange, onSubmit, busy = false }) {
   const debounceTimer = useRef(null);
 
   useEffect(() => {
+    if (debounceTimer.current) {
+      window.clearTimeout(debounceTimer.current);
+      debounceTimer.current = null;
+    }
     return () => {
       if (debounceTimer.current) window.clearTimeout(debounceTimer.current);
     };
-  }, []);
+  }, [syncSignal]);
 
   function handleChange(event) {
     const nextQuery = event.target.value;

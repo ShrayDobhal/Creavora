@@ -39,3 +39,10 @@
 - Re-review RED: 4 focused assertions failed for keyed focus loss, one-instance synchronization, unreachable free rejoin, and the unique race
 - Re-review GREEN: 3 focused files / 72 tests passed
 - Re-review full regression: 27 files / 297 tests passed; full ESLint and diff check passed
+
+## Final debounce synchronization edge
+
+- Explore now owns an explicit external-search synchronization signal and advances it on URL mount/`popstate` synchronization and clear
+- SearchPanel observes that signal only to cancel a pending user-input timer; it remains mounted and focused, and external query values never feed back into debounced search
+- RED: fake-timer clear and `popstate` sequences both issued the abandoned search before the fix
+- GREEN: Explore focused suite passed 1 file / 22 tests
