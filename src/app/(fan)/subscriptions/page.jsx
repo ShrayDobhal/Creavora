@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, Library, RefreshCw } from "lucide-react";
 import { Card } from "@/ui/Bits.jsx";
+import { ConsumerAvatar } from "@/components/consumer/CreatorCard";
 import {
   cancelSubscription,
   getSubscriptions,
@@ -79,7 +80,7 @@ export default function SubscriptionsPage() {
     setActionError("");
     setFeedback("");
     try {
-      const data = await cancelSubscription(creator.id);
+      const data = await cancelSubscription(subscription.id);
       setSubscriptions((current) => current.map((item) => (
         item.id === subscription.id
           ? { ...item, ...data.subscription, creator: data.subscription.creator || item.creator }
@@ -163,11 +164,19 @@ export default function SubscriptionsPage() {
               <h2 id="subscription-recommendations" className="text-lg font-extrabold text-ink">Recommended Creators for You</h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {recommendations.map((recommendation) => (
-                  <Card key={recommendation.id} className="p-5">
-                    <Link href={`/creator/${encodeURIComponent(recommendation.handle)}`} className="block truncate font-extrabold text-ink hover:underline">
-                      {recommendation.name}
-                    </Link>
-                    {recommendation.roleTitle && <p className="mt-1 text-xs text-muted">{recommendation.roleTitle}</p>}
+                  <Card key={recommendation.id} className="min-w-0 p-4 sm:p-5">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <ConsumerAvatar creator={recommendation} size="h-14 w-14" />
+                      <div className="min-w-0">
+                        <Link href={`/creator/${encodeURIComponent(recommendation.handle)}`} className="block truncate font-extrabold text-ink hover:underline">
+                          {recommendation.name}
+                        </Link>
+                        <p className="mt-0.5 truncate text-xs text-muted">{recommendation.category || recommendation.roleTitle || "Creator"}</p>
+                        {typeof recommendation.followerCount === "number" ? (
+                          <p className="mt-1 text-xs font-semibold text-muted">{recommendation.followerCount.toLocaleString("en-IN")} followers</p>
+                        ) : null}
+                      </div>
+                    </div>
                     <button
                       type="button"
                       onClick={() => join(recommendation)}

@@ -32,6 +32,11 @@ const readCategoryFromLocation = () => {
   const requested = new URLSearchParams(window.location.search).get("category");
   return CATEGORY_OPTIONS.includes(requested) ? requested : "All";
 };
+const readSearchFromLocation = () => (
+  typeof window === "undefined"
+    ? ""
+    : new URLSearchParams(window.location.search).get("q")?.trim() || ""
+);
 
 export function CommunityCard({ community }) {
   return (
@@ -130,20 +135,42 @@ export default function ExplorePage() {
     setSearchState((current) => ({ ...current, status: "loading", error: "" }));
     setSearchRequest((current) => ({ query, sequence: (current?.sequence || 0) + 1 }));
   }, []);
+  useEffect(() => {
+    const synchronizeSearch = () => {
+      const query = readSearchFromLocation();
+      if (!query) {
+        setSearchRequest(null);
+        setSearchState({ status: "idle", results: emptySearch, error: "" });
+        return;
+      }
+      runSearch(query);
+    };
+    synchronizeSearch();
+    window.addEventListener("popstate", synchronizeSearch);
+    return () => window.removeEventListener("popstate", synchronizeSearch);
+  }, [runSearch]);
+
+  const writeSearchUrl = useCallback((query) => {
+    const params = new URLSearchParams(window.location.search);
+    if (query) params.set("q", query);
+    else params.delete("q");
+    const suffix = params.toString();
+    const nextUrl = `${window.location.pathname}${suffix ? `?${suffix}` : ""}${window.location.hash}`;
+    window.history.pushState(null, "", nextUrl);
+  }, []);
   const handleSearchSubmit = useCallback((query) => {
     setHistoryError("");
-    const params = new URLSearchParams(window.location.search);
-    params.set("q", query);
-    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
+    if (readSearchFromLocation() !== query) writeSearchUrl(query);
     runSearch(query);
     saveSearchHistory({ query }).catch((saveError) => {
       setHistoryError(saveError.message || "Search history could not be saved");
     });
-  }, [runSearch]);
+  }, [runSearch, writeSearchUrl]);
   const clearSearch = useCallback(() => {
+    writeSearchUrl("");
     setSearchRequest(null);
     setSearchState({ status: "idle", results: emptySearch, error: "" });
-  }, []);
+  }, [writeSearchUrl]);
   const searchQuery = searchRequest?.query || "";
   const retryDiscovery = useCallback(() => {
     setStatus("loading");
@@ -203,6 +230,8 @@ export default function ExplorePage() {
         </div>
         <div>
           <SearchPanel
+            key={searchQuery}
+            query={searchQuery}
             onQueryChange={runSearch}
             onSubmit={handleSearchSubmit}
             busy={searchState.status === "loading"}

@@ -506,6 +506,12 @@ it("joins a real recommended creator and cancels the persisted subscription", as
     status: "ACTIVE",
     creator: homeCreator,
   };
+  const recommendation = {
+    ...homeCreator,
+    avatar: "https://cdn.example.test/asha-avatar.jpg",
+    category: "Textile Art",
+    followerCount: 1250,
+  };
   const fetch = vi.fn((url, options = {}) => {
     const path = String(url);
     if (path === "/api/subscriptions" && options.method === "POST") {
@@ -516,13 +522,16 @@ it("joins a real recommended creator and cancels the persisted subscription", as
         subscription: { ...subscription, status: "CANCELLED", cancelledAt: "2026-08-05T10:00:00.000Z" },
       }), { status: 200 }));
     }
-    return Promise.resolve(new Response(JSON.stringify({ items: [], recommendations: [homeCreator] }), { status: 200 }));
+    return Promise.resolve(new Response(JSON.stringify({ items: [], recommendations: [recommendation] }), { status: 200 }));
   });
   vi.stubGlobal("fetch", fetch);
 
   render(<SubscriptionsPage />);
 
   expect(await screen.findByText("Asha Rao")).toBeVisible();
+  expect(screen.getByLabelText("Asha Rao avatar").querySelector("img")).toHaveAttribute("src", recommendation.avatar);
+  expect(screen.getByText("Textile Art")).toBeVisible();
+  expect(screen.getByText("1,250 followers")).toBeVisible();
   expect(screen.getByRole("heading", { name: "Recommended Creators for You" })).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Join Asha Rao for free" }));
 
@@ -536,7 +545,7 @@ it("joins a real recommended creator and cancels the persisted subscription", as
   fireEvent.click(screen.getByRole("button", { name: "Cancel subscription to Asha Rao" }));
   await waitFor(() => expect(fetch).toHaveBeenCalledWith(
     "/api/subscriptions/cancel",
-    expect.objectContaining({ method: "POST", body: JSON.stringify({ creatorId: "creator-1" }) }),
+    expect.objectContaining({ method: "POST", body: JSON.stringify({ subscriptionId: "subscription-1" }) }),
   ));
   expect(await screen.findByText("Subscription to Asha Rao cancelled.")).toBeVisible();
   expect(screen.getByText("CANCELLED")).toBeVisible();

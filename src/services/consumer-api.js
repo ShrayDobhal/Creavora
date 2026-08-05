@@ -188,11 +188,11 @@ export function joinFreeSubscription(creatorId, { signal } = {}) {
   });
 }
 
-export function cancelSubscription(creatorId, { signal } = {}) {
+export function cancelSubscription(subscriptionId, { signal } = {}) {
   return request("/api/subscriptions/cancel", {
     method: "POST",
     signal,
-    body: { creatorId },
+    body: { subscriptionId },
   });
 }
 

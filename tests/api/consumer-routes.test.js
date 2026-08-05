@@ -523,6 +523,23 @@ describe("consumer API contracts", () => {
     }));
   });
 
+  it("excludes banned creators and posts from search", async () => {
+    const userFindMany = vi.fn().mockResolvedValue([]);
+    const postFindMany = vi.fn().mockResolvedValue([]);
+    await searchConsumer(
+      { user: { findMany: userFindMany }, post: { findMany: postFindMany }, community: { findMany: vi.fn().mockResolvedValue([]) } },
+      "viewer-1",
+      { q: "fitness", type: "all" },
+    );
+
+    expect(userFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ banned: false }),
+    }));
+    expect(postFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ creator: { is: expect.objectContaining({ banned: false }) } }),
+    }));
+  });
+
   it("returns creators whose role title is their only search match", async () => {
     const findMany = vi.fn(async ({ where }) =>
       where.OR.some((branch) =>

@@ -33,6 +33,7 @@ export async function searchConsumer(database, viewerId, query) {
           where: {
             role: "CREATOR",
             deletedAt: null,
+            banned: false,
             OR: [
               { name: contains },
               { handle: contains },
@@ -56,7 +57,7 @@ export async function searchConsumer(database, viewerId, query) {
             deletedAt: null,
             publishedAt: { lte: new Date() },
             content: contains,
-            creator: { is: { role: "CREATOR", deletedAt: null } },
+            creator: { is: { role: "CREATOR", deletedAt: null, banned: false } },
           },
           take: 15,
           orderBy: [{ publishedAt: "desc" }, { id: "desc" }],

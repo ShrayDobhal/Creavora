@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SearchPanel } from "@/components/consumer/SearchPanel";
@@ -91,6 +91,16 @@ describe("SearchPanel", () => {
     expect(onQueryChange).not.toHaveBeenCalled();
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(onSubmit).toHaveBeenCalledWith("Asha");
+  });
+
+  it("synchronizes its visible value when the URL-backed query changes", () => {
+    const { rerender } = render(
+      <SearchPanel key="Asha" query="Asha" onQueryChange={vi.fn()} onSubmit={vi.fn()} />,
+    );
+    expect(screen.getByRole("searchbox")).toHaveValue("Asha");
+
+    rerender(<SearchPanel key="empty" query="" onQueryChange={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByRole("searchbox")).toHaveValue("");
   });
 });
 
@@ -446,6 +456,45 @@ describe("Explore page", () => {
       "/api/search?q=Asha&type=all",
       expect.objectContaining({ credentials: "same-origin" }),
     );
+  });
+
+  it("loads, clears, and restores database search from browser history", async () => {
+    window.history.replaceState({}, "", "/explore?q=Asha");
+    const fetchMock = vi.fn((url) => Promise.resolve(new Response(
+      JSON.stringify(
+        String(url).startsWith("/api/search?")
+          ? { creators: [], posts: [], communities: [] }
+          : String(url) === "/api/discovery"
+            ? { categories: [], creators: [] }
+            : { items: [], nextCursor: null },
+      ),
+      { status: 200, headers: { "content-type": "application/json" } },
+    )));
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+
+    render(<ExplorePage />);
+
+    expect(await screen.findByRole("heading", { name: "“Asha”" })).toBeVisible();
+    expect(screen.getByRole("searchbox")).toHaveValue("Asha");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/search?q=Asha&type=all",
+      expect.objectContaining({ credentials: "same-origin" }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Back to discovery" }));
+    expect(window.location.search).toBe("");
+    expect(screen.getByRole("searchbox")).toHaveValue("");
+
+    window.history.replaceState({}, "", "/explore?q=Kochi");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+
+    expect(await screen.findByRole("heading", { name: "“Kochi”" })).toBeVisible();
+    expect(screen.getByRole("searchbox")).toHaveValue("Kochi");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      "/api/search?q=Kochi&type=all",
+      expect.objectContaining({ credentials: "same-origin" }),
+    ));
   });
 
   it("does not persist debounced reads and saves history after explicit submit", async () => {

@@ -12,7 +12,8 @@ export function createSubscriptionsGet({ database = db } = {}) {
               id: { not: user.id },
               role: "CREATOR",
               deletedAt: null,
-              creatorSubs: { none: { userId: user.id, status: "ACTIVE" } },
+              banned: false,
+              creatorSubs: { none: { userId: user.id } },
             },
             orderBy: { createdAt: "desc" },
             take: 12,
@@ -23,6 +24,8 @@ export function createSubscriptionsGet({ database = db } = {}) {
               avatar: true,
               roleTitle: true,
               verified: true,
+              creatorProfile: { select: { category: true } },
+              _count: { select: { followers: true } },
             },
           })
         : Promise.resolve([]);
@@ -50,7 +53,21 @@ export function createSubscriptionsGet({ database = db } = {}) {
         }),
         recommendationsQuery,
       ]);
-      return NextResponse.json({ items: subscriptions, recommendations });
+      return NextResponse.json({
+        items: subscriptions,
+        recommendations: recommendations.map((creator) => ({
+          id: creator.id,
+          name: creator.name,
+          handle: creator.handle,
+          avatar: creator.avatar ?? null,
+          roleTitle: creator.roleTitle ?? null,
+          verified: Boolean(creator.verified),
+          category: creator.creatorProfile?.category ?? null,
+          followerCount: typeof creator._count?.followers === "number"
+            ? creator._count.followers
+            : null,
+        })),
+      });
     } catch (error) {
       return consumerErrorResponse(error, "Failed to load subscriptions");
     }
@@ -102,25 +119,44 @@ export function createSubscriptionPost({ database = db } = {}) {
 
       const result = await database.$transaction(async (transaction) => {
         const creator = await transaction.user.findFirst({
-          where: { id: creatorId, role: "CREATOR", deletedAt: null },
+          where: { id: creatorId, role: "CREATOR", deletedAt: null, banned: false },
           select: { id: true },
         });
         if (!creator) return null;
 
         const existing = await transaction.subscription.findUnique({
           where: { userId_creatorId: { userId: user.id, creatorId } },
-          select: { id: true, status: true },
-        });
-        const subscription = await transaction.subscription.upsert({
-          where: { userId_creatorId: { userId: user.id, creatorId } },
-          create: { userId: user.id, creatorId, ...freeSubscriptionValues },
-          update: freeSubscriptionValues,
           select: subscriptionSelect,
         });
-        return { subscription, created: !existing };
+        if (!existing) {
+          const subscription = await transaction.subscription.create({
+            data: { userId: user.id, creatorId, ...freeSubscriptionValues },
+            select: subscriptionSelect,
+          });
+          return { subscription, created: true };
+        }
+
+        const isFreeCommunity = existing.tier === freeSubscriptionValues.tier
+          && Number(existing.price) === freeSubscriptionValues.price
+          && existing.method === freeSubscriptionValues.method;
+        if (!isFreeCommunity) return { conflict: true };
+        if (existing.status === "ACTIVE") return { subscription: existing, created: false };
+
+        const subscription = await transaction.subscription.update({
+          where: { id: existing.id, userId: user.id },
+          data: { status: "ACTIVE", renewsOn: "No renewal", cancelledAt: null },
+          select: subscriptionSelect,
+        });
+        return { subscription, created: false };
       });
 
       if (!result) return NextResponse.json({ error: "Creator not found" }, { status: 404 });
+      if (result.conflict) {
+        return NextResponse.json(
+          { error: "A recorded subscription already exists for this creator" },
+          { status: 409 },
+        );
+      }
       return NextResponse.json(result, { status: result.created ? 201 : 200 });
     } catch (error) {
       return consumerErrorResponse(error, "Failed to create subscription");

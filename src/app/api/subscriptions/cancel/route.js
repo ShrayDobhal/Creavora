@@ -7,13 +7,13 @@ export function createCancelSubscriptionPost({ database = db } = {}) {
   return async (req, { user }) => {
     try {
       const body = await req.json();
-      const creatorId = typeof body?.creatorId === "string" ? body.creatorId.trim() : "";
-      if (!creatorId) {
-        return NextResponse.json({ error: "Creator is required" }, { status: 400 });
+      const subscriptionId = typeof body?.subscriptionId === "string" ? body.subscriptionId.trim() : "";
+      if (!subscriptionId) {
+        return NextResponse.json({ error: "Subscription is required" }, { status: 400 });
       }
 
-      const where = { userId_creatorId: { userId: user.id, creatorId } };
-      const existing = await database.subscription.findUnique({
+      const where = { id: subscriptionId, userId: user.id, status: "ACTIVE" };
+      const existing = await database.subscription.findFirst({
         where,
         select: { id: true, status: true },
       });

@@ -135,35 +135,37 @@ export function generateTokenPair(userId, role) {
 export async function issueSession({ database, user, request, setCookies = setAuthCookies, now = () => new Date() }) {
   const role = normalizeRole(user.role);
   const { accessToken, refreshToken } = generateTokenPair(user.id, role);
-  const existingSessions = await database.refreshToken.count({
-    where: { userId: user.id, revoked: false },
-  });
-  if (existingSessions >= 5) {
-    const oldest = await database.refreshToken.findFirst({
-      where: { userId: user.id, revoked: false },
-      orderBy: { createdAt: "asc" },
-    });
-    if (oldest) {
-      await database.refreshToken.update({ where: { id: oldest.id }, data: { revoked: true } });
-    }
-  }
   const createdAt = now();
-  await database.refreshToken.create({
-    data: {
-      userId: user.id,
-      tokenHash: hashRefreshToken(refreshToken),
-      expiresAt: new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000),
-      userAgent: request.headers.get("user-agent") || "unknown",
-    },
+  await database.$transaction(async (transaction) => {
+    const existingSessions = await transaction.refreshToken.count({
+      where: { userId: user.id, revoked: false },
+    });
+    if (existingSessions >= 5) {
+      const oldest = await transaction.refreshToken.findFirst({
+        where: { userId: user.id, revoked: false },
+        orderBy: { createdAt: "asc" },
+      });
+      if (oldest) {
+        await transaction.refreshToken.update({ where: { id: oldest.id }, data: { revoked: true } });
+      }
+    }
+    await transaction.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashRefreshToken(refreshToken),
+        expiresAt: new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000),
+        userAgent: request.headers.get("user-agent") || "unknown",
+      },
+    });
+    await transaction.activityLog.create({
+      data: {
+        userId: user.id,
+        action: "LOGIN",
+        details: `Logged in from ${request.headers.get("user-agent")?.substring(0, 100) || "unknown"}`,
+        ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+      },
+    });
   });
   await setCookies(accessToken, refreshToken);
-  await database.activityLog.create({
-    data: {
-      userId: user.id,
-      action: "LOGIN",
-      details: `Logged in from ${request.headers.get("user-agent")?.substring(0, 100) || "unknown"}`,
-      ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
-    },
-  });
   return { accessToken, refreshToken, role };
 }

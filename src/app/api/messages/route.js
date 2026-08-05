@@ -96,7 +96,8 @@ export function createMessagesGet({ database = db } = {}) {
         ? await database.follow.findMany({
           where: {
             followerId: user.id,
-            following: { is: { role: "CREATOR", deletedAt: null } },
+            ...(seen.size ? { followingId: { notIn: [...seen] } } : {}),
+            following: { is: { role: "CREATOR", deletedAt: null, banned: false } },
           },
           orderBy: { createdAt: "desc" },
           take: 12,

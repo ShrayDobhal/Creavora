@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 
-export function SearchPanel({ onQueryChange, onSubmit, busy = false }) {
-  const [query, setQuery] = useState("");
+export function SearchPanel({ query: externalQuery = "", onQueryChange, onSubmit, busy = false }) {
+  const [query, setQuery] = useState(externalQuery);
   const debounceTimer = useRef(null);
 
   useEffect(() => {
     const normalized = query.trim();
-    if (!normalized) return undefined;
+    if (!normalized || normalized === externalQuery.trim()) return undefined;
 
     const timer = window.setTimeout(() => {
       debounceTimer.current = null;
@@ -20,7 +20,7 @@ export function SearchPanel({ onQueryChange, onSubmit, busy = false }) {
       window.clearTimeout(timer);
       if (debounceTimer.current === timer) debounceTimer.current = null;
     };
-  }, [onQueryChange, query]);
+  }, [externalQuery, onQueryChange, query]);
 
   function handleSubmit(event) {
     event.preventDefault();
