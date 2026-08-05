@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Clock3, Users } from "lucide-react";
+import { Clock3, Flame, Users } from "lucide-react";
 import { AsyncState } from "@/components/consumer/AsyncState";
 import { FeedCard } from "@/components/consumer/FeedCard";
+import { FeedRail } from "@/components/consumer/FeedRail";
 import { PostComposer } from "@/components/consumer/PostComposer";
+import { StoryStrip } from "@/components/consumer/StoryStrip";
 import {
   createComment,
   getComments,
+  getConsumerHome,
   getFeed,
   getProfile,
   toggleBookmark,
@@ -17,6 +20,7 @@ import {
 const filters = [
   { label: "Latest", mode: "latest", icon: Clock3 },
   { label: "Following", mode: "following", icon: Users },
+  { label: "Trending", mode: "trending", icon: Flame },
 ];
 
 export default function FeedPage() {
@@ -28,6 +32,7 @@ export default function FeedPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [profile, setProfile] = useState(null);
+  const [context, setContext] = useState(null);
   const paginationController = useRef(null);
 
   useEffect(() => {
@@ -55,6 +60,14 @@ export default function FeedPage() {
     const controller = new AbortController();
     getProfile({ signal: controller.signal })
       .then(setProfile)
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getConsumerHome({ signal: controller.signal })
+      .then(setContext)
       .catch(() => {});
     return () => controller.abort();
   }, []);
@@ -129,6 +142,14 @@ export default function FeedPage() {
             ))}
           </div>
 
+          <section className="mb-5" aria-labelledby="feed-stories-title">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 id="feed-stories-title" className="text-lg font-black">Stories from creators</h2>
+              <span className="text-xs font-semibold text-muted">Current updates</span>
+            </div>
+            <StoryStrip stories={context?.stories || []} />
+          </section>
+
           <div className="mb-5">
             <PostComposer user={profile} onPublished={retry} />
           </div>
@@ -170,10 +191,12 @@ export default function FeedPage() {
         </section>
 
         <aside className="hidden lg:block">
-          <div className="sticky top-5 rounded-2xl bg-[#17121f] p-6 text-white">
-            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-300">Feed filters</p>
-            <h2 className="mt-3 text-xl font-black">Choose what to view</h2>
-            <p className="mt-3 text-sm leading-6 text-white/70">Latest sorts by publication time. Following shows creators you follow.</p>
+          <div className="sticky top-5">
+            <FeedRail
+              creators={context?.creators || []}
+              topics={context?.categories || []}
+              liveSessions={context?.liveSessions || []}
+            />
           </div>
         </aside>
       </div>

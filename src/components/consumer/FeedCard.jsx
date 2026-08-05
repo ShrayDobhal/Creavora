@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ConsumerAvatar } from "./CreatorCard";
+import EditorialImage from "./EditorialImage";
 import { OwnedPostMenu } from "./OwnedPostMenu";
 
 const formatDate = (value) => {
@@ -38,7 +39,7 @@ export function FeedCard({
   const [isBookmarked, setIsBookmarked] = useState(Boolean(post.viewer?.isBookmarked));
   const [pendingAction, setPendingAction] = useState(null);
   const [error, setError] = useState("");
-  const [mediaFailed, setMediaFailed] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentCount, setCommentCount] = useState(numericCount(post.counts?.comments));
@@ -166,26 +167,29 @@ export function FeedCard({
       ) : (
         <>
           {content ? <p className="px-4 pb-4 text-[15px] leading-7 text-ink/85 sm:px-5">{content}</p> : null}
-          {post.mediaUrl && !mediaFailed ? (
+          {post.mediaUrl ? (
             post.mediaType?.toLowerCase().startsWith("video") ? (
-              <div className="relative bg-black">
-                <video
-                  src={post.mediaUrl}
-                  controls
-                  preload="metadata"
-                  className="max-h-[620px] w-full"
-                  aria-label={mediaAlt}
-                  onError={() => setMediaFailed(true)}
-                />
-                <Play className="pointer-events-none absolute left-4 top-4 text-white/80" size={20} />
-              </div>
+              videoFailed ? (
+                <div role="img" aria-label={mediaAlt} className="grid min-h-48 place-items-center bg-canvas p-5 text-sm font-semibold text-muted">Media unavailable</div>
+              ) : (
+                <div className="relative bg-black">
+                  <video
+                    src={post.mediaUrl}
+                    controls
+                    preload="metadata"
+                    className="max-h-[620px] w-full"
+                    aria-label={mediaAlt}
+                    onError={() => setVideoFailed(true)}
+                  />
+                  <Play className="pointer-events-none absolute left-4 top-4 text-white/80" size={20} />
+                </div>
+              )
             ) : (
-              // eslint-disable-next-line @next/next/no-img-element -- API media may come from creator-selected hosts.
-              <img
+              <EditorialImage
                 src={post.mediaUrl}
                 alt={mediaAlt}
                 className="max-h-[680px] w-full bg-neutral-100 object-cover"
-                onError={() => setMediaFailed(true)}
+                fallbackLabel="Media unavailable"
               />
             )
           ) : null}

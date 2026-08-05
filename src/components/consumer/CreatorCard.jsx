@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BadgeCheck, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
+import EditorialImage from "./EditorialImage";
 
 const initials = (name = "") =>
   name
@@ -63,14 +64,11 @@ export function CreatorCard({ creator, onFollow }) {
     <article className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
       <div className="h-24 bg-gradient-to-br from-[#241541] via-brand-700 to-[#d1609f]">
         {creator.coverImage ? (
-          // eslint-disable-next-line @next/next/no-img-element -- remote creator URLs are user-provided.
-          <img
+          <EditorialImage
             src={creator.coverImage}
-            alt=""
+            alt={`${creator.name} cover`}
             className="h-full w-full object-cover"
-            onError={(event) => {
-              event.currentTarget.hidden = true;
-            }}
+            fallbackLabel="Creator cover unavailable"
           />
         ) : null}
       </div>

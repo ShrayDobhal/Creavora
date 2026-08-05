@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FeedCard } from "@/components/consumer/FeedCard";
@@ -82,6 +82,16 @@ describe("FeedCard", () => {
       post.mediaUrl,
     );
     expect(screen.getByLabelText("Asha Rao avatar")).toHaveTextContent("AR");
+  });
+
+  it("keeps post actions usable after its image media fails", () => {
+    render(<FeedCard post={post} onLike={vi.fn()} onBookmark={vi.fn()} />);
+
+    fireEvent.error(screen.getByRole("img", { name: post.content }));
+
+    expect(screen.getByRole("button", { name: "Like post by Asha Rao" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Bookmark post" })).toBeEnabled();
+    expect(screen.getByText("Media unavailable")).toBeVisible();
   });
 
   it("does not display unknown engagement counts as zero", () => {
@@ -234,7 +244,7 @@ describe("Feed page", () => {
     expect(screen.getByRole("button", { name: "Load more" })).toBeEnabled();
   });
 
-  it("offers only defensible latest and following feed modes", async () => {
+  it("offers every supported feed mode", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -249,6 +259,6 @@ describe("Feed page", () => {
 
     expect(screen.getByRole("button", { name: "Latest" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Following" })).toBeVisible();
-    expect(screen.queryAllByText(/trending/i)).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Trending" })).toBeVisible();
   });
 });

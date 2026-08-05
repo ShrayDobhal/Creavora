@@ -6,10 +6,12 @@ import { afterEach, expect, it, vi } from "vitest";
 import ConsumerWorkspaceNav from "@/components/consumer/ConsumerWorkspaceNav";
 import EditorialImage from "@/components/consumer/EditorialImage";
 import HomeDashboard from "@/components/consumer/HomeDashboard";
+import { StoryStrip } from "@/components/consumer/StoryStrip";
 import WalletPage from "@/app/(fan)/wallet/page";
 import RewardsPage from "@/app/(fan)/rewards/page";
 import LivePage from "@/app/(fan)/live/page";
 import { CommunityCard } from "@/app/(fan)/explore/page";
+import FeedPage from "@/app/(fan)/feed/page";
 import { getLiveSessions } from "@/lib/consumer/workspace";
 
 vi.mock("next/navigation", () => ({
@@ -77,6 +79,42 @@ it("uses an honest Home empty state", () => {
     screen.getByText("Your Blindly workspace is ready for new connections"),
   ).toBeInTheDocument();
   expect(screen.queryByText("Ananya Sharma")).not.toBeInTheDocument();
+});
+
+it("uses an honest empty state when Feed has no active stories", () => {
+  render(<StoryStrip stories={[]} />);
+
+  expect(screen.getByText("No active stories right now.")).toBeVisible();
+  expect(screen.queryByText("Ananya Sharma")).not.toBeInTheDocument();
+});
+
+it("renders real image and video stories without inventing story media", () => {
+  render(
+    <StoryStrip
+      stories={[
+        {
+          id: "story-image",
+          mediaUrl: "https://cdn.example.test/studio.jpg",
+          mediaType: "image",
+          caption: "Studio materials",
+          creator: homeCreator,
+        },
+        {
+          id: "story-video",
+          mediaUrl: "https://cdn.example.test/studio.mp4",
+          mediaType: "video",
+          caption: "At the loom",
+          creator: homeCreator,
+        },
+      ]}
+    />,
+  );
+
+  expect(screen.getByRole("img", { name: "Studio materials" })).toHaveAttribute(
+    "src",
+    "https://cdn.example.test/studio.jpg",
+  );
+  expect(screen.getByLabelText("At the loom").tagName).toBe("VIDEO");
 });
 
 it("uses real creator media in the reference Home hierarchy", () => {
@@ -268,4 +306,56 @@ it("keeps the community card meaningful when its cover image fails", async () =>
   fireEvent.error(screen.getByRole("img", { name: "Kochi Makers cover image" }));
 
   expect(await screen.findByText("Community cover unavailable")).toBeInTheDocument();
+});
+
+it("composes Feed discovery from the consumer Home response", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((url) => {
+      const path = String(url);
+      const payload = path.startsWith("/api/posts")
+        ? { items: [homePost], nextCursor: null }
+        : path === "/api/profile"
+          ? homeCreator
+          : {
+              ...homeData({
+                categories: ["Art"],
+                creators: [homeCreator],
+                stories: [{
+                  id: "feed-story",
+                  mediaUrl: "https://cdn.example.test/feed-story.jpg",
+                  mediaType: "image",
+                  caption: "Behind the scenes",
+                  creator: homeCreator,
+                }],
+                liveSessions: [{
+                  id: "feed-live",
+                  title: "Studio live",
+                  status: "LIVE",
+                  viewerCount: 15,
+                  host: homeCreator,
+                }],
+              }),
+            };
+      return Promise.resolve(
+        new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    }),
+  );
+
+  render(<FeedPage />);
+
+  expect(await screen.findByRole("img", { name: "Behind the scenes" })).toHaveAttribute(
+    "src",
+    "https://cdn.example.test/feed-story.jpg",
+  );
+  expect(screen.getByRole("button", { name: "Trending" })).toBeVisible();
+  expect(screen.getByRole("link", { name: "Art" })).toHaveAttribute(
+    "href",
+    "/explore?category=Art",
+  );
+  expect(screen.getByText("Studio live")).toBeVisible();
 });

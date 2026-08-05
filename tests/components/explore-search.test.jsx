@@ -228,7 +228,7 @@ describe("Explore page", () => {
                 name: "Leela Menon",
                 handle: "leela-menon",
                 avatar: null,
-                coverImage: null,
+                coverImage: "https://cdn.example.test/leela-cover.jpg",
                 roleTitle: "Mural artist",
                 bio: "Public art from Kochi",
                 verified: true,
@@ -246,6 +246,10 @@ describe("Explore page", () => {
     render(<ExplorePage />);
 
     expect(await screen.findByText("Leela Menon")).toBeVisible();
+    expect(screen.getByRole("img", { name: "Leela Menon cover" })).toHaveAttribute(
+      "src",
+      "https://cdn.example.test/leela-cover.jpg",
+    );
     expect(screen.getByText("18 followers")).toBeVisible();
     expect(screen.getByRole("button", { name: "Art" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Explore" })).toBeVisible();
