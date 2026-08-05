@@ -5,6 +5,7 @@ import { Compass, Lock, Users } from "lucide-react";
 import { AsyncState } from "@/components/consumer/AsyncState";
 import { CreatorCard } from "@/components/consumer/CreatorCard";
 import { FeedCard } from "@/components/consumer/FeedCard";
+import EditorialImage from "@/components/consumer/EditorialImage";
 import { SearchPanel } from "@/components/consumer/SearchPanel";
 import {
   createComment,
@@ -19,13 +20,17 @@ import {
 
 const emptySearch = { creators: [], posts: [], communities: [] };
 
-function CommunityCard({ community }) {
+export function CommunityCard({ community }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-line bg-white">
       <div className="h-28 bg-gradient-to-br from-brand-900 to-[#c85b91]">
         {community.coverImage ? (
-          // eslint-disable-next-line @next/next/no-img-element -- API media may use community-selected hosts.
-          <img src={community.coverImage} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.hidden = true; }} />
+          <EditorialImage
+            src={community.coverImage}
+            alt={`${community.name} cover image`}
+            className="h-full w-full object-cover"
+            fallbackLabel="Community cover unavailable"
+          />
         ) : null}
       </div>
       <div className="p-4">

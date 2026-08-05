@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { AsyncState } from "@/components/consumer/AsyncState";
 import { ConsumerAvatar } from "@/components/consumer/CreatorCard";
 import { FeedCard } from "@/components/consumer/FeedCard";
+import EditorialImage from "@/components/consumer/EditorialImage";
 import {
   createComment,
   getComments,
@@ -84,8 +85,12 @@ export default function CreatorProfilePage() {
       <section className="overflow-hidden rounded-3xl border border-line bg-white" aria-labelledby="creator-name">
         <div className="relative h-44 bg-gradient-to-br from-[#201238] via-brand-800 to-[#d15f94] sm:h-56">
           {creator.coverImage ? (
-            // eslint-disable-next-line @next/next/no-img-element -- remote creator URLs are user-provided.
-            <img src={creator.coverImage} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.hidden = true; }} />
+            <EditorialImage
+              src={creator.coverImage}
+              alt={`${creator.name} cover image`}
+              className="h-full w-full object-cover"
+              fallbackLabel="Creator cover unavailable"
+            />
           ) : null}
           <Link href="/feed" aria-label="Back to feed" className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-black/45 text-white backdrop-blur"><ArrowLeft size={18} /></Link>
         </div>

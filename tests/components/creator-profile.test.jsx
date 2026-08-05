@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -45,7 +45,7 @@ describe("Creator profile", () => {
               name: "Leela Menon",
               handle: "missing-creator",
               avatar: null,
-              coverImage: null,
+              coverImage: "https://invalid.example/creator.jpg",
               roleTitle: "Mural artist",
               bio: null,
               verified: true,
@@ -65,5 +65,8 @@ describe("Creator profile", () => {
     expect(screen.getByText("Followers")).toBeVisible();
     expect(screen.getByText("23")).toBeVisible();
     expect(screen.queryByText("Subscribers")).not.toBeInTheDocument();
+
+    fireEvent.error(screen.getByRole("img", { name: "Leela Menon cover image" }));
+    expect(await screen.findByText("Creator cover unavailable")).toBeVisible();
   });
 });
