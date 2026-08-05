@@ -138,7 +138,10 @@ export function PostComposer({ user, onPublished }) {
         const completed = await completeImageUpload(intent.assetId, { signal: controller.signal });
         mediaAssetId = completed.assetId;
       }
-      const post = await createPost({ content: text, mediaAssetId });
+      const post = await createPost({
+        content: text,
+        ...(mediaAssetId ? { mediaAssetId } : {}),
+      });
       setContent("");
       clearImage();
       onPublished?.(post);

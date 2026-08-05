@@ -124,7 +124,18 @@ describe("social launch UI", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Image uploads are not configured yet");
     expect(screen.getByLabelText("Add image")).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Publish post" }));
-    expect(createPost).toHaveBeenCalledWith({ content: "A text-only update", mediaAssetId: null });
+    expect(createPost).toHaveBeenCalledWith({ content: "A text-only update" });
+  });
+
+  it("omits mediaAssetId for a text-only post", async () => {
+    const user = userEvent.setup();
+    createPost.mockResolvedValue({ id: "post-1" });
+
+    render(<PostComposer user={{ name: "Nisha" }} onPublished={vi.fn()} />);
+    await user.type(screen.getByRole("textbox", { name: "Write a post" }), "A plain text update");
+    await user.click(screen.getByRole("button", { name: "Publish post" }));
+
+    expect(createPost).toHaveBeenCalledWith({ content: "A plain text update" });
   });
 
   it("saves editable profile fields with the update API rather than an alert", async () => {
