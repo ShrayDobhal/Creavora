@@ -25,6 +25,7 @@ const presentProfile = (user) => ({
   coverImage: user.coverImage,
   roleTitle: user.roleTitle,
   location: user.location,
+  address: user.address,
   website: user.website,
   profileVisibility: user.profileVisibility,
   counts: {

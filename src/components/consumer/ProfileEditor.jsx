@@ -39,7 +39,7 @@ function initialValues(profile) {
     bio: profile.bio || "",
     roleTitle: profile.roleTitle || "",
     location: profile.location || "",
-    website: profile.website || "",
+    address: profile.address || "",
     profileVisibility: profile.profileVisibility || "PUBLIC",
   };
 }
@@ -113,7 +113,7 @@ export function ProfileEditor({ profile, onSaved }) {
         bio: values.bio.trim() || null,
         roleTitle: values.roleTitle.trim() || null,
         location: values.location.trim() || null,
-        website: values.website.trim() || null,
+        address: values.address.trim() || null,
         profileVisibility: values.profileVisibility,
         ...(avatar ? { avatar } : {}),
         ...(coverImage ? { coverImage } : {}),
@@ -156,8 +156,8 @@ export function ProfileEditor({ profile, onSaved }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Name" value={values.name} onChange={(value) => updateValue("name", value)} required />
         <Field label="Role" value={values.roleTitle} onChange={(value) => updateValue("roleTitle", value)} />
-        <Field label="Location" value={values.location} onChange={(value) => updateValue("location", value)} />
-        <Field label="Website" value={values.website} type="url" onChange={(value) => updateValue("website", value)} />
+        <Field label="City / State" value={values.location} onChange={(value) => updateValue("location", value)} />
+        <Field label="Address" value={values.address} maxLength={240} onChange={(value) => updateValue("address", value)} />
       </div>
       <div>
         <label htmlFor="profile-bio" className="mb-1.5 block text-sm font-bold text-ink">Bio</label>
@@ -185,12 +185,12 @@ export function ProfileEditor({ profile, onSaved }) {
   );
 }
 
-function Field({ label, value, onChange, type = "text", required = false }) {
+function Field({ label, value, onChange, type = "text", required = false, maxLength }) {
   const id = `profile-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div>
       <label htmlFor={id} className="mb-1.5 block text-sm font-bold text-ink">{label}</label>
-      <input id={id} type={type} required={required} value={value} onChange={(event) => onChange(event.target.value)} maxLength={type === "url" ? 2048 : 100} className="h-11 w-full rounded-xl border border-line bg-canvas px-3 text-sm outline-none focus:border-brand-500 focus:bg-white" />
+      <input id={id} type={type} required={required} value={value} onChange={(event) => onChange(event.target.value)} maxLength={maxLength ?? (type === "url" ? 2048 : 100)} className="h-11 w-full rounded-xl border border-line bg-canvas px-3 text-sm outline-none focus:border-brand-500 focus:bg-white" />
     </div>
   );
 }

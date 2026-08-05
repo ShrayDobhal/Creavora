@@ -49,7 +49,8 @@ const profile = {
   avatar: null,
   coverImage: null,
   roleTitle: "Photographer",
-  location: "Bengaluru",
+  location: "Mumbai, Maharashtra",
+  address: "Bandra West, Mumbai 400050",
   website: "https://nisha.example.test",
   profileVisibility: "PUBLIC",
   counts: { followers: 2, following: 4, posts: 3 },
@@ -155,11 +156,15 @@ describe("social launch UI", () => {
     const alertSpy = vi.spyOn(window, "alert");
 
     render(<ProfileEditor profile={profile} onSaved={onSaved} />);
-    await user.clear(screen.getByLabelText("Location"));
-    await user.type(screen.getByLabelText("Location"), "Pune");
+    expect(screen.getByLabelText("City / State")).toHaveValue("Mumbai, Maharashtra");
+    expect(screen.getByLabelText("Address")).toHaveValue("Bandra West, Mumbai 400050");
+    expect(screen.queryByLabelText("Website")).not.toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Address"));
+    await user.clear(screen.getByLabelText("City / State"));
+    await user.type(screen.getByLabelText("City / State"), "Pune");
     await user.click(screen.getByRole("button", { name: "Save profile" }));
 
-    expect(updateProfile).toHaveBeenCalledWith(expect.objectContaining({ location: "Pune" }));
+    expect(updateProfile).toHaveBeenCalledWith(expect.objectContaining({ location: "Pune", address: null }));
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ location: "Pune" }));
     expect(alertSpy).not.toHaveBeenCalled();
   });

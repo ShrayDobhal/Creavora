@@ -23,6 +23,7 @@ model User {
   coverImage    String?
   roleTitle     String?   // e.g. "Fashion Creator"
   location      String?
+  address       String?
   website       String?
   profileVisibility String @default("PUBLIC")
   verified      Boolean   @default(false)

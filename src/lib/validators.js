@@ -158,6 +158,7 @@ export const updateProfileSchema = z.object({
   coverImage: z.string().url().nullable().optional(),
   roleTitle: z.string().max(50).nullable().optional(),
   location: z.string().max(80).nullable().optional(),
+  address: z.string().trim().max(240).nullable().optional(),
   website: z.string().url().max(2048).nullable().optional(),
   profileVisibility: z.enum(["PUBLIC", "FOLLOWERS"]).optional(),
 }).strict();
