@@ -110,6 +110,9 @@ Expected: selected tests pass and mobile back behavior remains intact.
 **Files:**
 - Modify: `prisma/schema.prisma`
 - Create: `prisma/migrations/20260805170000_add_auth_recovery/migration.sql`
+- Modify: `src/proxy.js`
+- Modify: `src/lib/auth.js`
+- Modify: `src/lib/validators.js`
 - Create: `src/lib/auth-providers.js`
 - Create: `src/lib/password-reset.js`
 - Create: `src/app/api/auth/providers/route.js`
@@ -121,8 +124,12 @@ Expected: selected tests pass and mobile back behavior remains intact.
 - Create: `src/app/(auth)/reset-password/page.jsx`
 - Modify: `src/app/(auth)/login/page.jsx`
 - Modify: `src/app/(auth)/creator-login/page.jsx`
+- Modify: `.env.example`
+- Modify: `README.md`
 - Test: `tests/api/auth-providers.test.js`
 - Test: `tests/api/auth-recovery.test.js`
+- Test: `tests/api/proxy-auth.test.js`
+- Test: `tests/components/auth-entry.test.jsx`
 - Test: `tests/components/auth-ui.test.jsx`
 
 **Interfaces:**
@@ -130,7 +137,7 @@ Expected: selected tests pass and mobile back behavior remains intact.
 
 - [ ] **Step 1: Write failing service, route, and UI tests**
 
-Cover unavailable providers, state/PKCE cookies, callback rejection, verified-email linking, token hashing/expiry/single use, refresh-token revocation, generic forgot responses, and visible auth controls.
+Cover unavailable providers, state/PKCE cookies, callback rejection, verified-email linking, token hashing/expiry/single use, refresh-token revocation, generic forgot responses, public proxy access, and visible auth controls.
 
 - [ ] **Step 2: Run focused tests and confirm expected failures**
 
@@ -142,11 +149,11 @@ Add nullable unique `User.googleSubject`, `User.passwordResetTokens`, and `Passw
 
 - [ ] **Step 4: Implement provider services, routes, and pages**
 
-Use random state plus PKCE S256 cookies, Google token/userinfo endpoints, safe redirects, SHA-256 reset tokens, 30-minute expiry, bcrypt password hashing, Resend HTTP delivery, and explicit unavailable UI.
+Use random state plus PKCE S256 cookies, Google token/userinfo endpoints, safe redirects, SHA-256 reset tokens, 30-minute expiry, bcrypt password hashing, Resend HTTP delivery, and explicit unavailable UI. Reuse the current Blindly session cookie/refresh-token path. Google from `/login` may link or create a `USER` with a collision-safe handle; Google from `/creator-login` may authenticate only an existing active `CREATOR` and must never create or elevate one. Exact provider/recovery pages and APIs must be anonymously reachable through the proxy while neighboring auth APIs stay protected.
 
 - [ ] **Step 5: Run focused tests, Prisma validation, and commit**
 
-Run: `npm test -- tests/api/auth-providers.test.js tests/api/auth-recovery.test.js tests/components/auth-ui.test.jsx && npx prisma validate`
+Run: `npm test -- tests/api/auth-providers.test.js tests/api/auth-recovery.test.js tests/api/proxy-auth.test.js tests/components/auth-entry.test.jsx tests/components/auth-ui.test.jsx && npx prisma validate`
 
 ### Task 5: Full release verification
 
@@ -163,7 +170,7 @@ Require no open Critical or Important findings and verify no credentials are com
 
 - [ ] **Step 3: Merge and deploy**
 
-Fast-forward `main`, push GitHub, wait for Vercel Ready, run `prisma migrate deploy`, and preserve current imported content.
+Apply the additive production migration while the current application is still serving, then fast-forward `main`, push GitHub, wait for Vercel Ready, and preserve current imported content. Do not route the new Prisma client to an unmigrated production schema.
 
 - [ ] **Step 4: Run live authenticated smoke checks**
 
