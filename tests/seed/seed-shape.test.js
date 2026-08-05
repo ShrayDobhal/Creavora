@@ -1,23 +1,24 @@
 import { describe, expect, it } from "vitest";
 
 describe("development seed", () => {
-  it("defines Indian-market creator categories and never runs when NODE_ENV is production", async () => {
-    const { CATEGORY_OPTIONS, runSeed } = await import("../../prisma/seed.mjs");
+  it("defines every Blindly launch category and never runs when NODE_ENV is production", async () => {
+    const { CATEGORY_OPTIONS, LAUNCH_CATEGORIES, runSeed } = await import("../../prisma/seed.mjs");
 
-    expect(CATEGORY_OPTIONS).toContain("Food");
-    expect(CATEGORY_OPTIONS).toEqual(
-      expect.arrayContaining([
-        "Fashion",
-        "Fitness",
-        "Gaming",
-        "Education",
-        "Music",
-        "Travel",
-        "Art",
-        "Comedy",
-        "Technology",
-      ]),
-    );
+    expect(LAUNCH_CATEGORIES).toEqual([
+      "Fitness",
+      "Sports",
+      "Technology",
+      "Fashion",
+      "Food",
+      "Travel",
+      "Education",
+      "Music",
+      "Art",
+      "Comedy",
+      "Gaming",
+      "Lifestyle",
+    ]);
+    expect(CATEGORY_OPTIONS).toEqual(expect.arrayContaining(LAUNCH_CATEGORIES));
     await expect(runSeed({ NODE_ENV: "production" })).rejects.toThrow(
       "Seed data is disabled in production",
     );

@@ -5,18 +5,111 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 // This script is intentionally limited to local development databases.
-export const CATEGORY_OPTIONS = [
-  "Food",
-  "Fashion",
+export const LAUNCH_CATEGORIES = [
   "Fitness",
-  "Gaming",
+  "Sports",
+  "Technology",
+  "Fashion",
+  "Food",
+  "Travel",
   "Education",
   "Music",
-  "Travel",
   "Art",
   "Comedy",
-  "Technology",
+  "Gaming",
+  "Lifestyle",
 ];
+
+export const CATEGORY_OPTIONS = LAUNCH_CATEGORIES;
+
+const LAUNCH_POST_COPY = {
+  Fitness: [
+    "A 20-minute strength circuit for the days your calendar is full.",
+    "Three mobility checks that make a desk day feel lighter.",
+    "Sunday recovery: a calm stretch flow for your living room.",
+  ],
+  Sports: [
+    "A closer look at the passing patterns that changed the match.",
+    "Practice-day drills for sharper footwork and faster decisions.",
+    "The local sports stories worth following this weekend.",
+  ],
+  Technology: [
+    "A practical guide to clearing the digital clutter from your week.",
+    "Small keyboard shortcuts that make everyday work feel quicker.",
+    "What I learned while building a simpler creator toolkit.",
+  ],
+  Fashion: [
+    "Three ways to style a handloom layer through the monsoon.",
+    "A capsule wardrobe note: texture, colour, and repeat wear.",
+    "Behind the seams of a thoughtful Chennai market find.",
+  ],
+  Food: [
+    "A bright Mumbai breakfast plate worth making at home.",
+    "The spice balance behind a comforting weeknight curry.",
+    "A neighbourhood food walk with room for one more stop.",
+  ],
+  Travel: [
+    "A slow morning on a Himalayan trail before the crowds arrive.",
+    "Packing light for a two-day train journey across the coast.",
+    "Three details that make a familiar city feel new again.",
+  ],
+  Education: [
+    "A focused study session starts with one realistic next step.",
+    "How to turn a long reading list into a useful learning plan.",
+    "The revision ritual that keeps exam week manageable.",
+  ],
+  Music: [
+    "A new melody built from an afternoon of tiny experiments.",
+    "Listening notes from a session where rhythm led the way.",
+    "Three songs for a quiet commute and a clear head.",
+  ],
+  Art: [
+    "Sketchbook colours inspired by a rainy Kolkata street.",
+    "A mural detail that changed after one unexpected brushstroke.",
+    "Making space for play in a serious studio practice.",
+  ],
+  Comedy: [
+    "The family group-chat update nobody asked to receive.",
+    "A field guide to politely escaping an endless voice note.",
+    "Observations from the queue where everyone became an expert.",
+  ],
+  Gaming: [
+    "A team-comms reset for calmer and smarter game nights.",
+    "The map route that turned a close round into a win.",
+    "Weekend squad plans: practice, play, and celebrate the chaos.",
+  ],
+  Lifestyle: [
+    "A gentle reset for a home that works with your routine.",
+    "Small rituals that make an ordinary evening feel intentional.",
+    "The weekend table setup that invites friends to linger.",
+  ],
+};
+
+const LAUNCH_IMAGE_IDS = {
+  Fitness: "photo-1517836357463-d25dfeac3438",
+  Sports: "photo-1461896836934-ffe607ba8211",
+  Technology: "photo-1518770660439-4636190af475",
+  Fashion: "photo-1445205170230-053b83016050",
+  Food: "photo-1504674900247-0877df9cc836",
+  Travel: "photo-1500530855697-b586d89ba3ee",
+  Education: "photo-1503676260728-1c00da094a0b",
+  Music: "photo-1511379938547-c1f69419868d",
+  Art: "photo-1549490349-8643362247b5",
+  Comedy: "photo-1527529482837-4698179dc6ce",
+  Gaming: "photo-1542751371-adc38448a05e",
+  Lifestyle: "photo-1500534623283-312aade485b7",
+};
+
+export const LAUNCH_FEED_FIXTURES = LAUNCH_CATEGORIES.flatMap((category, categoryIndex) => (
+  LAUNCH_POST_COPY[category].map((content, postIndex) => ({
+    category,
+    content,
+    mediaUrl: `https://images.unsplash.com/${LAUNCH_IMAGE_IDS[category]}?auto=format&fit=crop&w=1200&q=85&crop=entropy&ixlib=rb-4.1.0&ixid=${categoryIndex * 3 + postIndex + 1}`,
+    isPremium: false,
+    price: 0,
+    publishedAt: new Date(Date.UTC(2026, 7, 1, 9, categoryIndex * 3 + postIndex)).toISOString(),
+  }))
+));
 
 const LOCAL_DATABASE_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 const DEFAULT_PASSWORD = "Test1234";
@@ -32,6 +125,8 @@ const creators = [
   ["canvas-tara", "Tara Das", "Art", "Kolkata", "Illustration, murals, and a bright sketchbook."],
   ["comic-isha", "Isha Patel", "Comedy", "Ahmedabad", "Observations from Indian family group chats."],
   ["tech-with-vihaan", "Vihaan Rao", "Technology", "Hyderabad", "Friendly guides to Indian tech and tools."],
+  ["sporty-samar", "Samar Kapoor", "Sports", "Jaipur", "Match analysis, training notes, and local sports stories."],
+  ["everyday-neha", "Neha Kulkarni", "Lifestyle", "Mumbai", "Simple routines, welcoming homes, and everyday inspiration."],
 ].map(([handle, name, category, city, bio], index) => ({
   handle,
   name,
@@ -187,20 +282,22 @@ export async function runSeed(env = process.env) {
     // Posts have no natural unique key in the schema. Replacing posts owned by the
     // dedicated seed accounts makes this repeatable without touching real local users.
     await db.post.deleteMany({ where: { creatorId: { in: seededCreators.map(({ user }) => user.id) } } });
+    const creatorsByCategory = new Map(seededCreators.map((creator) => [creator.category, creator]));
     const posts = [];
-    for (const creator of seededCreators) {
+    for (const fixture of LAUNCH_FEED_FIXTURES) {
+      const creator = creatorsByCategory.get(fixture.category);
       posts.push(await db.post.create({
         data: {
           creatorId: creator.user.id,
-          content: `${creator.category} from ${creator.city}: a fresh creator note for the Creavora community.`,
-          mediaUrl: creator.coverImage,
+          content: fixture.content,
+          mediaUrl: fixture.mediaUrl,
           mediaType: "image",
-          isPremium: creator.category === "Education" || creator.category === "Fitness",
-          price: creator.category === "Education" || creator.category === "Fitness" ? 149 : 0,
+          isPremium: fixture.isPremium,
+          price: fixture.price,
           likesCount: 0,
           commentsCount: 0,
           viewsCount: 0,
-          publishedAt: new Date("2026-08-01T09:00:00.000Z"),
+          publishedAt: new Date(fixture.publishedAt),
         },
       }));
     }
