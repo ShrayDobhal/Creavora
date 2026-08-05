@@ -55,3 +55,37 @@ After implementation, the focused suite passed. During self-review, a query-cont
 - A plain `npm run build` cannot start without `DATABASE_URL` because `src/lib/db.js` requires it at import time. Verification used a syntactically valid placeholder URL; the build does not connect to it during static generation.
 - Next.js reports that multiple lockfiles make workspace-root inference ambiguous. This predates Task 4 and was not changed here.
 - `package-lock.json` had an unrelated pre-existing `hasInstallScript` metadata change. It was preserved in the worktree and excluded from this task commit.
+
+## Round 1 review corrections
+
+Resolved every finding in `task-4-review.md`:
+
+- Disabled direct subscription cancellation, payment-order creation, and payment verification routes with the exact `501` unavailable response before request-body access, provider access, or persistence.
+- Made Collections, Saved Posts, and Subscriptions load-error and empty views mutually exclusive.
+- Split collection load, page-action, and modal errors so a failed create remains visible as an alert inside the active dialog.
+- Added request identity tracking to Messages so an aborted prior thread cannot clear the newer selected thread's pending state or publish stale data/errors.
+- Confirmed the refreshed Task 4 staging command excludes Live and unchanged Wallet/Rewards pages.
+
+### Round 1 TDD evidence
+
+The focused suite initially failed with eight expected regressions:
+
+- three direct mutation endpoints read the sentinel request body and returned `500` rather than `501`;
+- three failed loads rendered both the API error and fabricated empty-data copy;
+- a collection create failure was absent from the active dialog;
+- aborting the first of two rapid thread requests cleared the second request's loading state.
+
+After the minimal fixes:
+
+- `npm test -- tests/api/consumer-workspace-routes.test.js tests/components/consumer-workspace.test.jsx`
+  - 2 files passed
+  - 35 tests passed
+- `npm test`
+  - 17 files passed
+  - 183 tests passed
+- `npm run lint`
+  - passed with 0 errors and 0 warnings
+- `$env:DATABASE_URL='postgresql://blindly:blindly@127.0.0.1:5432/blindly'; npm run build`
+  - compiled, type checked, collected page data, and generated all 61 static pages successfully
+  - emitted only the existing multiple-lockfile workspace-root warning
+- Direct-route source audit found no request-body reads, payment-provider calls, persistence imports, balance/XP changes, transactions, or success claims in the six disabled mutation handlers.

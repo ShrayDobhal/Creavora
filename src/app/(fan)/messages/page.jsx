@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, RefreshCw, Search, Send } from "lucide-react";
 import { Card } from "@/ui/Bits.jsx";
 import {
@@ -38,13 +38,14 @@ export default function MessagesPage() {
   const [error, setError] = useState("");
   const [sendError, setSendError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const threadRequestRef = useRef(0);
 
   useEffect(() => {
     const controller = new AbortController();
     getConversations({ signal: controller.signal })
       .then((data) => {
-      const items = Array.isArray(data?.items) ? data.items : [];
-      setConversations(items);
+        const items = Array.isArray(data?.items) ? data.items : [];
+        setConversations(items);
         setActiveId((current) => current || items[0]?.participant.id || null);
         setThreadLoading(items.length > 0);
       })
@@ -58,13 +59,24 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!activeId) return undefined;
     const controller = new AbortController();
+    const requestId = threadRequestRef.current + 1;
+    threadRequestRef.current = requestId;
     getMessageThread(activeId, { signal: controller.signal })
-      .then(setThread)
-      .catch((loadError) => {
-        if (loadError.name !== "AbortError") setError(loadError.message);
+      .then((result) => {
+        if (threadRequestRef.current === requestId) setThread(result);
       })
-      .finally(() => setThreadLoading(false));
-    return () => controller.abort();
+      .catch((loadError) => {
+        if (loadError.name !== "AbortError" && threadRequestRef.current === requestId) {
+          setError(loadError.message);
+        }
+      })
+      .finally(() => {
+        if (threadRequestRef.current === requestId) setThreadLoading(false);
+      });
+    return () => {
+      controller.abort();
+      if (threadRequestRef.current === requestId) threadRequestRef.current += 1;
+    };
   }, [activeId]);
 
   const retryConversations = () => {
@@ -75,6 +87,7 @@ export default function MessagesPage() {
 
   const selectConversation = (participantId) => {
     if (participantId === activeId) return;
+    threadRequestRef.current += 1;
     setThread(null);
     setThreadLoading(true);
     setError("");

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import ConsumerWorkspaceNav from "@/components/consumer/ConsumerWorkspaceNav";
 import EditorialImage from "@/components/consumer/EditorialImage";
@@ -495,4 +495,97 @@ it("shows persisted subscriptions as read-only without purchase or cancel action
   expect(screen.getByText("Studio")).toBeVisible();
   expect(screen.queryByRole("button", { name: /subscribe|cancel|purchase/i })).not.toBeInTheDocument();
   expect(screen.queryByText("Recommended Creators for You")).not.toBeInTheDocument();
+});
+
+it.each([
+  ["collections", CollectionsPage, "No collections yet"],
+  ["saved posts", SavedPage, "No saved posts"],
+  ["subscriptions", SubscriptionsPage, "No subscriptions found"],
+])("does not claim empty %s when loading fails", async (_name, Page, emptyCopy) => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(
+    JSON.stringify({ error: "Workspace unavailable" }),
+    { status: 500 },
+  )));
+
+  render(<Page />);
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Workspace unavailable");
+  expect(screen.queryByText(emptyCopy)).not.toBeInTheDocument();
+});
+
+it("exposes collection creation failures inside the active dialog", async () => {
+  vi.stubGlobal("fetch", vi.fn((_url, options = {}) => Promise.resolve(new Response(
+    JSON.stringify(options.method === "POST" ? { error: "Collection could not be saved" } : []),
+    { status: options.method === "POST" ? 500 : 200 },
+  ))));
+
+  render(<CollectionsPage />);
+
+  expect(await screen.findByText("No collections yet")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Create collection" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "Collection name" }), {
+    target: { value: "Ideas" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save collection" }));
+
+  const dialog = screen.getByRole("dialog");
+  expect(await within(dialog).findByRole("alert")).toHaveTextContent("Collection could not be saved");
+});
+
+it("keeps the newly selected message thread loading when the prior request aborts", async () => {
+  const secondCreator = {
+    ...homeCreator,
+    id: "creator-2",
+    name: "Dev Shah",
+    handle: "dev-shah",
+  };
+  let resolveSecondThread;
+  const fetch = vi.fn((url, options = {}) => {
+    const path = String(url);
+    if (path === "/api/messages") {
+      return Promise.resolve(new Response(JSON.stringify({
+        items: [homeCreator, secondCreator].map((participant) => ({
+          participant,
+          lastMessage: {
+            id: `last-${participant.id}`,
+            content: "Persisted message",
+            mine: false,
+            status: "READ",
+            createdAt: "2026-08-05T10:00:00.000Z",
+          },
+        })),
+      }), { status: 200 }));
+    }
+    if (path.includes("creator-1")) {
+      return new Promise((_resolve, reject) => {
+        options.signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      });
+    }
+    return new Promise((resolve) => {
+      resolveSecondThread = () => resolve(new Response(JSON.stringify({
+        participant: secondCreator,
+        items: [{
+          id: "message-dev",
+          content: "Dev's persisted message",
+          mine: false,
+          status: "READ",
+          createdAt: "2026-08-05T10:02:00.000Z",
+        }],
+      }), { status: 200 }));
+    });
+  });
+  vi.stubGlobal("fetch", fetch);
+
+  render(<MessagesPage />);
+
+  fireEvent.click(await screen.findByRole("button", { name: /Dev Shah/ }));
+  await waitFor(() => expect(fetch).toHaveBeenCalledWith(
+    "/api/messages?userId=creator-2",
+    expect.objectContaining({ signal: expect.any(AbortSignal) }),
+  ));
+  expect(screen.getByText("Loading messages…")).toBeVisible();
+  expect(screen.queryByText("Unable to load this conversation.")).not.toBeInTheDocument();
+
+  resolveSecondThread();
+  expect(await screen.findByText("Dev's persisted message")).toBeVisible();
 });

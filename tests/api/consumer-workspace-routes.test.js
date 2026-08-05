@@ -15,6 +15,9 @@ import { createBookmarksGet } from "@/app/api/bookmarks/route";
 import { createSubscriptionPost } from "@/app/api/subscriptions/route";
 import { createWalletDepositPost } from "@/app/api/wallet/deposit/route";
 import { createRewardPost } from "@/app/api/rewards/route";
+import { POST as cancelSubscriptionPost } from "@/app/api/subscriptions/cancel/route";
+import { POST as createPaymentOrderPost } from "@/app/api/payments/create-order/route";
+import { POST as verifyPaymentPost } from "@/app/api/payments/verify/route";
 
 const fixtureUser = { id: "viewer-1", name: "Riya", role: "USER" };
 
@@ -368,4 +371,20 @@ it.each([
   expect(database.$transaction).not.toHaveBeenCalled();
   expect(database.user.update).not.toHaveBeenCalled();
   expect(database.notification.create).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["subscription cancellation", cancelSubscriptionPost],
+  ["payment order creation", createPaymentOrderPost],
+  ["payment verification", verifyPaymentPost],
+])("disables the direct %s endpoint before reading its body", async (_name, handler) => {
+  const readBody = vi.fn(() => {
+    throw new Error("request body must not be read");
+  });
+
+  const response = await handler({ json: readBody }, { user: fixtureUser });
+
+  expect(response.status).toBe(501);
+  expect(await response.json()).toEqual({ error: "This feature is not available yet" });
+  expect(readBody).not.toHaveBeenCalled();
 });

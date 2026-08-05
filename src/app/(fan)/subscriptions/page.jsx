@@ -53,7 +53,7 @@ export default function SubscriptionsPage() {
 
       {loading ? (
         <p className="mt-6 rounded-2xl border border-line bg-white p-12 text-center text-sm text-muted" role="status">Loading subscriptions…</p>
-      ) : subscriptions.length === 0 ? (
+      ) : error ? null : subscriptions.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-line bg-white p-12 text-center">
           <AlertCircle className="mx-auto text-muted" size={34} />
           <h2 className="mt-3 font-extrabold text-ink">No subscriptions found</h2>

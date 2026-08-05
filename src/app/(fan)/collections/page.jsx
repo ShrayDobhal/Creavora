@@ -12,7 +12,9 @@ import {
 export default function CollectionsPage() {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [modalError, setModalError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -26,7 +28,7 @@ export default function CollectionsPage() {
     getCollections({ signal: controller.signal })
       .then((data) => setCollections(Array.isArray(data) ? data : []))
       .catch((loadError) => {
-        if (loadError.name !== "AbortError") setError(loadError.message);
+        if (loadError.name !== "AbortError") setLoadError(loadError.message);
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
@@ -34,7 +36,7 @@ export default function CollectionsPage() {
 
   const retry = () => {
     setLoading(true);
-    setError("");
+    setLoadError("");
     setReloadKey((current) => current + 1);
   };
 
@@ -42,7 +44,7 @@ export default function CollectionsPage() {
     event.preventDefault();
     if (!name.trim() || saving) return;
     setSaving(true);
-    setError("");
+    setModalError("");
     try {
       const created = await createCollection({
         name: name.trim(),
@@ -53,7 +55,7 @@ export default function CollectionsPage() {
       setDescription("");
       setShowForm(false);
     } catch (saveError) {
-      setError(saveError.message);
+      setModalError(saveError.message);
     } finally {
       setSaving(false);
     }
@@ -61,13 +63,13 @@ export default function CollectionsPage() {
 
   const handleDelete = async (collection) => {
     setDeletingId(collection.id);
-    setError("");
+    setActionError("");
     try {
       await deleteCollection(collection.id);
       setCollections((current) => current.filter((item) => item.id !== collection.id));
       setDeleteId(null);
     } catch (deleteError) {
-      setError(deleteError.message);
+      setActionError(deleteError.message);
     } finally {
       setDeletingId(null);
     }
@@ -83,17 +85,20 @@ export default function CollectionsPage() {
           <p className="text-sm text-muted">Organize your saved posts into personal collections.</p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setModalError("");
+            setShowForm(true);
+          }}
           className="flex h-10 items-center gap-2 rounded-xl bg-brand-600 px-4 font-bold text-white"
         >
           <FolderPlus size={16} /> Create collection
         </button>
       </div>
 
-      {error && (
+      {(loadError || actionError) && (
         <div className="mt-5 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700" role="alert">
-          <span>{error}</span>
-          {collections.length === 0 && <button onClick={retry} className="inline-flex items-center gap-1 font-bold"><RefreshCw size={14} /> Try again</button>}
+          <span>{loadError || actionError}</span>
+          {loadError && <button onClick={retry} className="inline-flex items-center gap-1 font-bold"><RefreshCw size={14} /> Try again</button>}
         </div>
       )}
 
@@ -102,6 +107,11 @@ export default function CollectionsPage() {
           <Card className="w-full max-w-[440px] p-6" role="dialog" aria-modal="true" aria-labelledby="collection-dialog-title">
             <h2 id="collection-dialog-title" className="text-lg font-extrabold">New collection</h2>
             <form onSubmit={handleCreate} className="mt-4 space-y-4">
+              {modalError && (
+                <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                  {modalError}
+                </p>
+              )}
               <label className="block text-sm font-bold text-ink">
                 Collection name
                 <input
@@ -122,7 +132,10 @@ export default function CollectionsPage() {
                 />
               </label>
               <div className="flex justify-end gap-2">
-                <button type="button" disabled={saving} onClick={() => setShowForm(false)} className="h-10 rounded-xl border border-line px-4 font-bold">Cancel</button>
+                <button type="button" disabled={saving} onClick={() => {
+                  setModalError("");
+                  setShowForm(false);
+                }} className="h-10 rounded-xl border border-line px-4 font-bold">Cancel</button>
                 <button type="submit" disabled={saving || !name.trim()} className="h-10 rounded-xl bg-brand-600 px-4 font-bold text-white disabled:opacity-50">
                   {saving ? "Saving…" : "Save collection"}
                 </button>
@@ -134,7 +147,7 @@ export default function CollectionsPage() {
 
       {loading ? (
         <p className="mt-8 rounded-2xl border border-line bg-white p-10 text-center text-sm text-muted" role="status">Loading collections…</p>
-      ) : collections.length === 0 ? (
+      ) : loadError ? null : collections.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-line bg-white p-12 text-center">
           <Folder className="mx-auto text-muted" size={34} />
           <h2 className="mt-3 font-extrabold text-ink">No collections yet</h2>

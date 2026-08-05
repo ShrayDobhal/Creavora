@@ -10,7 +10,8 @@ import { getBookmarks, toggleBookmark } from "@/services/consumer-api";
 export default function SavedPage() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [actionError, setActionError] = useState("");
   const [removingId, setRemovingId] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -19,7 +20,7 @@ export default function SavedPage() {
     getBookmarks({ signal: controller.signal })
       .then((data) => setPosts(Array.isArray(data?.items) ? data.items : []))
       .catch((loadError) => {
-        if (loadError.name !== "AbortError") setError(loadError.message);
+        if (loadError.name !== "AbortError") setLoadError(loadError.message);
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
@@ -27,22 +28,22 @@ export default function SavedPage() {
 
   const retry = () => {
     setLoading(true);
-    setError("");
+    setLoadError("");
     setReloadKey((current) => current + 1);
   };
 
   const handleRemove = async (post) => {
     setRemovingId(post.id);
-    setError("");
+    setActionError("");
     try {
       const result = await toggleBookmark(post.id);
       if (result.isBookmarked === false) {
         setPosts((current) => current.filter((item) => item.id !== post.id));
       } else {
-        setError("The post is still saved. Please try again.");
+        setActionError("The post is still saved. Please try again.");
       }
     } catch (removeError) {
-      setError(removeError.message);
+      setActionError(removeError.message);
     } finally {
       setRemovingId(null);
     }
@@ -55,16 +56,16 @@ export default function SavedPage() {
       </h1>
       <p className="text-sm text-muted">Posts you bookmark appear here.</p>
 
-      {error && (
+      {(loadError || actionError) && (
         <div role="alert" className="mt-5 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          <span>{error}</span>
-          {posts.length === 0 && <button onClick={retry} className="inline-flex items-center gap-1 font-bold"><RefreshCw size={14} /> Try again</button>}
+          <span>{loadError || actionError}</span>
+          {loadError && <button onClick={retry} className="inline-flex items-center gap-1 font-bold"><RefreshCw size={14} /> Try again</button>}
         </div>
       )}
 
       {loading ? (
         <p className="mt-6 rounded-2xl border border-line bg-white p-12 text-center text-sm text-muted" role="status">Loading saved posts…</p>
-      ) : posts.length === 0 ? (
+      ) : loadError ? null : posts.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-line bg-white p-12 text-center">
           <Bookmark className="mx-auto text-muted" size={34} />
           <h2 className="mt-3 font-extrabold text-ink">No saved posts</h2>
