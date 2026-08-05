@@ -427,17 +427,18 @@ describe("Blindly social launch post API", () => {
   const assetId = "9cd87ddd-5890-467d-8feb-17c83f432111";
 
   it("lets a USER publish an owned signed image post", async () => {
-    const create = vi.fn(async ({ data }) => ({ id: "post-1", ...data }));
+    const queryRaw = vi.fn().mockResolvedValue([{
+      id: "post-1",
+      creatorId: owner.id,
+      content: "A morning update",
+      mediaUrl: "https://cdn.example.test/users/user-1/post.webp",
+      mediaType: "image/webp",
+      isPremium: false,
+      price: 0,
+    }]);
     const response = await createPostPost({
       database: {
-        mediaAsset: {
-          findFirst: vi.fn().mockResolvedValue({
-            id: assetId,
-            publicUrl: "https://cdn.example.test/users/user-1/post.webp",
-            mimeType: "image/webp",
-          }),
-        },
-        post: { create },
+        $queryRaw: queryRaw,
         follow: { findMany: vi.fn().mockResolvedValue([]) },
       },
     })(jsonRequest("POST", { content: "A morning update", mediaAssetId: assetId }), { user: owner });
@@ -450,37 +451,50 @@ describe("Blindly social launch post API", () => {
       isPremium: false,
       price: 0,
     });
-    expect(create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        creatorId: owner.id,
-        publishedAt: expect.any(Date),
-      }),
-    });
+    expect(queryRaw).toHaveBeenCalledOnce();
   });
 
   it("rejects a foreign, unverified, or wrong-kind media asset", async () => {
-    const findFirst = vi.fn().mockResolvedValue(null);
-    const create = vi.fn();
+    const queryRaw = vi.fn().mockResolvedValue([]);
     const response = await createPostPost({
       database: {
-        mediaAsset: { findFirst },
+        $queryRaw: queryRaw,
+      },
+    })(jsonRequest("POST", { content: "A morning update", mediaAssetId: assetId }), { user: owner });
+
+    expect(response.status).toBe(400);
+    expect(queryRaw).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a post when its authorized media is invalidated before conditional persistence", async () => {
+    const create = vi.fn().mockResolvedValue({ id: "post-1" });
+    const asset = { deletedAt: null };
+    const invalidateAsset = vi.fn(() => {
+      asset.deletedAt = new Date();
+    });
+    const queryRaw = vi.fn(async () => {
+      // A concurrent soft-delete wins after a stale authorization read.
+      invalidateAsset();
+      return asset.deletedAt ? [] : [{ id: "post-1" }];
+    });
+    const response = await createPostPost({
+      database: {
+        $queryRaw: queryRaw,
+        mediaAsset: {
+          // This stale authorization result models the pre-fix read/create race.
+          findFirst: vi.fn().mockResolvedValue({
+            publicUrl: "https://cdn.example.test/users/user-1/post.webp",
+            mimeType: "image/webp",
+          }),
+        },
         post: { create },
       },
     })(jsonRequest("POST", { content: "A morning update", mediaAssetId: assetId }), { user: owner });
 
     expect(response.status).toBe(400);
+    expect(invalidateAsset).toHaveBeenCalledOnce();
+    expect(queryRaw).toHaveBeenCalledOnce();
     expect(create).not.toHaveBeenCalled();
-    expect(findFirst).toHaveBeenCalledWith({
-      where: {
-        id: assetId,
-        ownerId: owner.id,
-        kind: "post",
-        mimeType: { in: ["image/jpeg", "image/png", "image/webp"] },
-        deletedAt: null,
-        verifiedAt: { not: null },
-      },
-      select: { publicUrl: true, mimeType: true },
-    });
   });
 
   it("returns 403 when another account attempts to edit a post", async () => {

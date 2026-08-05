@@ -1,9 +1,37 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { withAuth } from "@/lib/middleware";
 import { socialPostCreateSchema, validateBody } from "@/lib/validators";
 import { getFeedPage, parseFeedQuery } from "@/lib/consumer/feed";
 import { consumerErrorResponse } from "@/lib/consumer/http";
+
+const createPostFromVerifiedMedia = async (database, user, data) => {
+  const now = new Date();
+  const rows = await database.$queryRaw`
+    WITH verified_asset AS (
+      SELECT "publicUrl", "mimeType"
+      FROM "MediaAsset"
+      WHERE "id" = ${data.mediaAssetId}
+        AND "ownerId" = ${user.id}
+        AND "kind" = 'post'
+        AND "mimeType" IN ('image/jpeg', 'image/png', 'image/webp')
+        AND "deletedAt" IS NULL
+        AND "verifiedAt" IS NOT NULL
+      FOR SHARE
+    )
+    INSERT INTO "Post" (
+      "id", "creatorId", "content", "mediaUrl", "mediaType", "isPremium", "price",
+      "publishedAt", "createdAt", "updatedAt"
+    )
+    SELECT
+      ${randomUUID()}, ${user.id}, ${data.content}, "publicUrl", "mimeType", FALSE, 0,
+      ${now}, ${now}, ${now}
+    FROM verified_asset
+    RETURNING *
+  `;
+  return rows[0] ?? null;
+};
 
 export function createPostsGet({
   database = db,
@@ -33,36 +61,25 @@ export function createPostPost({ database = db, logError = console.error } = {})
         );
       }
 
-      let media = null;
+      let post;
       if (data.mediaAssetId) {
-        const asset = await database.mediaAsset.findFirst({
-          where: {
-            id: data.mediaAssetId,
-            ownerId: user.id,
-            kind: "post",
-            mimeType: { in: ["image/jpeg", "image/png", "image/webp"] },
-            deletedAt: null,
-            verifiedAt: { not: null },
-          },
-          select: { publicUrl: true, mimeType: true },
-        });
-        if (!asset) {
+        post = await createPostFromVerifiedMedia(database, user, data);
+        if (!post) {
           return NextResponse.json({ error: "Invalid post media" }, { status: 400 });
         }
-        media = asset;
+      } else {
+        post = await database.post.create({
+          data: {
+            creatorId: user.id,
+            content: data.content,
+            mediaUrl: null,
+            mediaType: null,
+            isPremium: false,
+            price: 0,
+            publishedAt: new Date(),
+          },
+        });
       }
-
-      const post = await database.post.create({
-        data: {
-          creatorId: user.id,
-          content: data.content,
-          mediaUrl: media?.publicUrl || null,
-          mediaType: media?.mimeType || null,
-          isPremium: false,
-          price: 0,
-          publishedAt: new Date(),
-        },
-      });
 
       try {
         const follows = await database.follow.findMany({
