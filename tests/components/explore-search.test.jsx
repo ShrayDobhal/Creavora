@@ -22,6 +22,15 @@ afterEach(() => {
 });
 
 describe("SearchPanel", () => {
+  it("identifies the Blindly search surface", () => {
+    render(<SearchPanel onQueryChange={vi.fn()} onSubmit={vi.fn()} />);
+
+    expect(screen.getByRole("searchbox")).toHaveAttribute(
+      "placeholder",
+      "Search Blindly creators, posts, and communities",
+    );
+  });
+
   it("debounces typed searches and sends only the latest trimmed query", async () => {
     vi.useFakeTimers();
     const onQueryChange = vi.fn();

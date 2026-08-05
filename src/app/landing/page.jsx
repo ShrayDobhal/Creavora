@@ -48,12 +48,12 @@ export default function Landing() {
     <div className="min-h-full bg-white">
       <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
         <div className="mx-auto flex min-h-[72px] max-w-[1500px] items-center gap-6 px-5 sm:px-8">
-          <Link href="/landing" className="flex items-center gap-2.5" aria-label="Creavora home">
+          <Link href="/landing" className="flex items-center gap-2.5" aria-label="Blindly home">
             <span className="relative grid h-8 w-8 place-items-center" aria-hidden="true">
               <span className="absolute inset-0 rounded-full border-[3.5px] border-[#141419] border-r-transparent" />
               <Sparkles size={11} className="absolute -right-0.5 -top-0.5 fill-brand-500 text-brand-500" />
             </span>
-            <span className="text-xl font-extrabold tracking-tight">Creavora</span>
+            <span className="text-xl font-extrabold tracking-tight">Blindly</span>
           </Link>
 
           <nav className="ml-4 hidden items-center gap-6 lg:flex" aria-label="Landing page">
@@ -72,7 +72,7 @@ export default function Landing() {
               Creator Login
             </Link>
             <Link href="/register" className="hidden h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-bold text-white hover:bg-brand-700 md:flex">
-              Join Creavora
+              Join Blindly
             </Link>
           </div>
         </div>
@@ -86,9 +86,9 @@ export default function Landing() {
                 Direct creator communities
               </p>
               <h1 className="mt-5 text-5xl font-extrabold leading-[1.03] tracking-[-0.045em] sm:text-6xl xl:text-[72px]">
-                Follow the work.
+                Follow the work
                 <br />
-                Know the creator.
+                Know the creator
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-muted">
                 Discover independent creators, follow new releases, and keep the conversations you care about in one place.
@@ -130,7 +130,7 @@ export default function Landing() {
             <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
               <div>
                 <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-700">Categories</p>
-                <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Start with what moves you.</h2>
+                <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Start with what moves you</h2>
               </div>
               <Link href="/explore" className="flex items-center gap-2 text-sm font-bold text-brand-700 hover:underline">
                 Browse active creator profiles <ArrowRight size={15} />
@@ -151,7 +151,7 @@ export default function Landing() {
           <div className="mx-auto grid max-w-[1500px] gap-10 overflow-hidden rounded-[2rem] bg-[#15131d] p-7 text-white sm:p-10 lg:grid-cols-[.8fr_1.2fr] lg:p-14">
             <div>
               <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-300">Grounded community evidence</p>
-              <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Community proof you can inspect.</h2>
+              <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Community proof you can inspect</h2>
               <p className="mt-4 max-w-lg text-sm leading-7 text-white/65">
                 No anonymous testimonials or inflated totals. The evidence is in product paths you can open and verify.
               </p>
@@ -182,7 +182,7 @@ export default function Landing() {
         <section className="border-y border-line bg-brand-50 px-5 py-16 sm:px-8">
           <div className="mx-auto flex max-w-5xl flex-col items-center text-center">
             <Lock size={24} className="text-brand-600" aria-hidden="true" />
-            <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-4xl">One platform, two clear entry points.</h2>
+            <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-4xl">One platform, two clear entry points</h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-muted">Join as a fan to discover creators, or enter the creator portal to manage your studio.</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link href="/register" className="flex h-12 items-center rounded-full bg-brand-600 px-6 text-sm font-bold text-white hover:bg-brand-700">Join as a fan</Link>
@@ -195,7 +195,7 @@ export default function Landing() {
 
       <footer className="px-5 py-8 sm:px-8">
         <div className="mx-auto flex max-w-[1500px] flex-col gap-3 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
-          <p>Creavora. Built for creators and the people who follow their work.</p>
+          <p>Blindly is built for creators and the people who follow their work</p>
           <div className="flex gap-5">
             <Link href="/explore" className="font-semibold hover:text-ink">Explore</Link>
             <Link href="/login" className="font-semibold hover:text-ink">User Login</Link>

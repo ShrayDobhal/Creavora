@@ -2,18 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Bell, ChevronDown, Compass, LayoutGrid, LogOut, Sparkles } from "lucide-react";
-
-const nav = [
-  { href: "/feed", label: "Feed", icon: LayoutGrid },
-  { href: "/explore", label: "Explore", icon: Compass },
-  { href: "/notifications", label: "Notifications", icon: Bell },
-];
+import { useRouter } from "next/navigation";
+import { Bell, ChevronDown, Compass, LogOut, Settings, Sparkles, UserRound } from "lucide-react";
+import ResponsiveNav from "@/components/consumer/ResponsiveNav";
 
 const accountLinks = [
-  ...nav,
-  { href: "/landing", label: "Landing page", icon: LogOut },
+  { href: "/profile", label: "Profile", icon: UserRound },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 const initials = (name) =>
@@ -40,18 +35,21 @@ export function Logo({ className = "" }) {
   return (
     <Link
       href="/landing"
-      title="Go to the Creavora landing page"
+      title="Go to the Blindly landing page"
       className={`flex w-fit items-center gap-2.5 ${className}`}
     >
       <Sparkles size={26} className="fill-brand-500 text-brand-500" />
-      <span className="text-[22px] font-extrabold tracking-tight">Creavora</span>
+      <span className="text-[22px] font-extrabold tracking-tight">Blindly</span>
     </Link>
   );
 }
 
 export function UserMenu({ name, label, sub, items, user }) {
   const [open, setOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  const [signingOut, setSigningOut] = useState(false);
   const ref = useRef(null);
+  const router = useRouter();
   const displayName = name || user?.name || "Account";
   const displayLabel = label ?? user?.name ?? "Account";
   const displaySub = sub ?? (user?.handle ? `@${user.handle}` : null);
@@ -62,9 +60,36 @@ export function UserMenu({ name, label, sub, items, user }) {
     const close = (event) => {
       if (!ref.current?.contains(event.target)) setOpen(false);
     };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
     document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, [open]);
+
+  const signOut = async () => {
+    setLogoutError("");
+    setSigningOut(true);
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      if (!response.ok) throw new Error("Logout request failed");
+      setOpen(false);
+      window.dispatchEvent(new Event("user-update"));
+      router.push("/landing");
+      router.refresh();
+    } catch {
+      setLogoutError("Unable to sign out, please try again");
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   return (
     <div className="relative" ref={ref}>
@@ -73,7 +98,7 @@ export function UserMenu({ name, label, sub, items, user }) {
         aria-expanded={open}
         aria-label="Open account menu"
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-2.5 rounded-full pl-1 pr-1 hover:bg-canvas"
+        className="flex items-center gap-2.5 rounded-full pl-1 pr-1 hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
       >
         <AccountAvatar name={displayName} size="h-[38px] w-[38px]" />
         {displayLabel ? (
@@ -105,12 +130,22 @@ export function UserMenu({ name, label, sub, items, user }) {
                 key={`${href}:${itemLabel}`}
                 href={href}
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-semibold hover:bg-canvas"
+                className="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-semibold hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600"
               >
                 <Icon size={16} className="text-ink/60" />
                 {itemLabel}
               </Link>
             ))}
+            <button
+              type="button"
+              onClick={signOut}
+              disabled={signingOut}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[13.5px] font-semibold text-rose-700 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 disabled:cursor-wait disabled:opacity-60"
+            >
+              <LogOut size={16} aria-hidden="true" />
+              {signingOut ? "Signing out" : "Sign out"}
+            </button>
+            {logoutError ? <p className="px-4 pb-1 text-xs font-semibold text-rose-700" role="alert">{logoutError}</p> : null}
           </div>
         </div>
       ) : null}
@@ -130,7 +165,7 @@ export function TopBar({ user, unreadNotifications }) {
           className="flex h-11 w-full max-w-[560px] items-center gap-3 rounded-full border border-line bg-canvas px-4 text-sm font-semibold text-muted hover:border-brand-300 hover:bg-white hover:text-ink"
         >
           <Compass size={17} aria-hidden="true" />
-          Explore Creavora
+          Explore Blindly
         </Link>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
@@ -149,36 +184,6 @@ export function TopBar({ user, unreadNotifications }) {
         <UserMenu user={user} />
       </div>
     </header>
-  );
-}
-
-function SideNav({ unreadNotifications }) {
-  const pathname = usePathname() || "";
-
-  return (
-    <nav className="space-y-1" aria-label="Consumer navigation">
-      {nav.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href || pathname.startsWith(`${href}/`);
-        const count = label === "Notifications" ? unreadNotifications : null;
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={`flex h-11 items-center gap-3.5 rounded-xl px-3.5 text-[14.5px] font-semibold transition ${
-              active ? "bg-brand-50 font-bold text-brand-700" : "text-ink/80 hover:bg-canvas"
-            }`}
-          >
-            <Icon size={19} className={active ? "text-brand-600" : "text-ink/70"} />
-            <span className="flex-1">{label}</span>
-            {typeof count === "number" && count > 0 ? (
-              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-brand-600 px-1.5 text-[11px] font-bold text-white">
-                {count}
-              </span>
-            ) : null}
-          </Link>
-        );
-      })}
-    </nav>
   );
 }
 
@@ -234,14 +239,15 @@ export default function FanLayout({ children, topbar }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen overflow-x-hidden bg-white">
       <TopBar {...topbar} user={user} unreadNotifications={unreadNotifications} />
       <div className="flex">
         <aside className="sticky top-[72px] hidden h-[calc(100vh-72px)] w-[244px] shrink-0 overflow-y-auto border-r border-line px-4 py-4 lg:block">
-          <SideNav unreadNotifications={unreadNotifications} />
+          <ResponsiveNav unreadNotifications={unreadNotifications} />
         </aside>
-        <main className="min-w-0 flex-1 bg-canvas">{children}</main>
+        <main className="min-w-0 flex-1 bg-canvas pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:pb-0">{children}</main>
       </div>
+      <ResponsiveNav variant="mobile" unreadNotifications={unreadNotifications} />
     </div>
   );
 }

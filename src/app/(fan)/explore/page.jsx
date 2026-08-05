@@ -112,9 +112,9 @@ export default function ExplorePage() {
     <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
       <header className="grid gap-6 rounded-3xl bg-[#17121f] p-6 text-white md:grid-cols-[1fr_minmax(320px,520px)] md:items-end md:p-8">
         <div>
-          <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-brand-300"><Compass size={15} /> Discover</p>
+          <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-brand-300"><Compass size={15} /> Discover Blindly</p>
           <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Explore</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">Search creators, posts, and communities.</p>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">Search Blindly creators, posts, and communities</p>
         </div>
         <div>
           <SearchPanel

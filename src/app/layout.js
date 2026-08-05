@@ -8,8 +8,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata = {
-  title: "Creavora – Creator Communities",
-  description: "Discover creators, follow their work, and join the conversation.",
+  title: "Blindly – Creator Communities",
+  description: "Discover creators, follow their work, and join the conversation",
 };
 
 export default function RootLayout({ children }) {

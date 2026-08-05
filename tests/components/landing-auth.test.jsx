@@ -4,7 +4,10 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/feed" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/feed",
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
 
 import Landing from "@/app/landing/page";
 import FanLayout, { TopBar } from "@/layouts/FanLayout";
@@ -22,7 +25,7 @@ describe("Landing auth entry points", () => {
     const userLoginLinks = screen.getAllByRole("link", { name: /user login/i });
     expect(userLoginLinks.length).toBeGreaterThan(0);
     userLoginLinks.forEach((link) => expect(link).toHaveAttribute("href", "/login"));
-    expect(screen.getByRole("link", { name: /join creavora/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /join blindly/i })).toHaveAttribute(
       "href",
       "/register",
     );
@@ -82,13 +85,13 @@ describe("Fan navigation", () => {
   it("offers a real Explore destination without inert search or create controls", () => {
     render(<TopBar />);
 
-    expect(screen.getByRole("link", { name: /explore creavora/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /explore blindly/i })).toHaveAttribute(
       "href",
       "/explore",
     );
     expect(screen.queryByPlaceholderText(/search creators/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /create/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Creavora" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Blindly" })).toHaveAttribute(
       "href",
       "/landing",
     );
@@ -116,8 +119,12 @@ describe("Fan navigation", () => {
     );
     const { container } = render(<FanLayout><p>Release content</p></FanLayout>);
 
-    expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute("href", "/feed");
-    expect(screen.getByRole("link", { name: "Explore" })).toHaveAttribute("href", "/explore");
+    screen.getAllByRole("link", { name: "Feed" }).forEach((link) =>
+      expect(link).toHaveAttribute("href", "/feed"),
+    );
+    screen.getAllByRole("link", { name: "Explore" }).forEach((link) =>
+      expect(link).toHaveAttribute("href", "/explore"),
+    );
     screen.getAllByRole("link", { name: "Notifications" }).forEach((link) =>
       expect(link).toHaveAttribute("href", "/notifications"),
     );

@@ -36,13 +36,13 @@ export function SearchPanel({ onQueryChange, onSubmit, busy = false }) {
   return (
     <form role="search" onSubmit={handleSubmit} className="flex w-full items-center gap-2 rounded-2xl border border-line bg-white p-2 shadow-sm focus-within:border-brand-300">
       <Search className="ml-2 shrink-0 text-muted" size={19} />
-      <label htmlFor="explore-search" className="sr-only">Search creators, posts, and communities</label>
+      <label htmlFor="explore-search" className="sr-only">Search Blindly creators, posts, and communities</label>
       <input
         id="explore-search"
         type="search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search creators, posts, and communities"
+        placeholder="Search Blindly creators, posts, and communities"
         className="h-10 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted"
       />
       <button

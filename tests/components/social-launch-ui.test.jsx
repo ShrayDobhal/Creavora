@@ -8,6 +8,8 @@ import { PostComposer } from "@/components/consumer/PostComposer";
 import { ProfileEditor } from "@/components/consumer/ProfileEditor";
 import { FeedCard } from "@/components/consumer/FeedCard";
 import SettingsPage from "@/app/(fan)/settings/page";
+import { UserMenu } from "@/layouts/FanLayout";
+import ResponsiveNav from "@/components/consumer/ResponsiveNav";
 import {
   completeImageUpload,
   createPost,
@@ -18,6 +20,14 @@ import {
   updateProfile,
   uploadSignedImage,
 } from "@/services/consumer-api";
+
+const push = vi.hoisted(() => vi.fn());
+const refresh = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/feed",
+  useRouter: () => ({ push, refresh }),
+}));
 
 vi.mock("@/services/consumer-api", () => ({
   completeImageUpload: vi.fn(),
@@ -195,5 +205,56 @@ describe("social launch UI", () => {
     expect(screen.queryByText(/billing|wallet|achievements/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Profile" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Privacy" })).toBeVisible();
+  });
+
+  it("only renders Feed, Explore, and Notifications in the mobile primary navigation", () => {
+    render(<ResponsiveNav variant="mobile" unreadNotifications={2} />);
+
+    const navigation = screen.getByRole("navigation", { name: "Mobile primary navigation" });
+    expect(navigation).toHaveTextContent("Feed");
+    expect(navigation).toHaveTextContent("Explore");
+    expect(navigation).toHaveTextContent("Notifications");
+    expect(navigation).not.toHaveTextContent(/collections|messages|wallet|rewards/i);
+  });
+
+  it("closes the account menu when Escape is pressed", async () => {
+    const user = userEvent.setup();
+    render(<UserMenu user={profile} />);
+
+    await user.click(screen.getByRole("button", { name: "Open account menu" }));
+    expect(screen.getByRole("link", { name: "Profile" })).toBeVisible();
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("link", { name: "Profile" })).not.toBeInTheDocument();
+  });
+
+  it("logs out before returning to the Blindly landing page", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<UserMenu user={profile} />);
+    await user.click(screen.getByRole("button", { name: "Open account menu" }));
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+    expect(push).toHaveBeenCalledWith("/landing");
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the account menu open and shows an inline error when logout fails", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 503 })));
+
+    render(<UserMenu user={profile} />);
+    await user.click(screen.getByRole("button", { name: "Open account menu" }));
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Unable to sign out, please try again");
+    expect(push).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
   });
 });
