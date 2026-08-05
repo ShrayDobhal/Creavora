@@ -1,6 +1,7 @@
 import { getDiscovery } from "./directory";
 import { getFeedPage } from "./feed";
 import { presentCreator } from "./presenters";
+import { sanitizePublicCopy } from "./public-copy";
 
 const STORY_LIMIT = 8;
 const LIVE_SESSION_LIMIT = 4;
@@ -59,7 +60,7 @@ const loadStories = async (database, viewerId) => {
     id: story.id,
     mediaUrl: story.mediaUrl,
     mediaType: story.mediaType,
-    caption: story.caption,
+    caption: sanitizePublicCopy(story.caption),
     createdAt: story.createdAt,
     creator: presentHomeCreator(story.user, viewerId),
   }));
@@ -90,7 +91,7 @@ export const getLiveSessions = async (
 
   return [...liveRows, ...scheduledRows].map((session) => ({
     id: session.id,
-    title: session.title,
+    title: sanitizePublicCopy(session.title),
     description: session.description,
     thumbnailUrl: session.thumbnailUrl,
     status: session.status,

@@ -7,7 +7,6 @@ import { PrismaClient } from "../src/generated/prisma/client.js";
 const DEMO_CONFIRMATION = "blindly-production-demo-content";
 const DEMO_EMAIL_DOMAIN = "blindly.demo";
 const DEMO_ID_PREFIX = "blindly-demo";
-const DEMO_POST_PREFIX = "[blindly-demo:";
 const HOUR_IN_MS = 60 * 60 * 1000;
 
 const DEMO_AVATARS = [
@@ -26,18 +25,18 @@ const DEMO_AVATARS = [
 ];
 
 const DEMO_COMMENTS = {
-  Fitness: "This demo fitness routine fits neatly into a busy Bengaluru morning.",
-  Sports: "The grassroots sports angle makes this demo post worth saving.",
-  Technology: "A useful technology demo for India-first creator workflows.",
-  Fashion: "Love seeing handloom fashion represented in the demo feed.",
-  Food: "This fictional food trail has my Mumbai weekend planned.",
-  Travel: "The travel demo gets the pace of Indian rail journeys right.",
-  Education: "A practical education idea for the demo learning community.",
-  Music: "This demo music session would make a lovely indie playlist opener.",
-  Art: "The Kolkata palette gives this fictional art studio real warmth.",
-  Comedy: "A very accurate comedy demo of the family group-chat experience.",
-  Gaming: "The gaming squad strategy in this demo post is wonderfully calm.",
-  Lifestyle: "This fictional lifestyle ritual feels made for monsoon evenings.",
+  Fitness: "This fitness routine fits neatly into a busy Bengaluru morning.",
+  Sports: "The grassroots sports angle makes this post worth saving.",
+  Technology: "A useful technology guide for India-first creator workflows.",
+  Fashion: "Love seeing handloom fashion represented in the feed.",
+  Food: "This food trail has my Mumbai weekend planned.",
+  Travel: "The travel story gets the pace of Indian rail journeys right.",
+  Education: "A practical education idea for the learning community.",
+  Music: "This music session would make a lovely indie playlist opener.",
+  Art: "The Kolkata palette gives this art studio real warmth.",
+  Comedy: "A very accurate comedy take on the family group-chat experience.",
+  Gaming: "The gaming squad strategy in this post is wonderfully calm.",
+  Lifestyle: "This lifestyle ritual feels made for monsoon evenings.",
 };
 
 function dateFrom(now, hours) {
@@ -82,14 +81,14 @@ export async function importBlindlyDemoContent({ database, now }) {
   for (const [index, fixture] of LAUNCH_CREATOR_FIXTURES.entries()) {
     const id = `${DEMO_ID_PREFIX}-user-${fixture.handle}`;
     const userData = {
-      name: `${fixture.name} (Blindly Demo)`,
+      name: fixture.name,
       email: `${DEMO_ID_PREFIX}-${fixture.handle}@${DEMO_EMAIL_DOMAIN}`,
-      handle: `${DEMO_ID_PREFIX}-${fixture.handle}`,
+      handle: fixture.handle,
       avatar: DEMO_AVATARS[index],
       role: "CREATOR",
-      bio: `Fictional demo creator for ${fixture.category}, based in ${fixture.city}, India. ${fixture.bio}`,
+      bio: fixture.bio,
       coverImage: feedFixturesByCategory.get(fixture.category)[0].mediaUrl,
-      roleTitle: `${fixture.category} Demo Creator`,
+      roleTitle: `${fixture.category} Creator`,
       location: `${fixture.city}, India`,
       verified: false,
       deletedAt: null,
@@ -119,7 +118,7 @@ export async function importBlindlyDemoContent({ database, now }) {
     const id = `${DEMO_ID_PREFIX}-post-${categorySlug}-${postIndex + 1}`;
     const postData = {
       creatorId: creator.user.id,
-      content: `${DEMO_POST_PREFIX}${categorySlug}:${postIndex + 1}] ${fixture.content}`,
+      content: fixture.content,
       mediaUrl: fixture.mediaUrl,
       mediaType: "image",
       isPremium: false,
@@ -151,7 +150,7 @@ export async function importBlindlyDemoContent({ database, now }) {
       userId: creator.user.id,
       mediaUrl: feedFixturesByCategory.get(creator.category)[1].mediaUrl,
       mediaType: "image",
-      caption: `[blindly-demo:story:${creator.category.toLowerCase()}] A fictional ${creator.category} story for previewing Blindly.`,
+      caption: `A ${creator.category} story worth sharing.`,
       viewsCount: 30 + index * 11,
       expiresAt: dateFrom(demoNow, 24 + index),
       deletedAt: null,
@@ -172,8 +171,8 @@ export async function importBlindlyDemoContent({ database, now }) {
     const creator = creators[creatorIndex];
     const liveData = {
       hostId: creator.user.id,
-      title: `[blindly-demo:live:${creator.category.toLowerCase()}] ${creator.category} creator room`,
-      description: `A scheduled fictional demo session hosted from ${creator.city}, India.`,
+      title: `${creator.category} creator room`,
+      description: `A scheduled session hosted from ${creator.city}, India.`,
       thumbnailUrl: feedFixturesByCategory.get(creator.category)[2].mediaUrl,
       status: "SCHEDULED",
       scheduledAt: dateFrom(demoNow, 24 * (liveIndex + 1)),
@@ -229,7 +228,7 @@ export async function importBlindlyDemoContent({ database, now }) {
     const commentData = {
       userId: commenter.user.id,
       postId: post.id,
-      content: `[blindly-demo:comment:${index + 1}] ${DEMO_COMMENTS[creator.category]}`,
+      content: DEMO_COMMENTS[creator.category],
       likesCount: 0,
       deletedAt: null,
     };

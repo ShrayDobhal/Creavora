@@ -61,4 +61,43 @@ describe("presentPost", () => {
     expect(creator.followerCount).toBe(17);
     expect(creator).not.toHaveProperty("subscriberCount");
   });
+
+  it("removes importer markers from public post and creator copy", () => {
+    const postRow = {
+      id: "p1",
+      creatorId: "c1",
+      mediaUrl: "https://cdn.test/a.jpg",
+      mediaType: "image",
+      isPremium: false,
+      likesCount: 0,
+      commentsCount: 0,
+      viewsCount: 0,
+      sharesCount: 0,
+      publishedAt: new Date("2026-08-01"),
+      likes: [],
+      bookmarks: [],
+      creatorFollowers: [],
+    };
+    const creatorRow = {
+      id: "c1",
+      avatar: null,
+      roleTitle: "Fitness Creator",
+      verified: false,
+      creatorProfile: { subscriberCount: 0 },
+      creatorFollowers: [],
+    };
+
+    expect(presentPost({
+      ...postRow,
+      content: "[blindly-demo:fitness:1] Morning mobility",
+      creator: {
+        ...creatorRow,
+        name: "Kabir (Blindly Demo)",
+        handle: "blindly-demo-coach-kabir",
+      },
+    }, "viewer-1")).toMatchObject({
+      content: "Morning mobility",
+      creator: { name: "Kabir", handle: "coach-kabir", roleTitle: "Fitness Creator" },
+    });
+  });
 });

@@ -125,7 +125,7 @@ describe("Blindly production demo-content importer", () => {
     expect(createDatabaseClient).not.toHaveBeenCalled();
   });
 
-  it("upserts the complete India launch experience in an explicit demo namespace", async () => {
+  it("upserts the complete India launch experience with clean public copy", async () => {
     const database = createDatabase();
     const now = new Date("2026-08-05T09:00:00.000Z");
 
@@ -156,12 +156,22 @@ describe("Blindly production demo-content importer", () => {
     const categoryByCreatorId = new Map(
       [...database.creatorProfile.records.values()].map((profile) => [profile.userId, profile.category]),
     );
+    const visibleCopy = [
+      ...users.flatMap((user) => [user.name, user.handle, user.bio, user.roleTitle]),
+      ...posts.map((post) => post.content),
+      ...stories.map((story) => story.caption),
+      ...liveSessions.map((session) => session.title),
+      ...[...database.comment.records.values()].map((comment) => comment.content),
+    ].join(" ");
 
     expect(users.every(({ email }) => email.endsWith("@blindly.demo"))).toBe(true);
-    expect(users.every(({ bio }) => bio.includes("Fictional demo creator"))).toBe(true);
+    expect(visibleCopy).not.toMatch(/\[blindly-demo:|\(Blindly Demo\)|blindly-demo-/i);
+    expect(users.map((user) => user.handle)).toEqual(
+      expect.arrayContaining(["aisha-bites", "coach-kabir", "tech-with-vihaan"]),
+    );
     expect(new Set(categories)).toEqual(new Set(LAUNCH_CATEGORIES));
     expect(posts.every(({ id, content }) => (
-      id.startsWith("blindly-demo-post-") && content.startsWith("[blindly-demo:")
+      id.startsWith("blindly-demo-post-") && !content.startsWith("[blindly-demo:")
     ))).toBe(true);
     expect(posts.every(({ mediaUrl }) => (
       ["images.unsplash.com", "images.pexels.com"].includes(new URL(mediaUrl).hostname)

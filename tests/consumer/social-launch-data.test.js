@@ -18,4 +18,10 @@ describe("Blindly social launch feed data", () => {
       expect(approvedImageHosts.has(new URL(post.mediaUrl).hostname)).toBe(true);
     }
   });
+
+  it("keeps source launch post copy free of importer namespace markers", () => {
+    expect(LAUNCH_FEED_FIXTURES.map((post) => post.content).join(" ")).not.toMatch(
+      /\[blindly-demo:|\(Blindly Demo\)|blindly-demo-/i,
+    );
+  });
 });

@@ -1,3 +1,5 @@
+import { sanitizePublicCopy } from "./public-copy";
+
 const includesViewer = (relations, viewerId) =>
   Array.isArray(relations) &&
   relations.some(
@@ -7,10 +9,10 @@ const includesViewer = (relations, viewerId) =>
 
 export const presentCreator = (row, viewerId) => ({
   id: row.id,
-  name: row.name,
-  handle: row.handle,
+  name: sanitizePublicCopy(row.name),
+  handle: sanitizePublicCopy(row.handle),
   avatar: row.avatar,
-  roleTitle: row.roleTitle,
+  roleTitle: sanitizePublicCopy(row.roleTitle),
   verified: row.verified,
   followerCount:
     typeof row._count?.followers === "number" ? row._count.followers : undefined,
@@ -22,7 +24,7 @@ export const presentPost = (row, viewerId) => {
 
   return {
     id: row.id,
-    content: isUnavailable ? null : row.content,
+    content: isUnavailable ? null : sanitizePublicCopy(row.content),
     mediaUrl: isUnavailable ? null : row.mediaUrl,
     mediaType: isUnavailable ? null : row.mediaType,
     isPremium: row.isPremium,
