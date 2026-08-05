@@ -6,6 +6,7 @@ const ACCESS_SECRET =
 
 const PUBLIC_ROUTES = [
   "/landing",
+  "/api/media",
   "/api/auth/login",
   "/api/auth/register",
   "/api/auth/refresh",

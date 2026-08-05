@@ -35,6 +35,11 @@ describe("actual consumer auth boundaries", () => {
     expect((await proxy(request("/api/auth/reset-password/private"))).status).toBe(401);
   });
 
+  it("allows verified database media to render without an auth token", async () => {
+    const response = await proxy(request("/api/media/9cd87ddd-5890-467d-8feb-17c83f432111"));
+    expect(response.status).toBe(200);
+  });
+
   it("redirects an unauthenticated root request to the public landing page", async () => {
     const response = await proxy(request("/"));
 
