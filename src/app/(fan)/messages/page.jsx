@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MessageCircle, RefreshCw, Search, Send } from "lucide-react";
+import { ArrowLeft, MessageCircle, RefreshCw, Search, Send } from "lucide-react";
 import { Card } from "@/ui/Bits.jsx";
 import {
   getConversations,
@@ -37,6 +37,7 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [sendError, setSendError] = useState("");
+  const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const threadRequestRef = useRef(0);
 
@@ -86,6 +87,7 @@ export default function MessagesPage() {
   };
 
   const selectConversation = (participantId) => {
+    setMobileThreadOpen(true);
     if (participantId === activeId) return;
     threadRequestRef.current += 1;
     setThread(null);
@@ -125,8 +127,11 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-72px)] gap-4 bg-canvas/30 p-4">
-      <Card className="flex w-full max-w-[344px] shrink-0 flex-col overflow-hidden">
+    <main
+      aria-label="Messages workspace"
+      className="flex min-h-[calc(100vh-72px)] flex-col gap-4 overflow-x-hidden bg-canvas/30 p-4 md:flex-row"
+    >
+      <Card className={`${mobileThreadOpen ? "hidden md:flex" : "flex"} w-full shrink-0 flex-col overflow-hidden md:w-[344px] md:max-w-[344px]`}>
         <div className="p-5 pb-3">
           <h1 className="text-[23px] font-extrabold tracking-tight">Messages</h1>
           <label className="relative mt-4 flex items-center">
@@ -172,7 +177,7 @@ export default function MessagesPage() {
         </div>
       </Card>
 
-      <Card className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <Card className={`${mobileThreadOpen ? "flex" : "hidden md:flex"} min-w-0 w-full flex-1 flex-col overflow-hidden`}>
         {!activeId ? (
           <div className="grid flex-1 place-items-center p-8 text-center text-sm text-muted">
             Select a conversation to read your messages.
@@ -182,6 +187,14 @@ export default function MessagesPage() {
         ) : thread ? (
           <>
             <header className="flex items-center gap-3 border-b border-line px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setMobileThreadOpen(false)}
+                aria-label="Back to conversations"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line text-ink md:hidden"
+              >
+                <ArrowLeft size={17} />
+              </button>
               <ParticipantAvatar participant={thread.participant} />
               <div>
                 <h2 className="font-extrabold text-ink">{thread.participant.name}</h2>
@@ -228,6 +241,6 @@ export default function MessagesPage() {
           <div className="grid flex-1 place-items-center p-8 text-sm text-rose-600" role="alert">{error || "Unable to load this conversation."}</div>
         )}
       </Card>
-    </div>
+    </main>
   );
 }

@@ -1,6 +1,7 @@
 export const CATEGORY_OPTIONS = [
   "Fashion",
   "Fitness",
+  "Sports",
   "Gaming",
   "Food",
   "Music",

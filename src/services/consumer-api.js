@@ -84,6 +84,12 @@ export function getDiscovery({ signal } = {}) {
   return request("/api/discovery", { signal });
 }
 
+export function getCreators({ category = "All", cursor, limit = 12, signal } = {}) {
+  const query = new URLSearchParams({ category, limit: String(limit) });
+  if (cursor) query.set("cursor", cursor);
+  return request(`/api/creators?${query}`, { signal });
+}
+
 export function search({ query, type = "all", signal }) {
   const params = new URLSearchParams({ q: query.trim(), type });
   return request(`/api/search?${params}`, { signal });
@@ -172,4 +178,19 @@ export function getBookmarks({ signal } = {}) {
 
 export function getSubscriptions({ signal } = {}) {
   return request("/api/subscriptions", { signal });
+}
+
+export function getNotifications({ signal } = {}) {
+  return request("/api/notifications", { signal });
+}
+
+export function markNotificationsRead({ signal } = {}) {
+  return request("/api/notifications", { method: "POST", signal });
+}
+
+export function deleteNotifications(id, { signal } = {}) {
+  const path = id
+    ? `/api/notifications?id=${encodeURIComponent(id)}`
+    : "/api/notifications";
+  return request(path, { method: "DELETE", signal });
 }

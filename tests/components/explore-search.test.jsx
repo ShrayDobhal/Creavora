@@ -172,25 +172,26 @@ describe("consumer API client", () => {
 describe("Explore page", () => {
   it("applies a category supplied by a Home link", async () => {
     window.history.replaceState({}, "", "/explore?category=Art");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            categories: ["Art", "Fitness"],
-            creators: [
-              { ...discoveryCreator, id: "artist", name: "Leela Menon", category: "Art" },
-              { ...discoveryCreator, id: "coach", name: "Dev Mehta", category: "Fitness" },
-            ],
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        ),
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          items: [
+            { ...discoveryCreator, id: "artist", name: "Leela Menon", category: "Art" },
+          ],
+          nextCursor: null,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
       ),
     );
+    vi.stubGlobal("fetch", fetchMock);
 
     render(<ExplorePage />);
 
     expect(await screen.findByText("Leela Menon")).toBeVisible();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/creators?category=Art&limit=12",
+      expect.objectContaining({ credentials: "same-origin" }),
+    );
     expect(screen.getByRole("button", { name: "Art" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -221,8 +222,7 @@ describe("Explore page", () => {
       vi.fn().mockResolvedValue(
         new Response(
           JSON.stringify({
-            categories: ["Art"],
-            creators: [
+            items: [
               {
                 id: "creator-api",
                 name: "Leela Menon",
@@ -237,6 +237,7 @@ describe("Explore page", () => {
                 category: "Art",
               },
             ],
+            nextCursor: null,
           }),
           { status: 200, headers: { "content-type": "application/json" } },
         ),
@@ -255,14 +256,68 @@ describe("Explore page", () => {
     expect(screen.getByRole("heading", { name: "Explore" })).toBeVisible();
   });
 
+  it("paginates the complete twelve-category creator directory", async () => {
+    const launchCategories = [
+      "Fitness",
+      "Sports",
+      "Technology",
+      "Fashion",
+      "Food",
+      "Travel",
+      "Education",
+      "Music",
+      "Art",
+      "Comedy",
+      "Gaming",
+      "Lifestyle",
+    ];
+    const firstPage = launchCategories.map((category, index) => ({
+      ...discoveryCreator,
+      id: `creator-${index + 1}`,
+      name: `${category} Creator`,
+      handle: `${category.toLowerCase()}-creator`,
+      category,
+    }));
+    const fetchMock = vi.fn((url) => Promise.resolve(new Response(
+      JSON.stringify(String(url).includes("cursor=")
+        ? {
+            items: [{
+              ...discoveryCreator,
+              id: "creator-13",
+              name: "Second Sports Creator",
+              handle: "second-sports-creator",
+              category: "Sports",
+            }],
+            nextCursor: null,
+          }
+        : { items: firstPage, nextCursor: "blindly-demo-user-page-12" }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    )));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExplorePage />);
+
+    for (const category of launchCategories) {
+      expect(await screen.findByText(`${category} Creator`)).toBeVisible();
+    }
+    expect(screen.getByRole("button", { name: "Sports" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Load more creators" }));
+
+    expect(await screen.findByText("Second Sports Creator")).toBeVisible();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/creators?category=All&limit=12&cursor=blindly-demo-user-page-12",
+      expect.objectContaining({ credentials: "same-origin" }),
+    );
+  });
+
   it("runs the same explicit search again", async () => {
     let searchCalls = 0;
     vi.stubGlobal(
       "fetch",
       vi.fn((url) => {
-        if (String(url).startsWith("/api/discovery")) {
+        if (String(url).startsWith("/api/creators")) {
           return Promise.resolve(
-            new Response(JSON.stringify({ categories: [], creators: [] }), {
+            new Response(JSON.stringify({ items: [], nextCursor: null }), {
               status: 200,
               headers: { "content-type": "application/json" },
             }),
@@ -326,8 +381,8 @@ describe("Explore page", () => {
       Promise.resolve(
         new Response(
           JSON.stringify(
-            String(url) === "/api/discovery"
-              ? { categories: [], creators: [] }
+            String(url).startsWith("/api/creators")
+              ? { items: [], nextCursor: null }
               : String(url) === "/api/search/history"
                 ? { id: "history-1", query: "Asha" }
                 : { creators: [], posts: [], communities: [] },
@@ -359,8 +414,8 @@ describe("Explore page", () => {
       vi.fn((url) => Promise.resolve(
         new Response(
           JSON.stringify(
-            String(url).startsWith("/api/discovery")
-              ? { categories: [], creators: [] }
+            String(url).startsWith("/api/creators")
+              ? { items: [], nextCursor: null }
               : {
                   creators: [],
                   posts: [],

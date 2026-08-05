@@ -38,13 +38,32 @@ describe("actual consumer auth boundaries", () => {
     expect(redirectLocation(response).searchParams.get("redirect")).toBe("/");
   });
 
-  it("routes authenticated users and creators away from the legacy root", async () => {
+  it("routes every authenticated role from root to its approved workspace", async () => {
     const userResponse = await proxy(request("/", signAccessToken("user-1", "USER")));
+    const fanResponse = await proxy(request("/", signAccessToken("fan-1", "FAN")));
     const creatorResponse = await proxy(
       request("/", signAccessToken("creator-1", "CREATOR")),
     );
+    const adminResponse = await proxy(request("/", signAccessToken("admin-1", "ADMIN")));
 
-    expect(redirectLocation(userResponse).pathname).toBe("/feed");
+    expect(redirectLocation(userResponse).pathname).toBe("/home");
+    expect(redirectLocation(fanResponse).pathname).toBe("/home");
+    expect(redirectLocation(creatorResponse).pathname).toBe("/studio/content");
+    expect(redirectLocation(adminResponse).pathname).toBe("/admin");
+  });
+
+  it("keeps Home private and redirects creators to their own workspace", async () => {
+    const anonymousResponse = await proxy(request("/home"));
+    const userResponse = await proxy(request("/home", signAccessToken("user-1", "USER")));
+    const fanResponse = await proxy(request("/home", signAccessToken("fan-1", "FAN")));
+    const creatorResponse = await proxy(
+      request("/home", signAccessToken("creator-1", "CREATOR")),
+    );
+
+    expect(redirectLocation(anonymousResponse).pathname).toBe("/login");
+    expect(redirectLocation(anonymousResponse).searchParams.get("redirect")).toBe("/home");
+    expect(userResponse.status).toBe(200);
+    expect(fanResponse.status).toBe(200);
     expect(redirectLocation(creatorResponse).pathname).toBe("/studio/content");
   });
 

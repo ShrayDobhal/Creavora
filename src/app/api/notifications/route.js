@@ -31,3 +31,27 @@ export const POST = withAuth(async (req, { user }) => {
     return NextResponse.json({ error: "Failed to mark notifications read" }, { status: 500 });
   }
 });
+
+export function createNotificationsDelete(database = db) {
+  return async (req, { user }) => {
+    try {
+      const params = new URL(req.url).searchParams;
+      const hasId = params.has("id");
+      const id = params.get("id")?.trim();
+
+      if (hasId && !id) {
+        return NextResponse.json({ error: "Notification id is required" }, { status: 400 });
+      }
+
+      const result = await database.notification.deleteMany({
+        where: { ...(id ? { id } : {}), userId: user.id },
+      });
+      return NextResponse.json({ success: true, deletedCount: result.count });
+    } catch (error) {
+      console.error("DELETE Notifications Error:", error);
+      return NextResponse.json({ error: "Failed to delete notifications" }, { status: 500 });
+    }
+  };
+}
+
+export const DELETE = withAuth(createNotificationsDelete());

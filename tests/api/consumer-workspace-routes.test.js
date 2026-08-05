@@ -347,6 +347,24 @@ it("returns bookmarked posts through the shared safe post presenter", async () =
   expect(findMany.mock.calls[0][0].include.post.include).not.toHaveProperty("creatorFollowers");
 });
 
+it("excludes saved posts owned by a soft-deleted creator", async () => {
+  const findMany = vi.fn().mockResolvedValue([]);
+
+  await createBookmarksGet({
+    database: { bookmark: { findMany } },
+  })(new Request("http://localhost/api/bookmarks"), { user: fixtureUser });
+
+  expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+    where: {
+      userId: fixtureUser.id,
+      post: {
+        deletedAt: null,
+        creator: { is: { deletedAt: null } },
+      },
+    },
+  }));
+});
+
 it.each([
   ["subscription purchase", createSubscriptionPost],
   ["wallet deposit", createWalletDepositPost],

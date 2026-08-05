@@ -220,6 +220,79 @@ describe("Blindly production demo-content importer", () => {
     expect(database.post.upsert).toHaveBeenCalledTimes(72);
   });
 
+  it("preserves seeded timestamps and live lifecycle state on a later rerun", async () => {
+    const database = createDatabase();
+    const firstRun = new Date("2026-08-05T09:00:00.000Z");
+    const laterRun = new Date("2026-08-12T17:30:00.000Z");
+
+    await importBlindlyDemoContent({ database, now: firstRun });
+
+    const post = [...database.post.records.values()][0];
+    const story = [...database.story.records.values()][0];
+    const live = [...database.liveSession.records.values()][0];
+    const startedAt = new Date("2026-08-06T09:05:00.000Z");
+    database.liveSession.records.set(live.id, {
+      ...live,
+      status: "LIVE",
+      startedAt,
+    });
+
+    await importBlindlyDemoContent({ database, now: laterRun });
+
+    expect(database.post.records.get(post.id).publishedAt).toEqual(post.publishedAt);
+    expect(database.story.records.get(story.id).expiresAt).toEqual(story.expiresAt);
+    expect(database.liveSession.records.get(live.id)).toMatchObject({
+      scheduledAt: live.scheduledAt,
+      status: "LIVE",
+      startedAt,
+    });
+  });
+
+  it("preserves persisted engagement aggregates on a later rerun", async () => {
+    const database = createDatabase();
+    await importBlindlyDemoContent({
+      database,
+      now: new Date("2026-08-05T09:00:00.000Z"),
+    });
+
+    const post = [...database.post.records.values()][0];
+    const story = [...database.story.records.values()][0];
+    const live = [...database.liveSession.records.values()][0];
+    const comment = [...database.comment.records.values()][0];
+    database.post.records.set(post.id, {
+      ...post,
+      likesCount: 41,
+      commentsCount: 12,
+      viewsCount: 902,
+      sharesCount: 27,
+    });
+    database.story.records.set(story.id, { ...story, viewsCount: 88 });
+    database.liveSession.records.set(live.id, {
+      ...live,
+      viewerCount: 64,
+      maxViewers: 91,
+    });
+    database.comment.records.set(comment.id, { ...comment, likesCount: 7 });
+
+    await importBlindlyDemoContent({
+      database,
+      now: new Date("2026-08-12T17:30:00.000Z"),
+    });
+
+    expect(database.post.records.get(post.id)).toMatchObject({
+      likesCount: 41,
+      commentsCount: 12,
+      viewsCount: 902,
+      sharesCount: 27,
+    });
+    expect(database.story.records.get(story.id).viewsCount).toBe(88);
+    expect(database.liveSession.records.get(live.id)).toMatchObject({
+      viewerCount: 64,
+      maxViewers: 91,
+    });
+    expect(database.comment.records.get(comment.id).likesCount).toBe(7);
+  });
+
   it("fails on importer-email collisions without altering the non-importer user", async () => {
     const database = createDatabase();
     const existingUser = {

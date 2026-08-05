@@ -20,7 +20,13 @@ export function createBookmarksGet({ database = db } = {}) {
   return async (_req, { user }) => {
     try {
       const rows = await database.bookmark.findMany({
-        where: { userId: user.id, post: { deletedAt: null } },
+        where: {
+          userId: user.id,
+          post: {
+            deletedAt: null,
+            creator: { is: { deletedAt: null } },
+          },
+        },
         orderBy: { createdAt: "desc" },
         include: { post: { include: postInclude(user.id) } },
         take: 50,

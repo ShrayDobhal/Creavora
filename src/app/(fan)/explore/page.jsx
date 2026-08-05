@@ -3,7 +3,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -16,7 +15,7 @@ import { SearchPanel } from "@/components/consumer/SearchPanel";
 import {
   createComment,
   getComments,
-  getDiscovery,
+  getCreators,
   saveSearchHistory,
   search,
   toggleBookmark,
@@ -61,9 +60,11 @@ export function CommunityCard({ community }) {
 }
 
 export default function ExplorePage() {
-  const [discovery, setDiscovery] = useState(null);
+  const [directory, setDirectory] = useState({ category: null, items: [], nextCursor: null });
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState("");
   const categoryFromUrl = useSyncExternalStore(
     subscribeToLocation,
     readCategoryFromLocation,
@@ -78,18 +79,19 @@ export default function ExplorePage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    getDiscovery({ signal: controller.signal })
+    getCreators({ category, signal: controller.signal })
       .then((result) => {
-        setDiscovery(result);
-        setStatus(result.creators.length ? "success" : "empty");
+        const items = Array.isArray(result?.items) ? result.items : [];
+        setDirectory({ category, items, nextCursor: result?.nextCursor || null });
+        setStatus(items.length ? "success" : "empty");
       })
       .catch((loadError) => {
         if (loadError.name === "AbortError") return;
         setError(loadError.message);
         setStatus("error");
-      });
+    });
     return () => controller.abort();
-  }, [reloadKey]);
+  }, [category, reloadKey]);
 
   useEffect(() => {
     if (!searchRequest) return undefined;
@@ -123,13 +125,41 @@ export default function ExplorePage() {
   const retryDiscovery = useCallback(() => {
     setStatus("loading");
     setError("");
+    setLoadMoreError("");
     setReloadKey((value) => value + 1);
   }, []);
-  const discoveredCreators = useMemo(() => {
-    if (!discovery) return [];
-    const creators = discovery.creators;
-    return category === "All" ? creators : creators.filter((creator) => creator.category === category);
-  }, [category, discovery]);
+  const selectCategory = useCallback((item) => {
+    if (item === category) return;
+    setStatus("loading");
+    setError("");
+    setLoadMoreError("");
+    setDirectory({ category: item, items: [], nextCursor: null });
+    setCategoryOverride(item);
+  }, [category]);
+  const loadMoreCreators = useCallback(async () => {
+    const cursor = directory.nextCursor;
+    if (!cursor || loadingMore) return;
+
+    setLoadingMore(true);
+    setLoadMoreError("");
+    try {
+      const result = await getCreators({ category, cursor });
+      const items = Array.isArray(result?.items) ? result.items : [];
+      setDirectory((current) => {
+        if (current.category !== category || current.nextCursor !== cursor) return current;
+        const existingIds = new Set(current.items.map((creator) => creator.id));
+        return {
+          category,
+          items: [...current.items, ...items.filter((creator) => !existingIds.has(creator.id))],
+          nextCursor: result?.nextCursor || null,
+        };
+      });
+    } catch (loadError) {
+      setLoadMoreError(loadError.message);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [category, directory.nextCursor, loadingMore]);
   const hasSearchResults = Object.values(searchState.results).some((items) => items.length);
 
   return (
@@ -192,17 +222,25 @@ export default function ExplorePage() {
             <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand-600">Categories</p>
             <h2 id="discovery-title" className="mt-1 text-2xl font-black">Discover creators</h2>
           </div>
-          {discovery ? (
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Creator categories">
-              {["All", ...discovery.categories].map((item) => (
-                <button key={item} type="button" aria-pressed={category === item} onClick={() => setCategoryOverride(item)} className={`h-9 shrink-0 rounded-full px-4 text-sm font-bold ${category === item ? "bg-brand-600 text-white" : "border border-line bg-white"}`}>{item}</button>
-              ))}
-            </div>
-          ) : null}
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Creator categories">
+            {["All", ...CATEGORY_OPTIONS].map((item) => (
+              <button key={item} type="button" aria-pressed={category === item} onClick={() => selectCategory(item)} className={`h-9 shrink-0 rounded-full px-4 text-sm font-bold ${category === item ? "bg-brand-600 text-white" : "border border-line bg-white"}`}>{item}</button>
+            ))}
+          </div>
           {status !== "success" ? (
             <div className="mt-5"><AsyncState status={status} error={error} onRetry={retryDiscovery} emptyTitle="No creators to discover yet" emptyMessage="The directory will update as creator profiles go live." /></div>
-          ) : discoveredCreators.length ? (
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{discoveredCreators.map((creator) => <CreatorCard key={creator.id} creator={creator} onFollow={toggleFollow} />)}</div>
+          ) : directory.items.length ? (
+            <>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{directory.items.map((creator) => <CreatorCard key={creator.id} creator={creator} onFollow={toggleFollow} />)}</div>
+              {loadMoreError ? <p className="mt-4 text-center text-sm font-semibold text-rose-600" role="alert">{loadMoreError}</p> : null}
+              {directory.nextCursor ? (
+                <div className="mt-6 text-center">
+                  <button type="button" onClick={loadMoreCreators} disabled={loadingMore} className="h-11 rounded-xl border border-line bg-white px-5 text-sm font-bold text-ink disabled:cursor-not-allowed disabled:opacity-60">
+                    {loadingMore ? "Loading more creators…" : "Load more creators"}
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : (
             <div className="mt-5"><AsyncState status="empty" emptyTitle={`No ${category} creators yet`} emptyMessage="Choose another category to keep exploring." /></div>
           )}

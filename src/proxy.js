@@ -14,6 +14,7 @@ const AUTH_ENTRY_ROUTES = ["/login", "/creator-login", "/register"];
 const CREATOR_ROUTES = ["/studio"];
 const CREATOR_API_ROUTES = ["/api/studio"];
 const USER_ROUTES = [
+  "/home",
   "/feed",
   "/explore",
   "/live",
@@ -43,7 +44,7 @@ const loginRedirect = (req, pathname) => {
 const roleHome = (role) => {
   if (role === "CREATOR") return "/studio/content";
   if (role === "ADMIN") return "/admin";
-  if (role === "USER" || role === "FAN") return "/feed";
+  if (role === "USER" || role === "FAN") return "/home";
   return null;
 };
 

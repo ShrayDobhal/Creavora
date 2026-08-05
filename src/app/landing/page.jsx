@@ -12,6 +12,7 @@ import {
   Plane,
   Shirt,
   Sparkles,
+  Trophy,
   UtensilsCrossed,
 } from "lucide-react";
 import Image from "next/image";
@@ -34,6 +35,7 @@ const categoryIcons = {
   Gaming: Gamepad2,
   Lifestyle: Coffee,
   Music,
+  Sports: Trophy,
   Technology: Cpu,
   Travel: Plane,
 };

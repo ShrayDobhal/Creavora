@@ -5,7 +5,7 @@ import { presentCreator, presentPost } from "./presenters";
 const creatorQuerySchema = z.object({
   category: z.enum(["All", ...CATEGORY_OPTIONS]).default("All"),
   q: z.string().trim().max(100).default(""),
-  cursor: z.uuid().nullable().default(null),
+  cursor: z.string().trim().min(1).max(191).regex(/^[A-Za-z0-9_-]+$/).nullable().default(null),
   limit: z.coerce.number().int().min(1).max(30).default(12),
 });
 

@@ -29,6 +29,20 @@ import { createDiscoveryGet } from "@/app/api/discovery/route";
 
 const viewer = { id: "viewer-1", name: "Viewer" };
 const authContext = { user: viewer, params: Promise.resolve({}) };
+const launchCategories = [
+  "Fitness",
+  "Sports",
+  "Technology",
+  "Fashion",
+  "Food",
+  "Travel",
+  "Education",
+  "Music",
+  "Art",
+  "Comedy",
+  "Gaming",
+  "Lifestyle",
+];
 
 const json = (response) => response.json();
 
@@ -276,10 +290,39 @@ describe("consumer API contracts", () => {
     });
   });
 
+  it.each(launchCategories)("accepts the imported %s creator category", async (category) => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const response = await createCreatorsGet({ user: { findMany } })(
+      new Request(`http://localhost/api/creators?category=${encodeURIComponent(category)}`),
+      authContext,
+    );
+
+    expect(response.status).toBe(200);
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        creatorProfile: { is: { category } },
+      }),
+    }));
+  });
+
+  it("accepts a deterministic demo creator id as a pagination cursor", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const response = await createCreatorsGet({ user: { findMany } })(
+      new Request("http://localhost/api/creators?cursor=blindly-demo-user-page-12"),
+      authContext,
+    );
+
+    expect(response.status).toBe(200);
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+      cursor: { id: "blindly-demo-user-page-12" },
+      skip: 1,
+    }));
+  });
+
   it("returns 400 for a malformed creator cursor", async () => {
     const findMany = vi.fn().mockResolvedValue([]);
     const response = await createCreatorsGet({ user: { findMany } })(
-      new Request("http://localhost/api/creators?cursor=not-a-uuid"),
+      new Request("http://localhost/api/creators?cursor=bad%20cursor!"),
       authContext,
     );
 

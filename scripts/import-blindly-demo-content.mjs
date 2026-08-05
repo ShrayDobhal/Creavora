@@ -131,9 +131,17 @@ export async function importBlindlyDemoContent({ database, now }) {
       publishedAt: dateFrom(demoNow, -(index + 1) * 3),
       deletedAt: null,
     };
+    const {
+      likesCount: _likesCount,
+      commentsCount: _commentsCount,
+      viewsCount: _viewsCount,
+      sharesCount: _sharesCount,
+      publishedAt: _publishedAt,
+      ...postUpdateData
+    } = postData;
     posts.push(await database.post.upsert({
       where: { id },
-      update: postData,
+      update: postUpdateData,
       create: { id, ...postData },
     }));
   }
@@ -148,9 +156,14 @@ export async function importBlindlyDemoContent({ database, now }) {
       expiresAt: dateFrom(demoNow, 24 + index),
       deletedAt: null,
     };
+    const {
+      viewsCount: _viewsCount,
+      expiresAt: _expiresAt,
+      ...storyUpdateData
+    } = storyData;
     await database.story.upsert({
       where: { id: `${DEMO_ID_PREFIX}-story-${creator.handle}` },
-      update: storyData,
+      update: storyUpdateData,
       create: { id: `${DEMO_ID_PREFIX}-story-${creator.handle}`, ...storyData },
     });
   }
@@ -169,9 +182,18 @@ export async function importBlindlyDemoContent({ database, now }) {
       viewerCount: 0,
       maxViewers: 0,
     };
+    const {
+      status: _status,
+      scheduledAt: _scheduledAt,
+      startedAt: _startedAt,
+      endedAt: _endedAt,
+      viewerCount: _viewerCount,
+      maxViewers: _maxViewers,
+      ...liveUpdateData
+    } = liveData;
     await database.liveSession.upsert({
       where: { id: `${DEMO_ID_PREFIX}-live-${creator.handle}` },
-      update: liveData,
+      update: liveUpdateData,
       create: { id: `${DEMO_ID_PREFIX}-live-${creator.handle}`, ...liveData },
     });
   }
@@ -211,9 +233,10 @@ export async function importBlindlyDemoContent({ database, now }) {
       likesCount: 0,
       deletedAt: null,
     };
+    const { likesCount: _likesCount, ...commentUpdateData } = commentData;
     await database.comment.upsert({
       where: { id: `${DEMO_ID_PREFIX}-comment-${creator.handle}` },
-      update: commentData,
+      update: commentUpdateData,
       create: { id: `${DEMO_ID_PREFIX}-comment-${creator.handle}`, ...commentData },
     });
   }
