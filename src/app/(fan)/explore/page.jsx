@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { Compass, Lock, Users } from "lucide-react";
 import { AsyncState } from "@/components/consumer/AsyncState";
 import { CreatorCard } from "@/components/consumer/CreatorCard";
@@ -17,8 +23,15 @@ import {
   toggleFollow,
   toggleLike,
 } from "@/services/consumer-api";
+import { CATEGORY_OPTIONS } from "@/lib/consumer/constants";
 
 const emptySearch = { creators: [], posts: [], communities: [] };
+
+const subscribeToLocation = () => () => {};
+const readCategoryFromLocation = () => {
+  const requested = new URLSearchParams(window.location.search).get("category");
+  return CATEGORY_OPTIONS.includes(requested) ? requested : "All";
+};
 
 export function CommunityCard({ community }) {
   return (
@@ -51,7 +64,13 @@ export default function ExplorePage() {
   const [discovery, setDiscovery] = useState(null);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
-  const [category, setCategory] = useState("All");
+  const categoryFromUrl = useSyncExternalStore(
+    subscribeToLocation,
+    readCategoryFromLocation,
+    () => "All",
+  );
+  const [categoryOverride, setCategoryOverride] = useState(null);
+  const category = categoryOverride ?? categoryFromUrl;
   const [reloadKey, setReloadKey] = useState(0);
   const [searchRequest, setSearchRequest] = useState(null);
   const [searchState, setSearchState] = useState({ status: "idle", results: emptySearch, error: "" });
@@ -176,7 +195,7 @@ export default function ExplorePage() {
           {discovery ? (
             <div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Creator categories">
               {["All", ...discovery.categories].map((item) => (
-                <button key={item} type="button" aria-pressed={category === item} onClick={() => setCategory(item)} className={`h-9 shrink-0 rounded-full px-4 text-sm font-bold ${category === item ? "bg-brand-600 text-white" : "border border-line bg-white"}`}>{item}</button>
+                <button key={item} type="button" aria-pressed={category === item} onClick={() => setCategoryOverride(item)} className={`h-9 shrink-0 rounded-full px-4 text-sm font-bold ${category === item ? "bg-brand-600 text-white" : "border border-line bg-white"}`}>{item}</button>
               ))}
             </div>
           ) : null}

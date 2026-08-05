@@ -24,6 +24,7 @@ const decodeCursor = (cursor, mode) => {
       value.mode !== mode ||
       typeof value.id !== "string" ||
       !value.id ||
+      typeof value.publishedAt !== "string" ||
       Number.isNaN(publishedAt.getTime())
     ) {
       throw new Error();

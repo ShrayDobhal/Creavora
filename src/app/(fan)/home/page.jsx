@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import { AsyncState } from "@/components/consumer/AsyncState";
 import HomeDashboard from "@/components/consumer/HomeDashboard";
-import { getConsumerHome, toggleFollow } from "@/services/consumer-api";
+import {
+  getConsumerHome,
+  toggleBookmark,
+  toggleFollow,
+  toggleLike,
+} from "@/services/consumer-api";
 
 export default function HomePage() {
   const [data, setData] = useState(null);
@@ -46,5 +51,12 @@ export default function HomePage() {
     );
   }
 
-  return <HomeDashboard data={data} onFollow={toggleFollow} />;
+  return (
+    <HomeDashboard
+      data={data}
+      onFollow={toggleFollow}
+      onLike={toggleLike}
+      onBookmark={toggleBookmark}
+    />
+  );
 }

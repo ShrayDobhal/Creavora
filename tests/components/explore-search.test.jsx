@@ -15,10 +15,22 @@ import {
 } from "@/services/consumer-api";
 import ExplorePage from "@/app/(fan)/explore/page";
 
+const discoveryCreator = {
+  handle: "creator-handle",
+  avatar: null,
+  coverImage: null,
+  roleTitle: "Creator",
+  bio: null,
+  verified: true,
+  followerCount: 4,
+  isFollowing: false,
+};
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  window.history.replaceState({}, "", "/explore");
 });
 
 describe("SearchPanel", () => {
@@ -158,6 +170,34 @@ describe("consumer API client", () => {
 });
 
 describe("Explore page", () => {
+  it("applies a category supplied by a Home link", async () => {
+    window.history.replaceState({}, "", "/explore?category=Art");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            categories: ["Art", "Fitness"],
+            creators: [
+              { ...discoveryCreator, id: "artist", name: "Leela Menon", category: "Art" },
+              { ...discoveryCreator, id: "coach", name: "Dev Mehta", category: "Fitness" },
+            ],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      ),
+    );
+
+    render(<ExplorePage />);
+
+    expect(await screen.findByText("Leela Menon")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Art" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.queryByText("Dev Mehta")).not.toBeInTheDocument();
+  });
+
   it("does not invent missing follower counts in search creator cards", () => {
     render(
       <CreatorCard

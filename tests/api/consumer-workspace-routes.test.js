@@ -6,6 +6,7 @@ vi.mock("@/lib/middleware", () => ({
 }));
 
 import { createConsumerHomeGet } from "@/app/api/consumer/home/route";
+import { createLiveGet } from "@/app/api/live/route";
 
 const fixtureUser = { id: "viewer-1", name: "Riya", role: "USER" };
 
@@ -120,4 +121,45 @@ it("returns bounded viewer-safe Home data", async () => {
   expect(findStories.mock.calls[0][0].take).toBeLessThanOrEqual(12);
   expect(findLiveSessions.mock.calls[0][0].take).toBeLessThanOrEqual(12);
   expect(findSubscriptions.mock.calls[0][0].take).toBeLessThanOrEqual(12);
+});
+
+it("returns bounded live and scheduled sessions from database rows", async () => {
+  const findMany = vi.fn().mockResolvedValue([
+    {
+      id: "live-real",
+      title: "Studio check-in",
+      description: "A read-only broadcast listing",
+      thumbnailUrl: "https://cdn.example.test/live-real.jpg",
+      status: "LIVE",
+      scheduledAt: null,
+      startedAt: new Date("2026-08-05T10:00:00.000Z"),
+      viewerCount: 14,
+      host: creator,
+    },
+  ]);
+
+  const response = await createLiveGet({
+    database: { liveSession: { findMany } },
+  })(new Request("http://localhost/api/live"), { user: fixtureUser });
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    items: [
+      {
+        id: "live-real",
+        title: "Studio check-in",
+        status: "LIVE",
+        host: { id: "creator-1", name: "Asha", handle: "asha" },
+      },
+    ],
+  });
+  expect(findMany).toHaveBeenCalledWith(
+    expect.objectContaining({
+      where: {
+        status: { in: ["LIVE", "SCHEDULED"] },
+        host: { is: { deletedAt: null } },
+      },
+      take: 12,
+    }),
+  );
 });

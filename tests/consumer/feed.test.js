@@ -217,4 +217,26 @@ describe("feed services", () => {
       }),
     ).rejects.toThrow("Invalid feed cursor");
   });
+
+  it("rejects a trending cursor with a non-string publication time", async () => {
+    const fixture = makeTransactionFixture();
+    const cursor = Buffer.from(
+      JSON.stringify({
+        mode: "trending",
+        likesCount: 9,
+        commentsCount: 4,
+        publishedAt: null,
+        id: "post-b",
+      }),
+    ).toString("base64url");
+
+    await expect(
+      getFeedPage(fixture.db, "viewer-1", {
+        mode: "trending",
+        limit: 4,
+        cursor,
+      }),
+    ).rejects.toThrow("Invalid feed cursor");
+    expect(fixture.calls.postFindMany).toHaveLength(0);
+  });
 });

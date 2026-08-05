@@ -27,6 +27,10 @@ export function getConsumerHome({ signal } = {}) {
   return request("/api/consumer/home", { signal });
 }
 
+export function getLiveSessions({ signal } = {}) {
+  return request("/api/live", { signal });
+}
+
 export function createPost(input, { signal } = {}) {
   return request("/api/posts", { method: "POST", signal, body: input });
 }

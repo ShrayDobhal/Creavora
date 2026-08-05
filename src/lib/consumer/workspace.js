@@ -65,11 +65,23 @@ const loadStories = async (database, viewerId) => {
   }));
 };
 
-const loadLiveSessions = async (database, viewerId) => {
+export const getLiveSessions = async (
+  database,
+  viewerId,
+  { limit = 12 } = {},
+) => {
   const rows = await database.liveSession.findMany({
-    where: { status: "LIVE", host: { is: { deletedAt: null } } },
-    orderBy: [{ startedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-    take: LIVE_SESSION_LIMIT,
+    where: {
+      status: { in: ["LIVE", "SCHEDULED"] },
+      host: { is: { deletedAt: null } },
+    },
+    orderBy: [
+      { status: "asc" },
+      { scheduledAt: "asc" },
+      { startedAt: "desc" },
+      { id: "desc" },
+    ],
+    take: Math.min(limit, 12),
     include: { host: { include: creatorInclude(viewerId) } },
   });
 
@@ -128,7 +140,7 @@ export async function getConsumerHome(database, viewerId) {
       cursor: null,
     }),
     loadStories(database, viewerId),
-    loadLiveSessions(database, viewerId),
+    getLiveSessions(database, viewerId, { limit: LIVE_SESSION_LIMIT }),
     loadSubscriptions(database, viewerId),
     countUnreadNotifications(database, viewerId),
   ]);

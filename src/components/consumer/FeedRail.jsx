@@ -1,6 +1,6 @@
 import { FeedCard } from "./FeedCard";
 
-export function FeedRail({ posts }) {
+export function FeedRail({ posts, onLike, onBookmark }) {
   if (!posts.length) {
     return (
       <p className="rounded-2xl border border-dashed border-line bg-white p-5 text-sm text-muted">
@@ -13,7 +13,7 @@ export function FeedRail({ posts }) {
     <div className="grid min-w-0 gap-5 xl:grid-cols-2">
       {posts.map((post) => (
         <div key={post.id} className="min-w-0">
-          <FeedCard post={post} />
+          <FeedCard post={post} onLike={onLike} onBookmark={onBookmark} />
         </div>
       ))}
     </div>
