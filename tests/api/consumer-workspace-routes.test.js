@@ -7,6 +7,14 @@ vi.mock("@/lib/middleware", () => ({
 
 import { createConsumerHomeGet } from "@/app/api/consumer/home/route";
 import { createLiveGet } from "@/app/api/live/route";
+import {
+  createMessagesGet,
+  createMessagesPost,
+} from "@/app/api/messages/route";
+import { createBookmarksGet } from "@/app/api/bookmarks/route";
+import { createSubscriptionPost } from "@/app/api/subscriptions/route";
+import { createWalletDepositPost } from "@/app/api/wallet/deposit/route";
+import { createRewardPost } from "@/app/api/rewards/route";
 
 const fixtureUser = { id: "viewer-1", name: "Riya", role: "USER" };
 
@@ -204,4 +212,160 @@ it("keeps a scheduled session when live rows exceed the live API limit", async (
       }),
     ]),
   );
+});
+
+it("lists persisted conversations and sends by receiver id", async () => {
+  const user = {
+    id: "11111111-1111-4111-8111-111111111111",
+    name: "Riya",
+  };
+  const recipient = {
+    id: "22222222-2222-4222-8222-222222222222",
+    name: "Asha",
+    handle: "asha",
+    avatar: null,
+    roleTitle: "Textile artist",
+    verified: true,
+  };
+  const row = {
+    id: "message-1",
+    senderId: recipient.id,
+    receiverId: user.id,
+    content: "Welcome to the studio",
+    mediaUrl: null,
+    mediaType: null,
+    isAudio: false,
+    duration: null,
+    status: "READ",
+    createdAt: new Date("2026-08-05T10:00:00.000Z"),
+    sender: recipient,
+    receiver: user,
+  };
+  const findMany = vi.fn().mockResolvedValue([row]);
+  const create = vi.fn().mockResolvedValue({
+    ...row,
+    id: "message-2",
+    senderId: user.id,
+    receiverId: recipient.id,
+    content: "Hello",
+    status: "SENT",
+    createdAt: new Date("2026-08-05T10:01:00.000Z"),
+  });
+  const database = {
+    message: { findMany, create },
+    user: { findFirst: vi.fn().mockResolvedValue(recipient) },
+  };
+
+  const response = await createMessagesGet({ database })(
+    new Request("http://localhost/api/messages"),
+    { user },
+  );
+  const body = await response.json();
+
+  expect(response.status).toBe(200);
+  expect(body.items[0]).toMatchObject({
+    participant: { id: recipient.id, name: "Asha", handle: "asha" },
+    lastMessage: { id: "message-1", content: "Welcome to the studio", mine: false },
+  });
+  expect(findMany.mock.calls[0][0]).toMatchObject({
+    where: {
+      OR: [{ senderId: user.id }, { receiverId: user.id }],
+      deletedAt: null,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const threadResponse = await createMessagesGet({ database })(
+    new Request(`http://localhost/api/messages?userId=${recipient.id}`),
+    { user },
+  );
+  expect(await threadResponse.json()).toMatchObject({
+    participant: { id: recipient.id },
+    items: [{ id: "message-1", content: "Welcome to the studio", mine: false }],
+  });
+
+  const sendResponse = await createMessagesPost({ database })(
+    new Request("http://localhost/api/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ receiverId: recipient.id, content: "Hello" }),
+    }),
+    { user },
+  );
+
+  expect(sendResponse.status).toBe(201);
+  expect(create).toHaveBeenCalledWith({
+    data: {
+      senderId: user.id,
+      receiverId: recipient.id,
+      content: "Hello",
+    },
+  });
+});
+
+it("returns bookmarked posts through the shared safe post presenter", async () => {
+  const bookmark = {
+    id: "bookmark-1",
+    createdAt: new Date("2026-08-05T11:00:00.000Z"),
+    post: {
+      ...post,
+      creator: { ...creator, followers: [] },
+      bookmarks: [{ userId: fixtureUser.id }],
+    },
+  };
+  const findMany = vi.fn().mockResolvedValue([bookmark]);
+
+  const response = await createBookmarksGet({
+    database: { bookmark: { findMany } },
+  })(new Request("http://localhost/api/bookmarks"), { user: fixtureUser });
+  const body = await response.json();
+
+  expect(response.status).toBe(200);
+  expect(body.items).toEqual([
+    expect.objectContaining({
+      id: "post-1",
+      content: "A short mobility practice",
+      creator: expect.objectContaining({ id: "creator-1", name: "Asha" }),
+      viewer: expect.objectContaining({ isBookmarked: true }),
+    }),
+  ]);
+  expect(findMany.mock.calls[0][0]).toMatchObject({
+    where: { userId: fixtureUser.id, post: { deletedAt: null } },
+    orderBy: { createdAt: "desc" },
+    include: {
+      post: {
+        include: {
+          creator: { include: { followers: { where: { followerId: fixtureUser.id } } } },
+          bookmarks: { where: { userId: fixtureUser.id } },
+        },
+      },
+    },
+  });
+  expect(findMany.mock.calls[0][0].include.post.include).not.toHaveProperty("creatorFollowers");
+});
+
+it.each([
+  ["subscription purchase", createSubscriptionPost],
+  ["wallet deposit", createWalletDepositPost],
+  ["reward claim", createRewardPost],
+])("rejects unconfigured %s without mutating data", async (_name, createHandler) => {
+  const database = {
+    $transaction: vi.fn(),
+    user: { update: vi.fn() },
+    notification: { create: vi.fn() },
+  };
+  const response = await createHandler({ database })(
+    new Request("http://localhost/api/unavailable", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    }),
+    { user: fixtureUser },
+  );
+
+  expect(response.status).toBe(501);
+  expect(await response.json()).toEqual({ error: "This feature is not available yet" });
+  expect(database.$transaction).not.toHaveBeenCalled();
+  expect(database.user.update).not.toHaveBeenCalled();
+  expect(database.notification.create).not.toHaveBeenCalled();
 });

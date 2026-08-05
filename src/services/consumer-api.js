@@ -134,3 +134,42 @@ export function createComment(postId, content, { signal } = {}) {
     body: { content: content.trim() },
   });
 }
+
+export function getConversations({ signal } = {}) {
+  return request("/api/messages", { signal });
+}
+
+export function getMessageThread(userId, { signal } = {}) {
+  return request(`/api/messages?userId=${encodeURIComponent(userId)}`, { signal });
+}
+
+export function sendMessage(receiverId, content, { signal } = {}) {
+  return request("/api/messages", {
+    method: "POST",
+    signal,
+    body: { receiverId, content: content.trim() },
+  });
+}
+
+export function getCollections({ signal } = {}) {
+  return request("/api/collections", { signal });
+}
+
+export function createCollection(input, { signal } = {}) {
+  return request("/api/collections", { method: "POST", signal, body: input });
+}
+
+export function deleteCollection(id, { signal } = {}) {
+  return request(`/api/collections?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    signal,
+  });
+}
+
+export function getBookmarks({ signal } = {}) {
+  return request("/api/bookmarks", { signal });
+}
+
+export function getSubscriptions({ signal } = {}) {
+  return request("/api/subscriptions", { signal });
+}

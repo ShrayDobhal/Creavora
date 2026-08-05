@@ -2,116 +2,139 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { withAuth } from "@/lib/middleware";
 import { sendMessageSchema, validateBody } from "@/lib/validators";
+import { consumerErrorResponse } from "@/lib/consumer/http";
 
-// GET messages between authenticated user and active contact
-export const GET = withAuth(async (req, { user }) => {
-  try {
-    const { searchParams } = new URL(req.url);
-    const activeContactName = searchParams.get("active");
+const participantSelect = {
+  id: true,
+  name: true,
+  handle: true,
+  avatar: true,
+  roleTitle: true,
+  verified: true,
+};
 
-    if (!activeContactName) {
-      return NextResponse.json({ error: "Active contact name is required" }, { status: 400 });
-    }
-
-    // Get active contact
-    const contact = await db.user.findFirst({
-      where: {
-        OR: [
-          { name: activeContactName },
-          { handle: activeContactName.toLowerCase().replace(/[^a-z0-9]/g, "") }
-        ],
-        deletedAt: null
-      }
-    });
-
-    if (!contact) {
-      return NextResponse.json([]); // Return empty if contact isn't found
-    }
-
-    // Fetch messages between user and contact
-    const messages = await db.message.findMany({
-      where: {
-        OR: [
-          { senderId: user.id, receiverId: contact.id },
-          { senderId: contact.id, receiverId: user.id }
-        ],
-        deletedAt: null
-      },
-      orderBy: {
-        createdAt: "asc"
-      }
-    });
-
-    // Map to frontend expected message object format
-    const formattedMessages = messages.map(m => ({
-      id: m.id,
-      mine: m.senderId === user.id,
-      sender: m.senderId === user.id ? null : contact.name,
-      lines: m.content ? [m.content] : [],
-      isAudio: m.isAudio,
-      duration: m.duration,
-      time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }));
-
-    return NextResponse.json(formattedMessages);
-  } catch (error) {
-    console.error("GET Messages Error:", error);
-    return NextResponse.json({ error: "Database error" }, { status: 500 });
-  }
+const presentParticipant = (participant) => ({
+  id: participant.id,
+  name: participant.name,
+  handle: participant.handle,
+  avatar: participant.avatar ?? null,
+  roleTitle: participant.roleTitle ?? null,
+  verified: Boolean(participant.verified),
 });
 
-// POST send new message from authenticated user
-export const POST = withAuth(async (req, { user }) => {
-  try {
-    const body = await req.json();
-    const { error, data } = validateBody(sendMessageSchema, body);
+const presentMessage = (message, viewerId) => ({
+  id: message.id,
+  content: message.content,
+  mediaUrl: message.mediaUrl ?? null,
+  mediaType: message.mediaType ?? null,
+  isAudio: Boolean(message.isAudio),
+  duration: message.duration ?? null,
+  status: message.status,
+  createdAt: message.createdAt,
+  mine: message.senderId === viewerId,
+});
 
-    if (error) {
-      return NextResponse.json({ error: "Validation failed", details: error }, { status: 400 });
-    }
+const messageInclude = {
+  sender: { select: participantSelect },
+  receiver: { select: participantSelect },
+};
 
-    let receiverId = data.receiverId;
+export function createMessagesGet({ database = db } = {}) {
+  return async (req, { user }) => {
+    try {
+      const participantId = new URL(req.url).searchParams.get("userId");
 
-    // Handle legacy payload where receiverName is sent
-    if (!receiverId && body.receiverName) {
-      const rec = await db.user.findFirst({
-        where: { name: body.receiverName, deletedAt: null }
+      if (participantId) {
+        const participant = await database.user.findFirst({
+          where: { id: participantId, deletedAt: null },
+          select: participantSelect,
+        });
+        if (!participant || participant.id === user.id) {
+          return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+        }
+
+        const rows = await database.message.findMany({
+          where: {
+            OR: [
+              { senderId: user.id, receiverId: participant.id },
+              { senderId: participant.id, receiverId: user.id },
+            ],
+            deletedAt: null,
+          },
+          orderBy: { createdAt: "asc" },
+          include: messageInclude,
+        });
+
+        return NextResponse.json({
+          participant: presentParticipant(participant),
+          items: rows.map((message) => presentMessage(message, user.id)),
+        });
+      }
+
+      const rows = await database.message.findMany({
+        where: {
+          OR: [{ senderId: user.id }, { receiverId: user.id }],
+          deletedAt: null,
+        },
+        orderBy: { createdAt: "desc" },
+        include: messageInclude,
       });
-      if (rec) {
-        receiverId = rec.id;
+      const seen = new Set();
+      const items = [];
+
+      for (const message of rows) {
+        const participant = message.senderId === user.id ? message.receiver : message.sender;
+        if (!participant || seen.has(participant.id)) continue;
+        seen.add(participant.id);
+        items.push({
+          participant: presentParticipant(participant),
+          lastMessage: presentMessage(message, user.id),
+        });
       }
-    }
 
-    if (!receiverId) {
-      return NextResponse.json({ error: "Receiver not found" }, { status: 404 });
+      return NextResponse.json({ items });
+    } catch (error) {
+      return consumerErrorResponse(error, "Failed to load messages");
     }
+  };
+}
 
-    // Create the message in database
-    const message = await db.message.create({
-      data: {
-        senderId: user.id,
-        receiverId: receiverId,
-        content: data.content || null,
-        isAudio: data.isAudio || false,
-        duration: data.duration || null,
+export function createMessagesPost({ database = db } = {}) {
+  return async (req, { user }) => {
+    try {
+      const body = await req.json();
+      const { error, data } = validateBody(sendMessageSchema, body);
+      const content = data?.content?.trim();
+
+      if (error || !data?.receiverId || !content) {
+        return NextResponse.json(
+          { error: "A receiver and message are required", ...(error ? { details: error } : {}) },
+          { status: 400 },
+        );
       }
-    });
 
-    const senderName = user.name;
+      const participant = await database.user.findFirst({
+        where: { id: data.receiverId, deletedAt: null },
+        select: participantSelect,
+      });
+      if (!participant || participant.id === user.id) {
+        return NextResponse.json({ error: "Receiver not found" }, { status: 404 });
+      }
 
-    const formattedMessage = {
-      id: message.id,
-      mine: true,
-      sender: null,
-      lines: message.content ? [message.content] : [],
-      isAudio: message.isAudio,
-      duration: message.duration,
-      time: new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
+      const message = await database.message.create({
+        data: {
+          senderId: user.id,
+          receiverId: participant.id,
+          content,
+        },
+      });
 
-    return NextResponse.json(formattedMessage);
-  } catch (error) {
-    console.error("POST Message Error:", error);
-    return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
-  }
-});
+      return NextResponse.json(presentMessage(message, user.id), { status: 201 });
+    } catch (error) {
+      return consumerErrorResponse(error, "Failed to send message");
+    }
+  };
+}
+
+export const GET = withAuth(createMessagesGet());
+export const POST = withAuth(createMessagesPost());

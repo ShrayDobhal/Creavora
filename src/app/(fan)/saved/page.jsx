@@ -1,123 +1,105 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";;
-import { Bookmark, Heart, MessageSquare, Trash2, ExternalLink } from "lucide-react";
-import { Card, SectionHead } from "@/ui/Bits.jsx";
-import { Avatar, Photo, Verified } from "@/ui/Media.jsx";
-import { slug } from "@/data.js";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Bookmark, Heart, MessageSquare, RefreshCw, Trash2 } from "lucide-react";
+import { Card } from "@/ui/Bits.jsx";
+import EditorialImage from "@/components/consumer/EditorialImage";
+import { getBookmarks, toggleBookmark } from "@/services/consumer-api";
 
-const initialSavedPosts = [
-  {
-    id: 1,
-    author: "Ananya Sharma",
-    role: "Fashion Creator",
-    time: "Saved 2 days ago",
-    body: "Morning vibes ☀️ A little peek into my peaceful Sunday. Full vlog dropping soon for my premium fam! ✨",
-    seed: "ananya-cup",
-    likes: "1.2K",
-    comments: 128,
-  },
-  {
-    id: 2,
-    author: "Wander With Karan",
-    role: "Travel Creator",
-    time: "Saved 4 days ago",
-    body: "Exploring the untouched beauty of Himachal! 🏔️❄️ Road trips are always special.",
-    seed: "karan-himachal",
-    likes: "1.8K",
-    comments: 96,
-  },
-  {
-    id: 3,
-    author: "Meera Art",
-    role: "Digital Artist",
-    time: "Saved 1 week ago",
-    body: "Behind the scenes from today's photoshoot. Choosing colors that pop! 🎨🖌️",
-    seed: "meera-studio",
-    likes: "2.3K",
-    comments: 245,
-  },
-];
+export default function SavedPage() {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [removingId, setRemovingId] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-export default function SavedPosts() {
-  const [posts, setPosts] = useState(initialSavedPosts);
+  useEffect(() => {
+    const controller = new AbortController();
+    getBookmarks({ signal: controller.signal })
+      .then((data) => setPosts(Array.isArray(data?.items) ? data.items : []))
+      .catch((loadError) => {
+        if (loadError.name !== "AbortError") setError(loadError.message);
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [reloadKey]);
 
-  const handleUnsave = (id) => {
-    setPosts(posts.filter((p) => p.id !== id));
+  const retry = () => {
+    setLoading(true);
+    setError("");
+    setReloadKey((current) => current + 1);
+  };
+
+  const handleRemove = async (post) => {
+    setRemovingId(post.id);
+    setError("");
+    try {
+      const result = await toggleBookmark(post.id);
+      if (result.isBookmarked === false) {
+        setPosts((current) => current.filter((item) => item.id !== post.id));
+      } else {
+        setError("The post is still saved. Please try again.");
+      }
+    } catch (removeError) {
+      setError(removeError.message);
+    } finally {
+      setRemovingId(null);
+    }
   };
 
   return (
-    <div className="max-w-[800px] mx-auto px-6 py-6 min-h-[calc(100vh-72px)] bg-canvas">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[25px] font-extrabold tracking-tight flex items-center gap-2">
-            <Bookmark className="text-brand-600 fill-brand-600" size={24} /> Saved Posts
-          </h1>
-          <p className="text-[14px] text-muted">Access all your bookmarked posts and content in one place</p>
+    <div className="mx-auto min-h-[calc(100vh-72px)] max-w-[860px] bg-canvas px-6 py-6">
+      <h1 className="flex items-center gap-2 text-[25px] font-extrabold tracking-tight">
+        <Bookmark className="fill-brand-600 text-brand-600" size={24} /> Saved Posts
+      </h1>
+      <p className="text-sm text-muted">Posts you bookmark appear here.</p>
+
+      {error && (
+        <div role="alert" className="mt-5 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <span>{error}</span>
+          {posts.length === 0 && <button onClick={retry} className="inline-flex items-center gap-1 font-bold"><RefreshCw size={14} /> Try again</button>}
         </div>
-      </div>
+      )}
 
-      {posts.length > 0 ? (
-        <div className="grid gap-5">
-          {posts.map((p) => (
-            <Card key={p.id} className="p-5 flex flex-col md:flex-row gap-5 hover:border-brand-200 transition">
-              {/* thumbnail */}
-              <Photo seed={p.seed} className="w-full md:w-[200px] h-[130px] rounded-xl shrink-0" />
-
-              {/* content */}
-              <div className="flex-1 flex flex-col justify-between min-w-0">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Avatar name={p.author} size={24} />
-                      <div className="leading-tight">
-                        <Link href={`/creator/${slug(p.author)}`} className="text-[13.5px] font-bold text-ink hover:underline flex items-center gap-0.5">
-                          {p.author} <Verified size={11} />
-                        </Link>
-                      </div>
-                    </div>
-                    <span className="text-[11px] font-semibold text-muted">{p.time}</span>
-                  </div>
-                  <p className="mt-3 text-[13px] text-ink/90 leading-relaxed line-clamp-2">
-                    {p.body}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-line flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-muted text-[12px]">
-                    <span className="flex items-center gap-1">
-                      <Heart size={14} className="text-rose-500 fill-rose-500" /> {p.likes}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MessageSquare size={14} /> {p.comments}
-                    </span>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleUnsave(p.id)}
-                      className="grid h-8 w-8 place-items-center rounded-lg border border-rose-100 hover:border-rose-200 text-rose-500 hover:bg-rose-50"
-                      title="Unsave Post"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    <Link href={`/creator/${slug(p.author)}`}
-                      className="flex h-8 items-center gap-1 rounded-lg bg-brand-600 px-3.5 text-[12px] font-bold text-white hover:bg-brand-700"
-                    >
-                      View Post <ExternalLink size={11} />
-                    </Link>
-                  </div>
+      {loading ? (
+        <p className="mt-6 rounded-2xl border border-line bg-white p-12 text-center text-sm text-muted" role="status">Loading saved posts…</p>
+      ) : posts.length === 0 ? (
+        <div className="mt-6 rounded-2xl border border-line bg-white p-12 text-center">
+          <Bookmark className="mx-auto text-muted" size={34} />
+          <h2 className="mt-3 font-extrabold text-ink">No saved posts</h2>
+          <p className="mt-1 text-sm text-muted">Use the bookmark action on a post to keep it here.</p>
+        </div>
+      ) : (
+        <div className="mt-6 grid gap-5">
+          {posts.map((post) => (
+            <Card key={post.id} className="overflow-hidden sm:flex">
+              {post.mediaUrl ? (
+                <EditorialImage src={post.mediaUrl} alt={`Post by ${post.creator.name}`} className="h-48 w-full object-cover sm:h-auto sm:w-52" fallbackLabel="Post media unavailable" />
+              ) : (
+                <div className="grid h-32 w-full shrink-0 place-items-center bg-brand-50 text-brand-700 sm:h-auto sm:w-52"><Bookmark size={28} /></div>
+              )}
+              <div className="flex min-w-0 flex-1 flex-col p-5">
+                <Link href={`/creator/${encodeURIComponent(post.creator.handle)}`} className="font-extrabold text-ink hover:underline">
+                  {post.creator.name}
+                </Link>
+                {post.creator.roleTitle && <p className="text-xs text-muted">{post.creator.roleTitle}</p>}
+                <p className="mt-3 flex-1 text-sm leading-relaxed text-ink">{post.content || "This post is not currently available."}</p>
+                <div className="mt-4 flex items-center gap-4 border-t border-line pt-3 text-xs text-muted">
+                  <span className="inline-flex items-center gap-1"><Heart size={14} /> {post.counts.likes}</span>
+                  <span className="inline-flex items-center gap-1"><MessageSquare size={14} /> {post.counts.comments}</span>
+                  <button
+                    onClick={() => handleRemove(post)}
+                    disabled={removingId === post.id}
+                    aria-label={`Remove saved post by ${post.creator.name}`}
+                    className="ml-auto inline-flex items-center gap-1.5 font-bold text-rose-600 disabled:opacity-50"
+                  >
+                    <Trash2 size={14} /> {removingId === post.id ? "Removing…" : "Remove"}
+                  </button>
                 </div>
               </div>
             </Card>
           ))}
-        </div>
-      ) : (
-        <div className="py-16 text-center bg-white rounded-2xl border border-line">
-          <Bookmark className="mx-auto text-muted mb-3" size={36} />
-          <p className="text-[15.5px] font-extrabold text-ink">No saved posts</p>
-          <p className="text-[13px] text-muted mt-1">Bookmarked posts will appear here for easy access later</p>
         </div>
       )}
     </div>

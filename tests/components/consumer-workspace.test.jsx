@@ -12,6 +12,10 @@ import RewardsPage from "@/app/(fan)/rewards/page";
 import LivePage from "@/app/(fan)/live/page";
 import { CommunityCard } from "@/app/(fan)/explore/page";
 import FeedPage from "@/app/(fan)/feed/page";
+import MessagesPage from "@/app/(fan)/messages/page";
+import CollectionsPage from "@/app/(fan)/collections/page";
+import SavedPage from "@/app/(fan)/saved/page";
+import SubscriptionsPage from "@/app/(fan)/subscriptions/page";
 import { getLiveSessions } from "@/lib/consumer/workspace";
 
 vi.mock("next/navigation", () => ({
@@ -358,4 +362,137 @@ it("composes Feed discovery from the consumer Home response", async () => {
     "/explore?category=Art",
   );
   expect(screen.getByText("Studio live")).toBeVisible();
+});
+
+it("loads persisted conversations and sends to the selected participant id", async () => {
+  const fetch = vi.fn((url, options) => {
+    const path = String(url);
+    const payload = options?.method === "POST"
+      ? {
+          id: "message-2",
+          content: "Hello Asha",
+          mine: true,
+          status: "SENT",
+          createdAt: "2026-08-05T10:01:00.000Z",
+        }
+      : path.includes("userId=")
+        ? {
+            participant: homeCreator,
+            items: [{
+              id: "message-1",
+              content: "Welcome to the studio",
+              mine: false,
+              status: "READ",
+              createdAt: "2026-08-05T10:00:00.000Z",
+            }],
+          }
+        : {
+            items: [{
+              participant: homeCreator,
+              lastMessage: {
+                id: "message-1",
+                content: "Welcome to the studio",
+                mine: false,
+                status: "READ",
+                createdAt: "2026-08-05T10:00:00.000Z",
+              },
+            }],
+          };
+    return Promise.resolve(new Response(JSON.stringify(payload), { status: 200 }));
+  });
+  vi.stubGlobal("fetch", fetch);
+
+  render(<MessagesPage />);
+
+  expect(await screen.findByText("Welcome to the studio")).toBeVisible();
+  fireEvent.change(screen.getByRole("textbox", { name: "Message Asha Rao" }), {
+    target: { value: "Hello Asha" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+  await waitFor(() => expect(fetch).toHaveBeenCalledWith(
+    "/api/messages",
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ receiverId: "creator-1", content: "Hello Asha" }),
+    }),
+  ));
+  expect(screen.queryByText("Ananya Sharma")).not.toBeInTheDocument();
+});
+
+it("creates and removes persisted collections with an inline confirmation", async () => {
+  let collections = [{
+    id: "collection-1",
+    name: "Studio references",
+    description: "Pieces to revisit",
+    postsCount: 2,
+  }];
+  const fetch = vi.fn((url, options = {}) => {
+    if (options.method === "POST") {
+      const input = JSON.parse(options.body);
+      const created = { id: "collection-2", postsCount: 0, ...input };
+      collections = [created, ...collections];
+      return Promise.resolve(new Response(JSON.stringify(created), { status: 201 }));
+    }
+    if (options.method === "DELETE") {
+      collections = collections.filter((item) => !String(url).includes(item.id));
+      return Promise.resolve(new Response(JSON.stringify({ success: true }), { status: 200 }));
+    }
+    return Promise.resolve(new Response(JSON.stringify(collections), { status: 200 }));
+  });
+  vi.stubGlobal("fetch", fetch);
+
+  render(<CollectionsPage />);
+
+  expect(await screen.findByText("Studio references")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Create collection" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "Collection name" }), {
+    target: { value: "Ideas" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save collection" }));
+  expect(await screen.findByText("Ideas")).toBeVisible();
+
+  fireEvent.click(screen.getByRole("button", { name: "Delete Studio references" }));
+  expect(screen.getByText("Delete Studio references?")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Confirm delete Studio references" }));
+  await waitFor(() => expect(screen.queryByText("Studio references")).not.toBeInTheDocument());
+});
+
+it("loads saved posts and removes a bookmark through the persisted endpoint", async () => {
+  const fetch = vi.fn((url, options) => Promise.resolve(new Response(
+    JSON.stringify(options?.method === "POST"
+      ? { isBookmarked: false }
+      : { items: [homePost] }),
+    { status: 200 },
+  )));
+  vi.stubGlobal("fetch", fetch);
+
+  render(<SavedPage />);
+
+  expect(await screen.findByText("A new studio piece")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Remove saved post by Asha Rao" }));
+  await waitFor(() => expect(fetch).toHaveBeenCalledWith(
+    "/api/posts/post-1/bookmark",
+    expect.objectContaining({ method: "POST" }),
+  ));
+  await waitFor(() => expect(screen.queryByText("A new studio piece")).not.toBeInTheDocument());
+});
+
+it("shows persisted subscriptions as read-only without purchase or cancel actions", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    items: [{
+      id: "subscription-1",
+      tier: "Studio",
+      renewsOn: "2026-09-05",
+      status: "ACTIVE",
+      creator: homeCreator,
+    }],
+  }), { status: 200 })));
+
+  render(<SubscriptionsPage />);
+
+  expect(await screen.findByText("Asha Rao")).toBeVisible();
+  expect(screen.getByText("Studio")).toBeVisible();
+  expect(screen.queryByRole("button", { name: /subscribe|cancel|purchase/i })).not.toBeInTheDocument();
+  expect(screen.queryByText("Recommended Creators for You")).not.toBeInTheDocument();
 });
