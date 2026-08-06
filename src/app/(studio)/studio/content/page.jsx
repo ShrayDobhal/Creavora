@@ -141,9 +141,9 @@ export default function StudioContent() {
   };
 
   return (
-    <div className="flex gap-5 px-6 py-6 min-h-[calc(100vh-76px)] bg-canvas/30">
+    <div className="grid min-h-[calc(100vh-76px)] min-w-0 gap-5 bg-canvas/30 px-3 py-5 sm:px-6 2xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between">
+        <div className="flex min-w-0 flex-col items-start justify-between gap-4 sm:flex-row">
           <div>
             <h1 className="text-[25px] font-extrabold tracking-tight">Content</h1>
             <p className="mt-1 text-[14px] text-muted">
@@ -375,7 +375,7 @@ export default function StudioContent() {
         </section>
       </div>
 
-      <aside className="hidden w-[352px] shrink-0 space-y-4 xl:block">
+      <aside className="hidden min-w-0 space-y-4 2xl:block">
         <Card className="p-4 bg-white">
           <SectionHead
             title="Content Overview"

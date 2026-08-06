@@ -28,7 +28,7 @@ import { Home, User } from "lucide-react";
 import { slug } from "../data.js";
 
 const creatorMenu = [
-  { href: "/profile", label: "My Profile", icon: User },
+  { href: "/studio/settings", label: "Edit Profile", icon: User },
   { href: "/studio/content", label: "Content", icon: LayoutDashboard },
   { href: "/studio/earnings", label: "Earnings", icon: DollarSign },
   { href: "/studio/community", label: "Community", icon: Users },
@@ -40,7 +40,7 @@ const nav = [
   { href: "/studio/content", label: "Dashboard", icon: LayoutDashboard, end: true },
   { href: "/studio/content", label: "Content", icon: LayoutGrid },
   { href: "/studio/live", label: "Live & Events", icon: Tv },
-  { href: "/studio/messages", label: "Messages", icon: MessageSquare, count: 23 },
+  { href: "/studio/messages", label: "Messages", icon: MessageSquare },
   { href: "/studio/subscribers", label: "Subscribers", icon: Users },
   { href: "/studio/earnings", label: "Earnings", icon: DollarSign },
   { href: "/studio/analytics", label: "Analytics", icon: TrendingUp },
@@ -209,7 +209,7 @@ export default function CreatorLayout({ children, topbar }) {
           {user && (
             <Link href={`/creator/${user.handle}`} className="block rounded-2xl bg-brand-50/70 p-3.5 hover:bg-brand-50">
               <div className="flex items-center gap-3">
-                <Avatar name={user.name} size={46} />
+                <Avatar name={user.name} src={user.avatar} size={46} />
                 <div className="min-w-0">
                   <p className="flex items-center gap-1 text-[14.5px] font-bold">
                     {user.name} <Verified size={14} />

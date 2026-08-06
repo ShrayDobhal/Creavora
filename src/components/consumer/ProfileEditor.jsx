@@ -10,9 +10,18 @@ import {
 } from "@/services/consumer-api";
 
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const maxImageBytes = 5 * 1024 * 1024;
+const maxImageBytes = 4 * 1024 * 1024;
 
 const canCreateObjectUrl = () => typeof URL !== "undefined" && typeof URL.createObjectURL === "function";
+
+async function hasValidImageSignature(file) {
+  if (typeof file.slice !== "function") return false;
+  const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  if (file.type === "image/jpeg") return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (file.type === "image/png") return [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((byte, index) => bytes[index] === byte);
+  if (file.type === "image/webp") return String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" && String.fromCharCode(...bytes.slice(8, 12)) === "WEBP";
+  return false;
+}
 
 async function dimensionsFor(file) {
   if (typeof navigator !== "undefined" && /jsdom/i.test(navigator.userAgent)) return { width: 1, height: 1 };
@@ -28,6 +37,41 @@ async function dimensionsFor(file) {
     return { width: image.naturalWidth || image.width || 1, height: image.naturalHeight || image.height || 1 };
   } catch {
     return { width: 1, height: 1 };
+  } finally {
+    URL.revokeObjectURL(source);
+  }
+}
+
+async function prepareImage(file) {
+  if (typeof navigator !== "undefined" && /jsdom/i.test(navigator.userAgent)) return file;
+  if (!canCreateObjectUrl() || typeof document === "undefined") return file;
+  const dimensions = await dimensionsFor(file);
+  const scale = Math.min(1, 2048 / Math.max(dimensions.width, dimensions.height));
+  const width = Math.max(1, Math.round(dimensions.width * scale));
+  const height = Math.max(1, Math.round(dimensions.height * scale));
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext?.("2d");
+  if (!context) return file;
+
+  const source = URL.createObjectURL(file);
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = reject;
+      element.src = source;
+    });
+    canvas.width = width;
+    canvas.height = height;
+    context.drawImage(image, 0, 0, width, height);
+    const outputType = file.type === "image/jpeg" ? "image/jpeg" : "image/webp";
+    const result = await new Promise((resolve) => canvas.toBlob(resolve, outputType, 0.86));
+    if (!result || result.size >= file.size) return file;
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "profile-image";
+    const extension = outputType === "image/webp" ? "webp" : "jpg";
+    return new File([result], `${baseName}.${extension}`, { type: outputType, lastModified: file.lastModified });
+  } catch {
+    return file;
   } finally {
     URL.revokeObjectURL(source);
   }
@@ -64,21 +108,32 @@ export function ProfileEditor({ profile, onSaved }) {
     setValues((current) => ({ ...current, [field]: value }));
   }
 
-  function chooseImage(kind, event) {
+  async function chooseImage(kind, event) {
     const file = event.target.files?.[0];
     if (!file) return;
     setError("");
-    if (!acceptedTypes.has(file.type) || file.size > maxImageBytes) {
-      setError("Choose a JPEG, PNG, or WebP image no larger than 5 MiB");
+    if (!acceptedTypes.has(file.type)) {
+      setError("Choose a JPEG, PNG, or WebP image");
+      event.target.value = "";
+      return;
+    }
+    if (!(await hasValidImageSignature(file))) {
+      setError("The selected file does not contain a valid image");
+      event.target.value = "";
+      return;
+    }
+    const prepared = await prepareImage(file);
+    if (prepared.size > maxImageBytes) {
+      setError("Image must be 4 MiB or smaller after compression");
       event.target.value = "";
       return;
     }
     const setFile = kind === "avatar" ? setAvatarFile : setCoverFile;
     const setPreview = kind === "avatar" ? setAvatarPreview : setCoverPreview;
-    setFile(file);
+    setFile(prepared);
     setPreview((current) => {
       if (current) URL.revokeObjectURL?.(current);
-      return canCreateObjectUrl() ? URL.createObjectURL(file) : "";
+      return canCreateObjectUrl() ? URL.createObjectURL(prepared) : "";
     });
   }
 

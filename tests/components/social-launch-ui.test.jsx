@@ -174,6 +174,39 @@ describe("social launch UI", () => {
     expect(alertSpy).not.toHaveBeenCalled();
   });
 
+  it("uploads creator profile images through the shared verified media flow", async () => {
+    const user = userEvent.setup();
+    signImageUpload.mockResolvedValue({
+      assetId: "avatar-asset",
+      uploadUrl: "https://upload.example.test/avatar-asset",
+      publicUrl: "https://cdn.example.test/avatar.webp",
+      headers: { "content-type": "image/webp" },
+    });
+    uploadSignedImage.mockResolvedValue(undefined);
+    completeImageUpload.mockResolvedValue({ publicUrl: "https://cdn.example.test/avatar.webp" });
+    updateProfile.mockResolvedValue({ ...profile, avatar: "https://cdn.example.test/avatar.webp" });
+
+    render(<ProfileEditor profile={profile} onSaved={vi.fn()} />);
+    await user.upload(screen.getByLabelText("Upload avatar"), webpFile("creator-avatar.webp"));
+    await screen.findByAltText("Selected avatar");
+    await user.click(screen.getByRole("button", { name: "Save profile" }));
+
+    expect(signImageUpload).toHaveBeenCalledWith(expect.objectContaining({
+      fileName: "creator-avatar.webp",
+      mimeType: "image/webp",
+      kind: "avatar",
+      width: 1,
+      height: 1,
+    }));
+    expect(uploadSignedImage).toHaveBeenCalledWith(
+      expect.objectContaining({ assetId: "avatar-asset" }),
+      expect.any(File),
+    );
+    expect(updateProfile).toHaveBeenCalledWith(expect.objectContaining({
+      avatar: "https://cdn.example.test/avatar.webp",
+    }));
+  });
+
   it("only exposes edit and delete actions for a manageable post and confirms deletion", async () => {
     const user = userEvent.setup();
     const onMutated = vi.fn();

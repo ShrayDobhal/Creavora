@@ -54,13 +54,13 @@ export default function StudioCommunity() {
   const [tab, setTab] = useState("Feed");
 
   return (
-    <div className="flex gap-5 px-6 py-6">
+    <div className="grid min-w-0 gap-5 px-3 py-5 sm:px-6 2xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-3.5">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
             <Users size={21} />
           </span>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-[25px] font-extrabold tracking-tight">Creator Community</h1>
             <p className="mt-1 text-[14px] text-muted">
               A place for creators to connect, share, learn and grow together.
@@ -84,15 +84,15 @@ export default function StudioCommunity() {
         />
 
         {/* composer */}
-        <Card className="mt-5 p-4">
+        <Card className="mt-5 min-w-0 p-4">
           <div className="flex items-center gap-3">
             <Avatar name="Ananya Sharma" size={42} />
             <input
               placeholder="What's on your mind, Ananya?"
-              className="h-11 flex-1 rounded-xl bg-canvas px-4 text-[14px] outline-none placeholder:text-muted"
+              className="h-11 min-w-0 flex-1 rounded-xl bg-canvas px-4 text-[14px] outline-none placeholder:text-muted"
             />
           </div>
-          <div className="mt-3.5 flex items-center gap-2.5">
+          <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
             {[
               { icon: ImageIcon, label: "Photo / Video" },
               { icon: BarChart3, label: "Poll" },
@@ -102,12 +102,12 @@ export default function StudioCommunity() {
             ].map(({ icon: Icon, label }) => (
               <button
                 key={label}
-                className="flex h-10 items-center gap-2 rounded-xl border border-line px-3.5 text-[13px] font-semibold hover:bg-canvas"
+                className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-line px-3.5 text-[13px] font-semibold hover:bg-canvas"
               >
                 <Icon size={15} className="text-ink/70" /> {label}
               </button>
             ))}
-            <button className="ml-auto h-10 rounded-xl bg-brand-600 px-6 text-[13.5px] font-bold text-white hover:bg-brand-700">
+            <button className="h-10 rounded-xl bg-brand-600 px-6 text-[13.5px] font-bold text-white hover:bg-brand-700 sm:ml-auto">
               Post
             </button>
           </div>
@@ -177,7 +177,7 @@ export default function StudioCommunity() {
             likes={45}
             comments={32}
             media={
-              <div className="grid w-[240px] shrink-0 grid-cols-3 gap-1.5">
+              <div className="grid w-full max-w-[360px] grid-cols-3 gap-1.5">
                 {[0, 1, 2].map((i) => (
                   <Photo key={i} seed={`neha-shoot-${i}`} className="h-[105px] rounded-lg" />
                 ))}
@@ -194,7 +194,7 @@ export default function StudioCommunity() {
             likes={38}
             comments={27}
             media={
-              <div className="w-[248px] shrink-0 rounded-xl bg-canvas p-3.5">
+              <div className="w-full max-w-[360px] rounded-xl bg-canvas p-3.5">
                 <p className="text-[12.5px] font-bold">How do you manage burnout?</p>
                 <div className="mt-3 space-y-2.5">
                   {[
@@ -240,7 +240,7 @@ export default function StudioCommunity() {
               <Photo
                 seed="live-promo"
                 dark
-                className="h-[132px] w-[280px] shrink-0 rounded-xl bg-gradient-to-br from-brand-600 to-[#e05fd6]"
+                className="h-[132px] w-full max-w-[360px] rounded-xl bg-gradient-to-br from-brand-600 to-[#e05fd6]"
               >
                 <div className="absolute inset-0 p-3.5">
                   <span className="flex w-fit items-center gap-1.5 rounded-md bg-white/20 px-2 py-1 text-[10.5px] font-bold text-white backdrop-blur">
@@ -260,7 +260,7 @@ export default function StudioCommunity() {
         </Card>
       </div>
 
-      <aside className="hidden w-[352px] shrink-0 space-y-4 xl:block">
+      <aside className="hidden min-w-0 space-y-4 2xl:block">
         <Card className="p-4">
           <h3 className="text-[15px] font-bold">Community Overview</h3>
           <div className="mt-3.5 space-y-3.5">
@@ -339,14 +339,14 @@ export default function StudioCommunity() {
 
 function CommunityPost({ author, verified, badge, time, body, tags, likes, comments, media }) {
   return (
-    <div className="flex gap-3.5 p-4">
+    <div className="relative flex min-w-0 flex-wrap gap-3.5 p-4">
       <Avatar name={author} size={40} />
-      <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-2 text-[14px] font-bold">
-          {author}
+      <div className="min-w-0 basis-[calc(100%-54px)]">
+        <p className="flex flex-wrap items-center gap-2 pr-8 text-[14px] font-bold">
+          <span className="min-w-0 truncate">{author}</span>
           {verified && <Verified size={13} />}
           {badge && (
-            <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badge[1]}`}>
+            <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${badge[1]}`}>
               {badge[0]}
             </span>
           )}
@@ -374,8 +374,8 @@ function CommunityPost({ author, verified, badge, time, body, tags, likes, comme
           </span>
         </div>
       </div>
-      {media}
-      <button className="h-fit shrink-0 text-muted">
+      {media ? <div className="ml-[54px] min-w-0 w-[calc(100%-54px)] overflow-hidden">{media}</div> : null}
+      <button type="button" className="absolute right-4 top-4 text-muted" aria-label={`More actions for ${author}'s post`}>
         <MoreHorizontal size={17} />
       </button>
     </div>

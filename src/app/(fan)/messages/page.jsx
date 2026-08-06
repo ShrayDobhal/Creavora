@@ -26,10 +26,10 @@ const formatTime = (value) =>
     ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(value))
     : "";
 
-export default function MessagesPage() {
+export default function MessagesPage({ initialParticipantId = null }) {
   const [conversations, setConversations] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
-  const [activeId, setActiveId] = useState(null);
+  const [activeId, setActiveId] = useState(initialParticipantId);
   const [thread, setThread] = useState(null);
   const [localStarterId, setLocalStarterId] = useState(null);
   const [query, setQuery] = useState("");
@@ -39,7 +39,7 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [sendError, setSendError] = useState("");
-  const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
+  const [mobileThreadOpen, setMobileThreadOpen] = useState(Boolean(initialParticipantId));
   const [reloadKey, setReloadKey] = useState(0);
   const [threadReloadKey, setThreadReloadKey] = useState(0);
   const threadRequestRef = useRef(0);
@@ -49,17 +49,26 @@ export default function MessagesPage() {
     getConversations({ signal: controller.signal })
       .then((data) => {
         const items = Array.isArray(data?.items) ? data.items : [];
+        const nextSuggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
         setConversations(items);
-        setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
+        setSuggestions(nextSuggestions);
+        const starter = initialParticipantId
+          ? nextSuggestions.find((participant) => participant.id === initialParticipantId)
+          : null;
+        if (starter) {
+          setLocalStarterId(starter.id);
+          setThread({ participant: starter, items: [] });
+          setThreadLoading(false);
+        }
         setActiveId((current) => current || items[0]?.participant.id || null);
-        setThreadLoading(items.length > 0);
+        if (!starter) setThreadLoading(Boolean(initialParticipantId || items.length > 0));
       })
       .catch((loadError) => {
         if (loadError.name !== "AbortError") setError(loadError.message);
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [reloadKey]);
+  }, [initialParticipantId, reloadKey]);
 
   useEffect(() => {
     if (!activeId || localStarterId === activeId) return undefined;

@@ -210,6 +210,10 @@ export function getSubscriptions({ signal } = {}) {
   return request("/api/subscriptions", { signal });
 }
 
+export function getStudioSubscribers({ signal } = {}) {
+  return request("/api/studio/subscribers", { signal });
+}
+
 export function joinFreeSubscription(creatorId, { signal } = {}) {
   return request("/api/subscriptions", {
     method: "POST",

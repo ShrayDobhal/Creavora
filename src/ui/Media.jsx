@@ -110,8 +110,8 @@ export function Photo({ seed = "", className = "", style, children }) {
   );
 }
 
-export function Avatar({ name = "", size = 40, ring, className = "" }) {
-  const url = imageUrlFor(name);
+export function Avatar({ name = "", src, size = 40, ring, className = "" }) {
+  const url = src || imageUrlFor(name);
   return (
     <div
       className={`relative shrink-0 rounded-full overflow-hidden ${className}`}

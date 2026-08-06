@@ -96,22 +96,34 @@ export function createMessagesGet({ database = db } = {}) {
         });
       }
 
-      const followRows = database.follow?.findMany
-        ? await database.follow.findMany({
+      const suggestionRows = user.role === "CREATOR" && database.subscription?.findMany
+        ? await database.subscription.findMany({
           where: {
-            followerId: user.id,
-            ...(seen.size ? { followingId: { notIn: [...seen] } } : {}),
-            following: { is: { role: "CREATOR", deletedAt: null, banned: false } },
+            creatorId: user.id,
+            status: "ACTIVE",
+            ...(seen.size ? { userId: { notIn: [...seen] } } : {}),
+            user: { is: { deletedAt: null, banned: false } },
           },
           orderBy: { createdAt: "desc" },
           take: 12,
-          select: { following: { select: participantSelect } },
+          select: { user: { select: participantSelect } },
         })
-        : [];
+        : database.follow?.findMany
+          ? await database.follow.findMany({
+            where: {
+              followerId: user.id,
+              ...(seen.size ? { followingId: { notIn: [...seen] } } : {}),
+              following: { is: { role: "CREATOR", deletedAt: null, banned: false } },
+            },
+            orderBy: { createdAt: "desc" },
+            take: 12,
+            select: { following: { select: participantSelect } },
+          })
+          : [];
       const suggestions = [];
 
-      for (const follow of followRows) {
-        const participant = follow.following;
+      for (const row of suggestionRows) {
+        const participant = row.user || row.following;
         if (!participant || participant.id === user.id || participant.deletedAt || seen.has(participant.id)) continue;
         seen.add(participant.id);
         suggestions.push(presentParticipant(participant));

@@ -53,12 +53,13 @@ export function Pill({ children, className = "" }) {
 
 export function Tabs({ items, value, onChange, className = "" }) {
   return (
-    <div className={`flex items-center gap-1 ${className}`}>
+    <div className={`no-scrollbar flex max-w-full items-center gap-1 overflow-x-auto overscroll-x-contain ${className}`}>
       {items.map((it) => (
         <button
           key={it}
+          type="button"
           onClick={() => onChange?.(it)}
-          className={`relative px-4 py-2.5 text-[14px] font-semibold transition cursor-pointer ${
+          className={`relative shrink-0 px-4 py-2.5 text-[14px] font-semibold transition cursor-pointer ${
             value === it ? "text-brand-600" : "text-muted hover:text-ink"
           }`}
         >
