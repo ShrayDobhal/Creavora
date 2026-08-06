@@ -11,7 +11,6 @@ import {
 import { CATEGORY_OPTIONS } from "@/lib/consumer/constants";
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
-const MIN_IMAGE_EDGE = 64;
 const UNAVAILABLE_MESSAGE = "Image uploads are not configured yet";
 const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -46,7 +45,7 @@ async function imageDimensions(file) {
 }
 
 async function compressImage(file) {
-  if (file.type === "image/webp" || !canCreateObjectUrl() || typeof document === "undefined") return file;
+  if (!canCreateObjectUrl() || typeof document === "undefined") return file;
   const dimensions = await imageDimensions(file);
   const maxDimension = 2048;
   const scale = Math.min(1, maxDimension / Math.max(dimensions.width, dimensions.height));
@@ -114,21 +113,15 @@ export function PostComposer({ user, onPublished }) {
       return;
     }
 
-    const prepared = await compressImage(selected);
-    if (prepared.size > MAX_IMAGE_BYTES) {
-      clearImage();
-      setError("Image must be 4 MiB or smaller after compression");
-      return;
-    }
     if (!(await hasValidImageSignature(selected))) {
       clearImage();
       setError("The selected file does not contain a valid image");
       return;
     }
-    const dimensions = await imageDimensions(prepared);
-    if (dimensions.width < MIN_IMAGE_EDGE || dimensions.height < MIN_IMAGE_EDGE) {
+    const prepared = await compressImage(selected);
+    if (prepared.size > MAX_IMAGE_BYTES) {
       clearImage();
-      setError(`Image width and height must each be at least ${MIN_IMAGE_EDGE} pixels`);
+      setError("Image must be 4 MiB or smaller after compression");
       return;
     }
 
