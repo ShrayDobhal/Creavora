@@ -178,18 +178,19 @@ model ActivityLog {
 // ─── CREATOR PROFILES ───────────────────────────────────────────────────────
 
 model CreatorProfile {
-  id               String   @id @default(uuid())
-  userId           String   @unique
-  category         String? // "Fashion", "Gaming", "Art", etc.
-  socialLinks      String? // JSON: { twitter, instagram, youtube }
-  payoutMethod     String? // "BANK_TRANSFER", "UPI", "PAYPAL"
-  payoutDetails    String? // JSON: bank account info
-  totalEarnings    Float    @default(0.0)
-  availableBalance Float    @default(0.0)
-  subscriberCount  Int      @default(0)
-  monthlyRevenue   Float    @default(0.0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  category          String? // "Fashion", "Gaming", "Art", etc.
+  socialLinks       String? // JSON: { twitter, instagram, youtube }
+  payoutMethod      String? // "BANK_TRANSFER", "UPI", "PAYPAL"
+  payoutDetails     String? // JSON: bank account info
+  totalEarnings     Float    @default(0.0)
+  availableBalance  Float    @default(0.0)
+  subscriberCount   Int      @default(0)
+  monthlyRevenue    Float    @default(0.0)
+  subscriptionPrice Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

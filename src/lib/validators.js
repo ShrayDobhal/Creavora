@@ -184,6 +184,16 @@ export const updateProfileSchema = z.object({
   profileVisibility: z.enum(["PUBLIC", "FOLLOWERS"]).optional(),
 }).strict();
 
+export const creatorSettingsSchema = z.object({
+  name: z.string().min(2).max(100).trim(),
+  bio: z.string().max(500).trim().transform((value) => value || null),
+  category: z.enum([
+    "Fashion", "Fitness", "Sports", "Gaming", "Food", "Music",
+    "Travel", "Education", "Comedy", "Art", "Technology", "Lifestyle",
+  ]),
+  subscriptionPrice: z.number().int().min(0).max(100000),
+}).strict();
+
 export const updateCommentSchema = z.object({
   commentId: z.string().uuid(),
   content: z.string().min(1, "Comment cannot be empty").max(2000, "Comment must be at most 2000 characters").trim(),

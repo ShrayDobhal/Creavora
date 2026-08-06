@@ -123,11 +123,15 @@ export default function CreatorProfilePage() {
               {creator.bio ? <p className="mt-2 max-w-2xl text-[15px] leading-7 text-ink/75">{creator.bio}</p> : null}
               {followError ? <p className="mt-2 text-sm font-semibold text-rose-700" role="alert">{followError}</p> : null}
             </div>
-            <dl className="flex gap-6 rounded-2xl bg-canvas px-5 py-3">
+            <dl className="flex flex-wrap gap-6 rounded-2xl bg-canvas px-5 py-3">
               <div><dt className="text-xs text-muted">Recent posts</dt><dd className="mt-0.5 text-lg font-black">{posts.length.toLocaleString("en-IN")}</dd></div>
               {typeof creator.followerCount === "number" ? (
                 <div><dt className="flex items-center gap-1 text-xs text-muted"><Users size={12} /> Followers</dt><dd className="mt-0.5 text-lg font-black">{creator.followerCount.toLocaleString("en-IN")}</dd></div>
               ) : null}
+              <div>
+                <dt className="text-xs text-muted">Monthly subscription</dt>
+                <dd className="mt-0.5 text-lg font-black">{creator.subscriptionPrice > 0 ? `₹${creator.subscriptionPrice.toLocaleString("en-IN")}` : "Free"}</dd>
+              </div>
             </dl>
           </div>
         </div>

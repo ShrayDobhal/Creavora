@@ -21,6 +21,7 @@ const presentDirectoryCreator = (row, viewerId) => ({
   coverImage: row.coverImage,
   bio: row.bio,
   category: row.creatorProfile?.category ?? null,
+  subscriptionPrice: row.creatorProfile?.subscriptionPrice ?? 0,
 });
 
 export function parseCreatorQuery(params) {

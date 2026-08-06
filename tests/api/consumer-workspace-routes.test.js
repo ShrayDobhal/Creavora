@@ -610,7 +610,7 @@ it("returns active non-subscribed creators as subscription recommendations", asy
     id: "creator-2",
     name: "Dev",
     avatar: "https://cdn.example.test/dev.jpg",
-    creatorProfile: { category: "Technology" },
+    creatorProfile: { category: "Technology", subscriptionPrice: 349 },
     _count: { followers: 27 },
   }]);
 
@@ -628,6 +628,7 @@ it("returns active non-subscribed creators as subscription recommendations", asy
       name: "Dev",
       avatar: "https://cdn.example.test/dev.jpg",
       category: "Technology",
+      subscriptionPrice: 349,
       followerCount: 27,
     }],
   });
@@ -642,7 +643,7 @@ it("returns active non-subscribed creators as subscription recommendations", asy
     take: 12,
     select: expect.objectContaining({
       avatar: true,
-      creatorProfile: { select: { category: true } },
+      creatorProfile: { select: { category: true, subscriptionPrice: true } },
       _count: { select: { followers: true } },
     }),
   }));
@@ -690,6 +691,33 @@ it("creates a free community subscription with server-controlled values", async 
       cancelledAt: null,
     }),
   }));
+});
+
+it("does not turn a creator-priced plan into free access", async () => {
+  const findUnique = vi.fn();
+  const create = vi.fn();
+  const response = await createSubscriptionPost({ database: {
+    $transaction: (callback) => callback({
+      user: { findFirst: vi.fn().mockResolvedValue({
+        ...creator,
+        creatorProfile: { subscriptionPrice: 699 },
+      }) },
+      subscription: { findUnique, create },
+    }),
+  } })(new Request("http://localhost/api/subscriptions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ creatorId: creator.id }),
+  }), { user: fixtureUser });
+
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({
+    error: "Paid checkout is required for this creator",
+    code: "PAID_CHECKOUT_REQUIRED",
+    price: 699,
+  });
+  expect(findUnique).not.toHaveBeenCalled();
+  expect(create).not.toHaveBeenCalled();
 });
 
 it("keeps an active free subscription idempotent and reactivates only a cancelled free row", async () => {

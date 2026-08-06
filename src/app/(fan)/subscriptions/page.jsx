@@ -209,8 +209,22 @@ export default function SubscriptionsPage() {
                         {typeof recommendation.followerCount === "number" ? (
                           <p className="mt-1 text-xs font-semibold text-muted">{recommendation.followerCount.toLocaleString("en-IN")} followers</p>
                         ) : null}
+                        <p className="mt-1 text-xs font-extrabold text-brand-700">
+                          {recommendation.subscriptionPrice > 0
+                            ? `₹${recommendation.subscriptionPrice.toLocaleString("en-IN")} per month`
+                            : "Free community access"}
+                        </p>
                       </div>
                     </div>
+                    {recommendation.subscriptionPrice > 0 ? (
+                      <Link
+                        href={`/creator/${encodeURIComponent(recommendation.handle)}`}
+                        className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-brand-600 px-3 py-2 text-sm font-bold text-white"
+                        aria-label={`View ${recommendation.name} subscription plan`}
+                      >
+                        View monthly plan
+                      </Link>
+                    ) : (
                     <button
                       type="button"
                       onClick={() => join(recommendation)}
@@ -220,6 +234,7 @@ export default function SubscriptionsPage() {
                     >
                       {pendingCreatorId === recommendation.id ? "Joining…" : "Join for free"}
                     </button>
+                    )}
                   </Card>
                 ))}
               </div>

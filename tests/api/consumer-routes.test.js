@@ -80,6 +80,7 @@ const creatorRow = (overrides = {}) => ({
     availableBalance: 0,
     subscriberCount: 42,
     monthlyRevenue: 0,
+    subscriptionPrice: 499,
     createdAt: new Date("2026-08-01T00:00:00.000Z"),
     updatedAt: new Date("2026-08-01T00:00:00.000Z"),
   },
@@ -430,6 +431,7 @@ describe("consumer API contracts", () => {
       name: "Kabir",
       handle: "coach-kabir",
       roleTitle: "Fitness Creator",
+      subscriptionPrice: 499,
     });
     expect(findFirst.mock.calls.map(([{ where }]) => where.handle)).toEqual([
       "coach-kabir",

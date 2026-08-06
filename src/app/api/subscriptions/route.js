@@ -24,7 +24,7 @@ export function createSubscriptionsGet({ database = db } = {}) {
               avatar: true,
               roleTitle: true,
               verified: true,
-              creatorProfile: { select: { category: true } },
+              creatorProfile: { select: { category: true, subscriptionPrice: true } },
               _count: { select: { followers: true } },
             },
           })
@@ -66,6 +66,7 @@ export function createSubscriptionsGet({ database = db } = {}) {
           roleTitle: creator.roleTitle ?? null,
           verified: Boolean(creator.verified),
           category: creator.creatorProfile?.category ?? null,
+          subscriptionPrice: creator.creatorProfile?.subscriptionPrice ?? 0,
           followerCount: typeof creator._count?.followers === "number"
             ? creator._count.followers
             : null,
@@ -130,9 +131,12 @@ export function createSubscriptionPost({ database = db } = {}) {
       const result = await database.$transaction(async (transaction) => {
         const creator = await transaction.user.findFirst({
           where: { id: creatorId, role: "CREATOR", deletedAt: null, banned: false },
-          select: { id: true },
+          select: { id: true, creatorProfile: { select: { subscriptionPrice: true } } },
         });
         if (!creator) return null;
+        if ((creator.creatorProfile?.subscriptionPrice ?? 0) > 0) {
+          return { paidPlan: true, price: creator.creatorProfile.subscriptionPrice };
+        }
 
         const existing = await transaction.subscription.findUnique({
           where: { userId_creatorId: { userId: user.id, creatorId } },
@@ -158,6 +162,12 @@ export function createSubscriptionPost({ database = db } = {}) {
       });
 
       if (!result) return NextResponse.json({ error: "Creator not found" }, { status: 404 });
+      if (result.paidPlan) {
+        return NextResponse.json(
+          { error: "Paid checkout is required for this creator", code: "PAID_CHECKOUT_REQUIRED", price: result.price },
+          { status: 409 },
+        );
+      }
       if (result.conflict) {
         return NextResponse.json(
           { error: "A recorded subscription already exists for this creator" },

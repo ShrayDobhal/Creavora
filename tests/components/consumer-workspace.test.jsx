@@ -551,6 +551,26 @@ it("joins a real recommended creator and cancels the persisted subscription", as
   expect(screen.getByText("CANCELLED")).toBeVisible();
 });
 
+it("shows a creator-priced plan without granting free access", async () => {
+  const recommendation = {
+    ...homeCreator,
+    category: "Textile Art",
+    followerCount: 1250,
+    subscriptionPrice: 599,
+  };
+  const fetch = vi.fn().mockResolvedValue(new Response(
+    JSON.stringify({ items: [], recommendations: [recommendation] }),
+    { status: 200 },
+  ));
+  vi.stubGlobal("fetch", fetch);
+
+  render(<SubscriptionsPage />);
+
+  expect(await screen.findByText("₹599 per month")).toBeVisible();
+  expect(screen.getByRole("link", { name: "View Asha Rao subscription plan" })).toHaveAttribute("href", "/creator/asha-rao");
+  expect(screen.queryByRole("button", { name: "Join Asha Rao for free" })).not.toBeInTheDocument();
+});
+
 it("rejoins a compatible cancelled free subscription through the real join endpoint", async () => {
   const cancelled = {
     id: "subscription-free-cancelled",
