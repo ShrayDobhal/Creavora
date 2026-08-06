@@ -61,7 +61,7 @@ export function CreatorTopBar({
   unreadNotifications = 0,
 }) {
   return (
-    <header className="sticky top-0 z-30 flex h-[76px] min-w-0 items-center gap-2 border-b border-line bg-white px-3 sm:gap-4 sm:px-6">
+    <header className="fixed inset-x-0 top-0 z-40 flex h-[76px] min-w-0 items-center gap-2 border-b border-line bg-white px-3 shadow-[0_1px_0_rgba(15,15,20,.04)] sm:gap-4 sm:px-6">
       <div className="min-w-0 shrink-0 sm:w-[196px]">
         {title ? (
           <div>
@@ -197,7 +197,7 @@ export default function CreatorLayout({ children, topbar }) {
   }, []);
 
   return (
-    <div className="min-h-dvh overflow-x-clip bg-white">
+    <div className="min-h-dvh overflow-x-clip bg-white pt-[76px]">
       <CreatorTopBar
         {...topbar}
         coins={user ? Math.round(user.walletBalance) : 0}

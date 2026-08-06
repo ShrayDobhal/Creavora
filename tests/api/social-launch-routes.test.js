@@ -415,6 +415,21 @@ describe("Blindly database image upload API", () => {
     }));
   });
 
+  it("accepts non-square portrait and landscape image dimensions", async () => {
+    const database = { mediaAsset: { create: vi.fn(async ({ data }) => ({ id: data.id, ...data })) } };
+    const portrait = await createUploadSignPost({ storage: configuredStorage, database })(
+      jsonRequest("POST", { ...imageInput, width: 240, height: 1600 }),
+      { user: { id: "user-1" } },
+    );
+    const landscape = await createUploadSignPost({ storage: configuredStorage, database })(
+      jsonRequest("POST", { ...imageInput, width: 1600, height: 240 }),
+      { user: { id: "user-1" } },
+    );
+
+    expect(portrait.status).toBe(201);
+    expect(landscape.status).toBe(201);
+  });
+
   it("rejects bytes whose image signature does not match", async () => {
     const updateMany = vi.fn();
     const database = { mediaAsset: {

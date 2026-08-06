@@ -163,7 +163,7 @@ export function UserMenu({ name, label, sub, items, user }) {
 
 export function TopBar({ user, unreadNotifications }) {
   return (
-    <header className="sticky top-0 z-30 flex min-w-0 h-[72px] items-center gap-4 border-b border-line bg-white px-3 sm:px-6">
+    <header className="fixed inset-x-0 top-0 z-40 flex h-[72px] min-w-0 items-center gap-4 border-b border-line bg-white px-3 shadow-[0_1px_0_rgba(15,15,20,.04)] sm:px-6">
       <div className="shrink-0 sm:w-[196px]">
         <Logo />
       </div>
@@ -248,7 +248,7 @@ export default function FanLayout({ children, topbar }) {
   }, []);
 
   return (
-    <div className="min-h-dvh overflow-x-clip bg-white">
+    <div className="min-h-dvh overflow-x-clip bg-white pt-[72px]">
       <TopBar {...topbar} user={user} unreadNotifications={unreadNotifications} />
       <div>
         <aside className="no-scrollbar fixed bottom-0 left-0 top-[72px] z-20 hidden w-[244px] overflow-y-auto border-r border-line bg-white px-4 py-4 lg:block">

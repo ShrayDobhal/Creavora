@@ -226,6 +226,8 @@ describe("social launch UI", () => {
     const shell = render(<FanLayout><div>Consumer content</div></FanLayout>);
 
     expect(screen.getByRole("main")).toHaveClass("min-w-0", "overflow-x-hidden");
+    expect(screen.getByRole("banner")).toHaveClass("fixed", "inset-x-0", "top-0");
+    expect(screen.getByRole("banner").parentElement).toHaveClass("pt-[72px]");
     expect(screen.getByRole("button", { name: "Open account menu" })).toBeVisible();
     shell.unmount();
 

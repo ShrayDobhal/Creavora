@@ -11,6 +11,7 @@ import {
 import { CATEGORY_OPTIONS } from "@/lib/consumer/constants";
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+const MIN_IMAGE_EDGE = 64;
 const UNAVAILABLE_MESSAGE = "Image uploads are not configured yet";
 const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -125,9 +126,9 @@ export function PostComposer({ user, onPublished }) {
       return;
     }
     const dimensions = await imageDimensions(prepared);
-    if (dimensions.width < 320 || dimensions.height < 320) {
+    if (dimensions.width < MIN_IMAGE_EDGE || dimensions.height < MIN_IMAGE_EDGE) {
       clearImage();
-      setError("Image dimensions must be at least 320 by 320 pixels");
+      setError(`Image width and height must each be at least ${MIN_IMAGE_EDGE} pixels`);
       return;
     }
 

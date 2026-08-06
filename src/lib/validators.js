@@ -197,8 +197,8 @@ export const uploadSignSchema = z.object({
   fileName: z.string().min(1).max(120),
   mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
   bytes: z.number().int().positive().max(4 * 1024 * 1024),
-  width: z.number().int().min(320).max(10000),
-  height: z.number().int().min(320).max(10000),
+  width: z.number().int().min(64).max(10000),
+  height: z.number().int().min(64).max(10000),
   kind: z.enum(["avatar", "cover", "post"]),
 }).strict();
 
