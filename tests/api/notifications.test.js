@@ -13,7 +13,25 @@ import * as notificationRoute from "@/app/api/notifications/route";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  notification.updateMany.mockResolvedValue({ count: 1 });
   notification.deleteMany.mockResolvedValue({ count: 1 });
+});
+
+it("marks one notification read only inside the authenticated inbox", async () => {
+  const response = await notificationRoute.POST(
+    new Request("http://localhost/api/notifications", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: "notification-1" }),
+    }),
+    { user: { id: "viewer-1" } },
+  );
+
+  expect(response.status).toBe(200);
+  expect(notification.updateMany).toHaveBeenCalledWith({
+    where: { id: "notification-1", userId: "viewer-1", read: false },
+    data: { read: true },
+  });
 });
 
 it("deletes one persisted notification only within the authenticated inbox", async () => {

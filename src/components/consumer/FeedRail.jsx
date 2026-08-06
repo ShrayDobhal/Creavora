@@ -10,6 +10,11 @@ export function FeedRail({
   liveSessions = [],
   onLike,
   onBookmark,
+  onLoadComments,
+  onCreateComment,
+  onUpdateComment,
+  onDeleteComment,
+  onShare,
 }) {
   if (posts) {
     if (!posts.length) {
@@ -18,7 +23,7 @@ export function FeedRail({
 
     return (
       <div className="grid min-w-0 gap-5 xl:grid-cols-2">
-        {posts.map((post) => <div key={post.id} className="min-w-0"><FeedCard post={post} onLike={onLike} onBookmark={onBookmark} /></div>)}
+        {posts.map((post) => <div key={post.id} className="min-w-0"><FeedCard post={post} onLike={onLike} onBookmark={onBookmark} onLoadComments={onLoadComments} onCreateComment={onCreateComment} onUpdateComment={onUpdateComment} onDeleteComment={onDeleteComment} onShare={onShare} /></div>)}
       </div>
     );
   }

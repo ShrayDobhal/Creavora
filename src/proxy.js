@@ -51,6 +51,12 @@ const loginRedirect = (req, pathname) => {
   return NextResponse.redirect(loginUrl);
 };
 
+const refreshRedirect = (req, destination) => {
+  const refreshUrl = new URL("/api/auth/refresh", req.url);
+  refreshUrl.searchParams.set("redirect", destination);
+  return NextResponse.redirect(refreshUrl);
+};
+
 const roleHome = (role) => {
   if (role === "CREATOR") return "/studio/content";
   if (role === "ADMIN") return "/admin";
@@ -91,6 +97,7 @@ async function verifyJwtPayload(token) {
 
 export async function proxy(req) {
   const { pathname } = req.nextUrl;
+  const requestedPath = `${pathname}${req.nextUrl.search}`;
 
   if (
     pathname.startsWith("/_next") ||
@@ -107,14 +114,19 @@ export async function proxy(req) {
   }
 
   const accessToken = req.cookies.get("access_token")?.value;
+  const refreshToken = req.cookies.get("refresh_token")?.value;
   const authHeader = req.headers.get("authorization");
   const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
   const token = accessToken || bearerToken;
 
   if (pathname === "/") {
-    if (!token) return NextResponse.redirect(new URL("/landing", req.url));
+    if (!token) {
+      return refreshToken
+        ? refreshRedirect(req, "/")
+        : NextResponse.redirect(new URL("/landing", req.url));
+    }
     const payload = await verifyJwtPayload(token);
-    if (!payload) return loginRedirect(req, pathname);
+    if (!payload) return refreshToken ? refreshRedirect(req, "/") : loginRedirect(req, pathname);
     const destination = roleHome(payload.role);
     return destination
       ? NextResponse.redirect(new URL(destination, req.url))
@@ -122,7 +134,7 @@ export async function proxy(req) {
   }
 
   if (isAuthEntry) {
-    if (!token) return NextResponse.next();
+    if (!token) return refreshToken ? refreshRedirect(req, "/") : NextResponse.next();
     const payload = await verifyJwtPayload(token);
     const destination = payload ? roleHome(payload.role) : null;
     return destination
@@ -134,7 +146,7 @@ export async function proxy(req) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
-    return loginRedirect(req, pathname);
+    return refreshToken ? refreshRedirect(req, requestedPath) : loginRedirect(req, requestedPath);
   }
 
   const payload = await verifyJwtPayload(token);
@@ -142,7 +154,7 @@ export async function proxy(req) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Token expired" }, { status: 401 });
     }
-    return loginRedirect(req, pathname);
+    return refreshToken ? refreshRedirect(req, requestedPath) : loginRedirect(req, requestedPath);
   }
 
   const role = payload.role;

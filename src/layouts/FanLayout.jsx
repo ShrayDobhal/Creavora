@@ -236,12 +236,19 @@ export default function FanLayout({ children, topbar }) {
 
     loadUser();
     loadNotifications();
+    const notificationPoll = window.setInterval(loadNotifications, 30_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") loadNotifications();
+    };
     window.addEventListener("user-update", loadUser);
     window.addEventListener("notifications-update", loadNotifications);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
+      window.clearInterval(notificationPoll);
       window.removeEventListener("user-update", loadUser);
       window.removeEventListener("notifications-update", loadNotifications);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
       userController?.abort();
       notificationsController?.abort();
     };

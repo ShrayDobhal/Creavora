@@ -149,7 +149,13 @@ describe("social services", () => {
       commentsCount: 1,
     });
     expect(tx.notifications).toMatchObject([
-      { userId: "creator-1", type: "COMMENT", read: false },
+      {
+        userId: "creator-1",
+        type: "COMMENT",
+        read: false,
+        actionUrl: "/post/post-1",
+        metadata: JSON.stringify({ postId: "post-1", commentId: "comment-1" }),
+      },
     ]);
     expect(tx.calls.transactions).toBe(1);
   });

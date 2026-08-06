@@ -15,6 +15,11 @@ const request = (pathname, token) =>
     headers: token ? { cookie: `access_token=${token}` } : undefined,
   });
 
+const requestWithRefresh = (pathname, refreshToken = "remembered-session") =>
+  new NextRequest(`http://localhost${pathname}`, {
+    headers: { cookie: `refresh_token=${refreshToken}` },
+  });
+
 const redirectLocation = (response) => new URL(response.headers.get("location"));
 
 describe("actual consumer auth boundaries", () => {
@@ -58,6 +63,14 @@ describe("actual consumer auth boundaries", () => {
     expect(response.status).toBe(307);
     expect(redirectLocation(response).pathname).toBe("/login");
     expect(redirectLocation(response).searchParams.get("redirect")).toBe("/");
+  });
+
+  it("renews a remembered browser session before sending the user to login", async () => {
+    const response = await proxy(requestWithRefresh("/home?tab=following"));
+
+    expect(response.status).toBe(307);
+    expect(redirectLocation(response).pathname).toBe("/api/auth/refresh");
+    expect(redirectLocation(response).searchParams.get("redirect")).toBe("/home?tab=following");
   });
 
   it("routes every authenticated role from root to its approved workspace", async () => {

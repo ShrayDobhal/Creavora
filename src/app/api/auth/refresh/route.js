@@ -7,15 +7,17 @@ import {
   generateTokenPair,
   setAuthCookies,
   getTokensFromCookies,
+  REFRESH_SESSION_MS,
+  clearAuthCookies,
 } from "@/lib/auth";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 
-export async function POST(req) {
-  try {
+async function rotateSession(req, { allowBody = false } = {}) {
     const { refreshToken: cookieRefresh } = await getTokensFromCookies();
 
     // Also accept refresh token from body (mobile clients)
     let refreshToken = cookieRefresh;
-    if (!refreshToken) {
+    if (!refreshToken && allowBody) {
       try {
         const body = await req.json();
         refreshToken = body.refreshToken;
@@ -25,19 +27,13 @@ export async function POST(req) {
     }
 
     if (!refreshToken) {
-      return NextResponse.json(
-        { error: "Refresh token required" },
-        { status: 401 }
-      );
+      return { error: "Refresh token required", status: 401 };
     }
 
     // Verify the refresh token JWT
     const payload = verifyRefreshToken(refreshToken);
     if (!payload || !payload.sub) {
-      return NextResponse.json(
-        { error: "Invalid refresh token" },
-        { status: 401 }
-      );
+      return { error: "Invalid refresh token", status: 401 };
     }
 
     // Check the token exists in DB and is not revoked
@@ -51,15 +47,8 @@ export async function POST(req) {
     });
 
     if (!storedToken) {
-      // Possible token reuse attack — revoke ALL tokens for this user
-      await db.refreshToken.updateMany({
-        where: { userId: payload.sub },
-        data: { revoked: true },
-      });
-      return NextResponse.json(
-        { error: "Refresh token has been revoked. Please log in again." },
-        { status: 401 }
-      );
+      // Another request from this browser may already have rotated this token.
+      return { error: "Refresh token has been revoked. Please log in again.", status: 401 };
     }
 
     // Get the user
@@ -68,10 +57,7 @@ export async function POST(req) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 401 }
-      );
+      return { error: "User not found", status: 401 };
     }
 
     // Rotate: revoke old token, issue new pair
@@ -89,14 +75,14 @@ export async function POST(req) {
       data: {
         userId: user.id,
         tokenHash: hashRefreshToken(newRefresh),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + REFRESH_SESSION_MS),
         userAgent: req.headers.get("user-agent") || "unknown",
       },
     });
 
     await setAuthCookies(newAccess, newRefresh);
 
-    return NextResponse.json({
+    return {
       user: {
         id: user.id,
         name: user.name,
@@ -106,12 +92,44 @@ export async function POST(req) {
         avatar: user.avatar,
       },
       accessToken: newAccess,
-    });
+    };
+}
+
+export async function POST(req) {
+  try {
+    const result = await rotateSession(req, { allowBody: true });
+    if (result.error) {
+      return NextResponse.json({ error: result.error }, { status: result.status });
+    }
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Refresh Token Error:", error);
     return NextResponse.json(
       { error: "Token refresh failed" },
       { status: 500 }
     );
+  }
+}
+
+export async function GET(req) {
+  const destination = safeRedirectPath(
+    new URL(req.url).searchParams.get("redirect"),
+    "/",
+  );
+  try {
+    const result = await rotateSession(req);
+    if (result.error) {
+      await clearAuthCookies();
+      const login = new URL("/login", req.url);
+      login.searchParams.set("redirect", destination);
+      return NextResponse.redirect(login);
+    }
+    return NextResponse.redirect(new URL(destination, req.url));
+  } catch (error) {
+    console.error("Browser Session Refresh Error:", error);
+    await clearAuthCookies();
+    const login = new URL("/login", req.url);
+    login.searchParams.set("redirect", destination);
+    return NextResponse.redirect(login);
   }
 }

@@ -242,6 +242,11 @@ export default function HomeDashboard({
   onFollow,
   onLike,
   onBookmark,
+  onLoadComments,
+  onCreateComment,
+  onUpdateComment,
+  onDeleteComment,
+  onShare,
 }) {
   const live = data.liveSessions.filter((session) => session.status === "LIVE");
   const upcoming = data.liveSessions.filter(
@@ -345,7 +350,7 @@ export default function HomeDashboard({
               <h2 id="featured-title" className="flex items-center gap-2 text-xl font-black"><Users size={19} className="text-brand-600" /> Featured posts</h2>
               <Link href="/feed" className="text-xs font-bold text-brand-700 hover:underline">Open feed</Link>
             </div>
-            <FeedRail posts={data.featuredPosts} onLike={onLike} onBookmark={onBookmark} />
+            <FeedRail posts={data.featuredPosts} onLike={onLike} onBookmark={onBookmark} onLoadComments={onLoadComments} onCreateComment={onCreateComment} onUpdateComment={onUpdateComment} onDeleteComment={onDeleteComment} onShare={onShare} />
           </section>
         </div>
 

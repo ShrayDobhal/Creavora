@@ -46,7 +46,7 @@ it("issues the shared Blindly session and keeps at most five active refresh sess
   expect(transaction.refreshToken.create).toHaveBeenCalledWith({ data: expect.objectContaining({
     userId: "user-1",
     tokenHash: hashRefreshToken(result.refreshToken),
-    expiresAt: new Date("2026-08-12T10:00:00.000Z"),
+    expiresAt: new Date("2026-09-04T10:00:00.000Z"),
     userAgent: "Vitest browser",
   }) });
   expect(setCookies).toHaveBeenCalledWith(result.accessToken, result.refreshToken);
@@ -78,11 +78,11 @@ it("does not set cookies or leave partial session persistence when activity logg
   expect(setCookies).not.toHaveBeenCalled();
 });
 
-it("clears the refresh cookie with the same /api/auth path used when it was created", async () => {
+it("clears the site-wide refresh cookie used by remembered browser sessions", async () => {
   const cookieStore = { set: vi.fn(), delete: vi.fn() };
   await clearAuthCookies(cookieStore);
   expect(cookieStore.set).toHaveBeenCalledWith("refresh_token", "", expect.objectContaining({
-    path: "/api/auth",
+    path: "/",
     maxAge: 0,
   }));
 });

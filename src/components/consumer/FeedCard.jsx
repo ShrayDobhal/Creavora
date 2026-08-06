@@ -157,7 +157,7 @@ export function FeedCard({
         </div>
       ) : (
         <>
-          {content ? <p className="px-4 pb-4 text-[15px] leading-7 text-ink/85 sm:px-5">{content}</p> : null}
+          {content ? <Link href={`/post/${post.id}`} className="block px-4 pb-4 text-[15px] leading-7 text-ink/85 hover:text-brand-800 sm:px-5">{content}</Link> : null}
           {post.mediaUrl ? (
             post.mediaType?.toLowerCase().startsWith("video") ? (
               videoFailed ? (
@@ -176,12 +176,14 @@ export function FeedCard({
                 </div>
               )
             ) : (
-              <EditorialImage
-                src={post.mediaUrl}
-                alt={mediaAlt}
-                className="aspect-[4/3] max-h-[680px] w-full bg-neutral-100 object-cover"
-                fallbackLabel="Media unavailable"
-              />
+              <Link href={`/post/${post.id}`} aria-label={`Open post by ${post.creator.name}`} className="block">
+                <EditorialImage
+                  src={post.mediaUrl}
+                  alt={mediaAlt}
+                  className="aspect-[4/3] max-h-[680px] w-full bg-neutral-100 object-cover transition-opacity hover:opacity-95"
+                  fallbackLabel="Media unavailable"
+                />
+              </Link>
             )
           ) : null}
         </>

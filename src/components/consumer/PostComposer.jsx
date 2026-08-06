@@ -89,17 +89,17 @@ export function PostComposer({ user, onPublished }) {
   const [imageUploadsUnavailable, setImageUploadsUnavailable] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInput = useRef(null);
+  const previewUrlRef = useRef("");
 
   useEffect(() => () => {
-    if (previewUrl) URL.revokeObjectURL?.(previewUrl);
-  }, [previewUrl]);
+    if (previewUrlRef.current) URL.revokeObjectURL?.(previewUrlRef.current);
+  }, []);
 
   function clearImage() {
     setImage(null);
-    setPreviewUrl((current) => {
-      if (current) URL.revokeObjectURL?.(current);
-      return "";
-    });
+    if (previewUrlRef.current) URL.revokeObjectURL?.(previewUrlRef.current);
+    previewUrlRef.current = "";
+    setPreviewUrl("");
     if (fileInput.current) fileInput.current.value = "";
   }
 
@@ -126,10 +126,9 @@ export function PostComposer({ user, onPublished }) {
     }
 
     setImage(prepared);
-    setPreviewUrl((current) => {
-      if (current) URL.revokeObjectURL?.(current);
-      return canCreateObjectUrl() ? URL.createObjectURL(prepared) : "";
-    });
+    if (previewUrlRef.current) URL.revokeObjectURL?.(previewUrlRef.current);
+    previewUrlRef.current = canCreateObjectUrl() ? URL.createObjectURL(prepared) : "";
+    setPreviewUrl(previewUrlRef.current);
   }
 
   async function handleSubmit(event) {
@@ -200,10 +199,12 @@ export function PostComposer({ user, onPublished }) {
         </select>
       </div>
       {previewUrl ? (
-        <div className="relative mt-3 overflow-hidden rounded-xl border border-line bg-canvas">
-          {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
-          <img src={previewUrl} alt="Selected image preview" className="max-h-72 w-full object-contain" />
-          <button type="button" onClick={clearImage} className="absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-black/65 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500" aria-label="Remove image">
+        <div className="relative mt-3">
+          <div className="grid min-h-48 overflow-hidden rounded-xl border border-line bg-canvas">
+            {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
+            <img src={previewUrl} alt="Selected image preview" className="max-h-72 min-h-48 w-full object-contain" />
+          </div>
+          <button type="button" onClick={clearImage} className="absolute right-3 top-3 z-10 grid h-10 w-10 place-items-center rounded-full bg-black/75 text-white shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500" aria-label="Remove image">
             <X size={16} />
           </button>
         </div>

@@ -17,6 +17,7 @@ const notificationItems = [
     message: "A persisted post is ready",
     type: "LIKE",
     read: false,
+    actionUrl: "/post/post-1",
     createdAt: "2026-08-05T10:00:00.000Z",
   },
   {
@@ -28,6 +29,27 @@ const notificationItems = [
     createdAt: "2026-08-05T09:00:00.000Z",
   },
 ];
+
+it("opens an actionable notification and marks only that item read", async () => {
+  const fetchMock = vi.fn((url, options = {}) => Promise.resolve(new Response(
+    JSON.stringify(options.method === "POST" ? { success: true } : notificationItems),
+    { status: 200 },
+  )));
+  vi.stubGlobal("fetch", fetchMock);
+
+  render(<NotificationsPage />);
+
+  const postLink = await screen.findByRole("link", { name: /studio update/i });
+  expect(postLink).toHaveAttribute("href", "/post/post-1");
+  fireEvent.click(postLink);
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+    "/api/notifications",
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ id: "notification-1" }),
+    }),
+  ));
+});
 
 it("persists per-row removal and clearing without fabricating an actor", async () => {
   const fetchMock = vi.fn((url, options = {}) => Promise.resolve(new Response(

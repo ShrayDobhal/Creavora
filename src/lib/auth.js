@@ -8,7 +8,8 @@ const isProduction = process.env.NODE_ENV === "production";
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || (isProduction ? undefined : "creavora-access-secret-dev-only");
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || (isProduction ? undefined : "creavora-refresh-secret-dev-only");
 const ACCESS_EXPIRES = "15m";
-const REFRESH_EXPIRES = "7d";
+const REFRESH_EXPIRES = "30d";
+export const REFRESH_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function normalizeRole(role) {
   return role === "FAN" ? "USER" : role;
@@ -75,8 +76,7 @@ export async function setAuthCookies(accessToken, refreshToken) {
   });
   cookieStore.set("refresh_token", refreshToken, {
     ...COOKIE_OPTIONS,
-    path: "/api/auth",
-    maxAge: 7 * 24 * 60 * 60, // 7 days
+    maxAge: REFRESH_SESSION_MS / 1000,
   });
 }
 
@@ -93,7 +93,6 @@ export async function clearAuthCookies(cookieStoreOverride) {
   });
   cookieStore.set("refresh_token", "", {
     ...COOKIE_OPTIONS,
-    path: "/api/auth",
     maxAge: 0,
     expires: new Date(0),
   });
@@ -153,7 +152,7 @@ export async function issueSession({ database, user, request, setCookies = setAu
       data: {
         userId: user.id,
         tokenHash: hashRefreshToken(refreshToken),
-        expiresAt: new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(createdAt.getTime() + REFRESH_SESSION_MS),
         userAgent: request.headers.get("user-agent") || "unknown",
       },
     });

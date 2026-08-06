@@ -5,6 +5,11 @@ import { AsyncState } from "@/components/consumer/AsyncState";
 import HomeDashboard from "@/components/consumer/HomeDashboard";
 import {
   getConsumerHome,
+  getComments,
+  createComment,
+  updateComment,
+  deleteComment,
+  sharePost,
   toggleBookmark,
   toggleFollow,
   toggleLike,
@@ -57,6 +62,11 @@ export default function HomePage() {
       onFollow={toggleFollow}
       onLike={toggleLike}
       onBookmark={toggleBookmark}
+      onLoadComments={getComments}
+      onCreateComment={createComment}
+      onUpdateComment={updateComment}
+      onDeleteComment={deleteComment}
+      onShare={sharePost}
     />
   );
 }

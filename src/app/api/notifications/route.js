@@ -17,11 +17,18 @@ export const GET = withAuth(async (req, { user }) => {
   }
 });
 
-// POST mark all as read
+// POST marks one notification read when an id is supplied, otherwise all.
 export const POST = withAuth(async (req, { user }) => {
   try {
+    let id = null;
+    try {
+      const body = await req.json();
+      id = typeof body?.id === "string" ? body.id.trim() : null;
+    } catch {
+      // An empty request body keeps the existing mark-all behavior.
+    }
     await db.notification.updateMany({
-      where: { userId: user.id, read: false },
+      where: { ...(id ? { id } : {}), userId: user.id, read: false },
       data: { read: true }
     });
 

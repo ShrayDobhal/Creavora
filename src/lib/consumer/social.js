@@ -94,6 +94,8 @@ export async function toggleLike(db, user, postId) {
                 message: `${user.name} liked your post.`,
                 type: "LIKE",
                 read: false,
+                actionUrl: `/post/${post.id}`,
+                metadata: JSON.stringify({ postId: post.id }),
               },
       };
     });
@@ -182,6 +184,8 @@ export async function toggleFollow(db, user, handle) {
                 message: `${user.name} started following you.`,
                 type: "FOLLOW",
                 read: false,
+                actionUrl: `/creator/${creator.handle}`,
+                metadata: JSON.stringify({ creatorId: creator.id }),
               },
       };
     });
@@ -267,6 +271,8 @@ export async function createComment(db, user, postId, input) {
               message: `${user.name} commented: "${data.content.slice(0, 30)}..."`,
               type: "COMMENT",
               read: false,
+              actionUrl: `/post/${post.id}`,
+              metadata: JSON.stringify({ postId: post.id, commentId: comment.id }),
             },
     };
   });

@@ -1,4 +1,19 @@
-async function request(path, { signal, method = "GET", body } = {}) {
+let refreshPromise = null;
+
+function refreshBrowserSession() {
+  if (!refreshPromise) {
+    refreshPromise = fetch("/api/auth/refresh", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    }).finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+async function request(path, { signal, method = "GET", body } = {}, mayRefresh = true) {
   const response = await fetch(path, {
     method,
     signal,
@@ -11,6 +26,10 @@ async function request(path, { signal, method = "GET", body } = {}) {
   });
 
   const payload = await response.json().catch(() => null);
+  if (response.status === 401 && mayRefresh && path !== "/api/auth/refresh") {
+    const refreshed = await refreshBrowserSession();
+    if (refreshed.ok) return request(path, { signal, method, body }, false);
+  }
   if (!response.ok) {
     throw new Error(payload?.error || "Something went wrong. Please try again.");
   }
@@ -234,8 +253,16 @@ export function getNotifications({ signal } = {}) {
   return request("/api/notifications", { signal });
 }
 
-export function markNotificationsRead({ signal } = {}) {
-  return request("/api/notifications", { method: "POST", signal });
+export function markNotificationsRead(idOrOptions = {}, options = {}) {
+  const id = typeof idOrOptions === "string" ? idOrOptions : null;
+  const signal = typeof idOrOptions === "object" && idOrOptions !== null
+    ? idOrOptions.signal
+    : options.signal;
+  return request("/api/notifications", {
+    method: "POST",
+    signal,
+    ...(id ? { body: { id } } : {}),
+  });
 }
 
 export function deleteNotifications(id, { signal } = {}) {

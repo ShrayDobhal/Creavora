@@ -101,7 +101,7 @@ export function CreatorTopBar({
             {coins}
           </span>
         )}
-        <Link href="/notifications" className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-canvas cursor-pointer text-ink">
+        <Link href="/studio/notifications" className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-canvas cursor-pointer text-ink">
           <Bell size={19} />
           {unreadNotifications > 0 && (
             <span className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[10px] font-bold text-white animate-pulse">
@@ -187,12 +187,19 @@ export default function CreatorLayout({ children, topbar }) {
   useEffect(() => {
     fetchUser();
     fetchNotifications();
+    const notificationPoll = window.setInterval(fetchNotifications, 30_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") fetchNotifications();
+    };
 
     window.addEventListener("user-update", fetchUser);
     window.addEventListener("notifications-update", fetchNotifications);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
+      window.clearInterval(notificationPoll);
       window.removeEventListener("user-update", fetchUser);
       window.removeEventListener("notifications-update", fetchNotifications);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, []);
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Bell,
   CheckCheck,
@@ -40,6 +41,11 @@ const formatCreatedAt = (value) => {
     minute: "2-digit",
   });
 };
+
+const safeActionUrl = (value) =>
+  typeof value === "string" && value.startsWith("/") && !value.startsWith("//")
+    ? value
+    : null;
 
 export default function NotificationsPage() {
   const [items, setItems] = useState([]);
@@ -117,6 +123,18 @@ export default function NotificationsPage() {
     }
   };
 
+  const handleOpen = async (item) => {
+    if (item.read) return;
+    try {
+      await markNotificationsRead(item.id);
+      setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, read: true } : entry));
+      window.dispatchEvent(new Event("notifications-update"));
+      window.dispatchEvent(new Event("user-update"));
+    } catch {
+      // Navigation remains available even if the read receipt cannot be stored.
+    }
+  };
+
   return (
     <main className="mx-auto min-h-[calc(100vh-72px)] max-w-[760px] bg-canvas px-4 py-6 sm:px-6">
       <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -178,6 +196,27 @@ export default function NotificationsPage() {
               key={item.id}
               className={`flex items-start justify-between gap-3 p-4 ${item.read ? "hover:bg-canvas/50" : "bg-brand-50/40"}`}
             >
+              {safeActionUrl(item.actionUrl) ? (
+                <Link
+                  href={safeActionUrl(item.actionUrl)}
+                  onClick={() => handleOpen(item)}
+                  className="flex min-w-0 flex-1 items-start gap-3.5 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500"
+                  aria-label={`${item.title} ${item.message}`}
+                >
+                  <span className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-full bg-brand-50">
+                    <NotificationIcon type={item.type} />
+                  </span>
+                  <span className="min-w-0 leading-tight">
+                    <span className="block text-[13.5px] leading-relaxed text-ink">
+                      <span className="mr-1 font-extrabold">{item.title}</span>
+                      {item.message}
+                    </span>
+                    <span className="mt-1 block text-[11.5px] font-medium text-muted">
+                      {formatCreatedAt(item.createdAt)}
+                    </span>
+                  </span>
+                </Link>
+              ) : (
               <div className="flex min-w-0 flex-1 items-start gap-3.5">
                 <span className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-full bg-brand-50">
                   <NotificationIcon type={item.type} />
@@ -192,6 +231,7 @@ export default function NotificationsPage() {
                   </p>
                 </div>
               </div>
+              )}
               <button
                 type="button"
                 onClick={() => handleRemove(item.id)}
