@@ -1,6 +1,7 @@
 import { FEED_MODES } from "./constants";
 import { presentPost } from "./presenters";
 import { feedQuerySchema } from "../validators";
+import { resolvePremiumAvailability } from "./premium";
 
 const encodeCursor = (post, mode) => {
   const value = {
@@ -142,12 +143,14 @@ export async function getFeedPage(db, viewerId, query) {
     include: postInclude(viewerId),
   });
   const page = posts.slice(0, query.limit);
+  const premiumAccess = await resolvePremiumAvailability(db, viewerId, page);
 
   return {
     items: page.map((post) =>
       presentPost(
         { ...post, creatorFollowers: post.creator?.followers ?? [] },
         viewerId,
+        premiumAccess.get(post.id),
       ),
     ),
     nextCursor:

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { presentCreator, presentPost } from "./presenters";
+import { resolvePremiumAvailability } from "./premium";
 
 const SEARCH_TYPES = ["all", "creators", "posts", "communities"];
 
@@ -86,6 +87,8 @@ export async function searchConsumer(database, viewerId, query) {
       : [],
   ]);
 
+  const premiumAccess = await resolvePremiumAvailability(database, viewerId, posts);
+
   return {
     creators: creators.map((creator) =>
       presentCreator(
@@ -97,6 +100,7 @@ export async function searchConsumer(database, viewerId, query) {
       presentPost(
         { ...post, creatorFollowers: post.creator?.followers ?? [] },
         viewerId,
+        premiumAccess.get(post.id),
       ),
     ),
     communities,

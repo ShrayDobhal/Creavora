@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { presentCreator, presentPost } from "@/lib/consumer/presenters";
 
 describe("presentPost", () => {
-  it("marks premium work as unavailable in this release without paid gating", () => {
+  it("locks premium work after the free previews while preserving a visual preview", () => {
     const post = {
       id: "p1",
       creatorId: "c1",
@@ -34,12 +34,26 @@ describe("presentPost", () => {
 
     expect(presented).toMatchObject({
       content: null,
-      mediaUrl: null,
-      availability: "coming_soon",
+      mediaUrl: "https://cdn.test/a.jpg",
+      availability: "locked",
       counts: { likes: 8, comments: 2, views: 20, shares: 1 },
     });
     expect(presented).not.toHaveProperty("price");
     expect(presented).not.toHaveProperty("isLocked");
+  });
+
+  it("shows one of the two free premium previews", () => {
+    const row = {
+      id: "p2", creatorId: "c1", content: "Preview note", mediaUrl: "https://cdn.test/p.jpg",
+      mediaType: "image", isPremium: true, likesCount: 0, commentsCount: 0, viewsCount: 0,
+      sharesCount: 0, publishedAt: new Date("2026-08-02"), likes: [], bookmarks: [], creatorFollowers: [],
+      creator: { id: "c1", name: "Asha", handle: "asha", avatar: null, roleTitle: "Fashion", verified: true },
+    };
+
+    expect(presentPost(row, "u1", { availability: "preview", previewIndex: 2 })).toMatchObject({
+      content: "Preview note", availability: "preview", previewIndex: 2,
+      viewer: { hasPremiumAccess: false },
+    });
   });
 
   it("presents a creator follower count from the live follow relation aggregate", () => {

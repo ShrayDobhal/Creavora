@@ -170,6 +170,9 @@ describe("Blindly production demo-content importer", () => {
       expect.arrayContaining(["aisha-bites", "coach-kabir", "tech-with-vihaan"]),
     );
     expect(new Set(categories)).toEqual(new Set(LAUNCH_CATEGORIES));
+    expect([...database.creatorProfile.records.values()].every(({ subscriptionPrice }) => (
+      [299, 399, 499, 599].includes(subscriptionPrice)
+    ))).toBe(true);
     expect(posts.every(({ id, content }) => (
       id.startsWith("blindly-demo-post-") && !content.startsWith("[blindly-demo:")
     ))).toBe(true);
@@ -180,6 +183,7 @@ describe("Blindly production demo-content importer", () => {
       /^https:\/\/images\.unsplash\.com\/photo-\d+-[a-z0-9]+\?/.test(mediaUrl)
     ))).toBe(true);
     expect(new Set(posts.map(({ mediaUrl }) => mediaUrl)).size).toBe(60);
+    expect(posts.every(({ isPremium, price }) => isPremium && [299, 399, 499, 599].includes(price))).toBe(true);
     expect(stories.every(({ id, expiresAt }) => (
       id.startsWith("blindly-demo-story-") && expiresAt > now
     ))).toBe(true);

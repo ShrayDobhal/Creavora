@@ -602,7 +602,7 @@ describe("consumer API contracts", () => {
     expect(mockDb.user.findMany).not.toHaveBeenCalled();
   });
 
-  it("marks premium search-result content as unavailable without entitlement lookup", async () => {
+  it("marks premium search-result content as locked when it is beyond the free previews", async () => {
     const premiumPost = {
       id: "post-premium",
       creatorId: "creator-1",
@@ -620,12 +620,15 @@ describe("consumer API contracts", () => {
       likes: [],
       bookmarks: [],
     };
+    const findPosts = vi.fn()
+      .mockResolvedValueOnce([premiumPost])
+      .mockResolvedValueOnce([{ id: "newer-preview-1" }, { id: "newer-preview-2" }]);
     const response = await createSearchGet({
-      post: { findMany: vi.fn().mockResolvedValue([premiumPost]) },
+      post: { findMany: findPosts },
     })(new Request("http://localhost/api/search?q=lesson&type=posts"), authContext);
 
     expect(await json(response)).toMatchObject({
-      posts: [{ id: "post-premium", content: null, mediaUrl: null, availability: "coming_soon" }],
+      posts: [{ id: "post-premium", content: null, mediaUrl: "https://cdn.example.test/lesson.jpg", availability: "locked" }],
     });
   });
 

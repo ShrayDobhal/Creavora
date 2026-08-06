@@ -137,6 +137,22 @@ export function getCreator({ handle, signal }) {
   return request(`/api/creators/${encodeURIComponent(handle)}`, { signal });
 }
 
+export function createPaymentOrder(creatorId, { signal } = {}) {
+  return request("/api/payments/create-order", {
+    method: "POST",
+    signal,
+    body: { creatorId },
+  });
+}
+
+export function verifyPayment(input, { signal } = {}) {
+  return request("/api/payments/verify", {
+    method: "POST",
+    signal,
+    body: input,
+  });
+}
+
 export function toggleLike(postId, { signal } = {}) {
   return request(`/api/posts/${encodeURIComponent(postId)}/like`, {
     method: "POST",

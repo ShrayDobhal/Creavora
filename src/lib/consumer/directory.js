@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CATEGORY_OPTIONS } from "./constants";
 import { presentCreator, presentPost } from "./presenters";
 import { getPublicHandleCandidates } from "./public-copy";
+import { resolvePremiumAvailability } from "./premium";
 
 const creatorQuerySchema = z.object({
   category: z.enum(["All", ...CATEGORY_OPTIONS]).default("All"),
@@ -92,12 +93,21 @@ export async function getCreatorProfile(database, viewerId, handle) {
   }
   if (!creator) throw new Error("Creator not found");
 
+  const premiumAccess = await resolvePremiumAvailability(database, viewerId, creator.posts);
+  const activeSubscription = database.subscription?.findUnique
+    ? await database.subscription.findUnique({
+        where: { userId_creatorId: { userId: viewerId, creatorId: creator.id } },
+        select: { status: true },
+      })
+    : null;
+
   return {
-    creator: presentDirectoryCreator(creator, viewerId),
+    creator: { ...presentDirectoryCreator(creator, viewerId), isSubscribed: activeSubscription?.status === "ACTIVE" },
     posts: creator.posts.map((post) =>
       presentPost(
         { ...post, creatorFollowers: post.creator?.followers ?? [] },
         viewerId,
+        premiumAccess.get(post.id),
       ),
     ),
   };

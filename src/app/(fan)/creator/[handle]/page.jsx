@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, BadgeCheck, Grid2X2, UserPlus, Users } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Crown, Grid2X2, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AsyncState } from "@/components/consumer/AsyncState";
@@ -17,9 +17,10 @@ import {
   toggleLike,
 } from "@/services/consumer-api";
 
-export default function CreatorProfilePage() {
+export default function CreatorProfilePage({ handleOverride, backHref = "/feed", isOwnProfile = false }) {
   const params = useParams();
-  const handle = Array.isArray(params.handle) ? params.handle[0] : params.handle;
+  const routeHandle = Array.isArray(params.handle) ? params.handle[0] : params.handle;
+  const handle = handleOverride || routeHandle;
   const [profile, setProfile] = useState(null);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
@@ -92,7 +93,7 @@ export default function CreatorProfilePage() {
               fallbackLabel="Creator cover unavailable"
             />
           ) : null}
-          <Link href="/feed" aria-label="Back to feed" className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-black/45 text-white backdrop-blur"><ArrowLeft size={18} /></Link>
+          <Link href={backHref} aria-label="Go back" className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-black/45 text-white backdrop-blur"><ArrowLeft size={18} /></Link>
         </div>
         <div className="px-5 pb-6 sm:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -106,15 +107,26 @@ export default function CreatorProfilePage() {
                 <p className="mt-1 text-sm text-muted">@{creator.handle}</p>
               </div>
             </div>
-            <button
-              type="button"
-              aria-pressed={isFollowing}
-              disabled={followPending}
-              onClick={handleFollow}
-              className={`inline-flex h-11 items-center justify-center gap-2 rounded-full px-6 text-sm font-extrabold transition disabled:opacity-60 ${isFollowing ? "border border-line bg-white text-ink" : "bg-brand-600 text-white hover:bg-brand-700"}`}
-            >
-              <UserPlus size={17} /> {isFollowing ? "Following" : "Follow"}
-            </button>
+            {isOwnProfile ? (
+              <Link href="/studio/settings" className="inline-flex h-11 items-center justify-center rounded-full bg-brand-600 px-6 text-sm font-extrabold text-white hover:bg-brand-700">
+                Edit profile
+              </Link>
+            ) : <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                aria-pressed={isFollowing}
+                disabled={followPending}
+                onClick={handleFollow}
+                className={`inline-flex h-11 items-center justify-center gap-2 rounded-full px-6 text-sm font-extrabold transition disabled:opacity-60 ${isFollowing ? "border border-line bg-white text-ink" : "bg-brand-600 text-white hover:bg-brand-700"}`}
+              >
+                <UserPlus size={17} /> {isFollowing ? "Following" : "Follow"}
+              </button>
+              {creator.subscriptionPrice > 0 ? creator.isSubscribed ? (
+                <Link href="/subscriptions" className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-6 text-sm font-extrabold text-emerald-800"><Crown size={17} /> Subscribed</Link>
+              ) : (
+                <Link href={`/checkout?creator=${encodeURIComponent(creator.handle)}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-neutral-950 px-6 text-sm font-extrabold text-white"><Crown size={17} /> Subscribe ₹{creator.subscriptionPrice.toLocaleString("en-IN")}</Link>
+              ) : null}
+            </div>}
           </div>
 
           <div className="mt-5 grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">

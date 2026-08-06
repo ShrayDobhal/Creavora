@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   Bookmark,
   Clock3,
+  LockKeyhole,
   Heart,
   MessageCircle,
   Play,
@@ -120,7 +121,9 @@ export function FeedCard({
   }
 
   const mediaAlt = content || `Post by ${post.creator.name}`;
-  const unavailable = post.isPremium && post.availability === "coming_soon";
+  const locked = post.isPremium && post.availability === "locked";
+  const premiumPreview = post.isPremium && post.availability === "preview";
+  const checkoutHref = `/checkout?creator=${encodeURIComponent(post.creator.handle)}`;
   const commentButtonLabel = commentsOpen
     ? `Hide ${commentCount ?? ""} comments`.replace(/\s+/g, " ")
     : `View ${commentCount ?? ""} comments`.replace(/\s+/g, " ");
@@ -148,15 +151,24 @@ export function FeedCard({
         />
       </header>
 
-      {unavailable ? (
-        <div className="mx-4 grid min-h-44 place-items-center rounded-xl bg-neutral-100 p-8 text-center sm:mx-5">
-          <div>
-            <Clock3 className="mx-auto text-brand-600" size={28} />
-            <p className="mt-3 font-bold">This post is not available in the current release.</p>
+      {locked ? (
+        <div className="relative min-h-64 overflow-hidden bg-neutral-900">
+          {post.mediaUrl && !post.mediaType?.toLowerCase().startsWith("video") ? (
+            <EditorialImage src={post.mediaUrl} alt="Locked premium preview" className="absolute inset-0 h-full w-full scale-105 object-cover blur-xl opacity-60" fallbackLabel="Premium media" />
+          ) : <div className="absolute inset-0 bg-gradient-to-br from-brand-900 via-neutral-900 to-violet-900" />}
+          <div className="absolute inset-0 bg-black/35" />
+          <div className="relative z-10 grid min-h-64 place-items-center p-8 text-center text-white">
+            <div>
+              <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/15 backdrop-blur"><LockKeyhole size={22} /></span>
+              <p className="mt-4 text-lg font-black">Premium content</p>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/75">You have viewed the two free premium previews from this creator</p>
+              <Link href={checkoutHref} className="mt-5 inline-flex min-h-10 items-center rounded-xl bg-white px-5 text-sm font-black text-brand-800">Subscribe to unlock</Link>
+            </div>
           </div>
         </div>
       ) : (
         <>
+          {premiumPreview ? <div className="mx-4 mb-3 flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2 text-xs font-bold text-brand-800 sm:mx-5"><Clock3 size={15} /> Free premium preview {post.previewIndex} of 2</div> : null}
           {content ? <Link href={`/post/${post.id}`} className="block px-4 pb-4 text-[15px] leading-7 text-ink/85 hover:text-brand-800 sm:px-5">{content}</Link> : null}
           {post.mediaUrl ? (
             post.mediaType?.toLowerCase().startsWith("video") ? (
@@ -194,7 +206,7 @@ export function FeedCard({
           type="button"
           aria-label={`${isLiked ? "Unlike" : "Like"} post by ${post.creator.name}`}
           aria-pressed={isLiked}
-          disabled={Boolean(pendingAction)}
+          disabled={Boolean(pendingAction) || locked}
           onClick={handleLike}
           className={`inline-flex min-h-10 items-center gap-2 rounded-full px-2 text-sm font-bold disabled:opacity-60 ${isLiked ? "text-rose-600" : "text-ink/70"}`}
         >
@@ -205,7 +217,8 @@ export function FeedCard({
             type="button"
             aria-expanded={commentsOpen}
             aria-label={commentButtonLabel}
-            onClick={() => setCommentsOpen(true)}
+            onClick={() => { if (!locked) setCommentsOpen(true); }}
+            disabled={locked}
             className="inline-flex min-h-10 items-center gap-1.5 text-sm text-muted"
           >
             <MessageCircle size={18} /> {commentCount === null ? null : commentCount.toLocaleString("en-IN")}
@@ -221,7 +234,7 @@ export function FeedCard({
           type="button"
           aria-label={isBookmarked ? "Remove bookmark" : "Bookmark post"}
           aria-pressed={isBookmarked}
-          disabled={Boolean(pendingAction)}
+          disabled={Boolean(pendingAction) || locked}
           onClick={handleBookmark}
           className={`ml-auto grid min-h-10 min-w-10 place-items-center rounded-full disabled:opacity-60 ${isBookmarked ? "text-brand-700" : "text-ink/65"}`}
         >
@@ -231,7 +244,7 @@ export function FeedCard({
 
       {error ? <p className="mx-4 mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 sm:mx-5" role="alert">{error}</p> : null}
     </article>
-    {onLoadComments && onCreateComment ? (
+    {onLoadComments && onCreateComment && !locked ? (
       <CommentDrawer
         post={post}
         open={commentsOpen}

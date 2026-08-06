@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({ db: {} }));
@@ -19,8 +20,8 @@ import {
 import { createWalletDepositPost } from "@/app/api/wallet/deposit/route";
 import { createRewardPost } from "@/app/api/rewards/route";
 import { createCancelSubscriptionPost } from "@/app/api/subscriptions/cancel/route";
-import { POST as createPaymentOrderPost } from "@/app/api/payments/create-order/route";
-import { POST as verifyPaymentPost } from "@/app/api/payments/verify/route";
+import { createPaymentOrderHandler } from "@/app/api/payments/create-order/route";
+import { createPaymentVerificationHandler } from "@/app/api/payments/verify/route";
 import { databaseIdSchema, sendMessageSchema } from "@/lib/validators";
 
 const fixtureUser = { id: "viewer-1", name: "Riya", role: "USER" };
@@ -581,19 +582,104 @@ it.each([
   expect(database.notification.create).not.toHaveBeenCalled();
 });
 
-it.each([
-  ["payment order creation", createPaymentOrderPost],
-  ["payment verification", verifyPaymentPost],
-])("disables the direct %s endpoint before reading its body", async (_name, handler) => {
-  const readBody = vi.fn(() => {
-    throw new Error("request body must not be read");
-  });
+it("creates a Razorpay order from the creator price stored in the database", async () => {
+  const createOrder = vi.fn().mockResolvedValue({ id: "order_blindly_1" });
+  const database = {
+    user: { findFirst: vi.fn().mockResolvedValue({
+      id: creator.id,
+      name: creator.name,
+      handle: creator.handle,
+      avatar: creator.avatar,
+      creatorProfile: { subscriptionPrice: 499 },
+    }) },
+    subscription: { findUnique: vi.fn().mockResolvedValue(null) },
+    payment: { create: vi.fn().mockResolvedValue({ id: "payment-record-1" }) },
+  };
+  const response = await createPaymentOrderHandler({
+    database,
+    env: { RAZORPAY_KEY_ID: "rzp_test_public", RAZORPAY_KEY_SECRET: "test-secret" },
+    createGateway: () => ({ orders: { create: createOrder } }),
+  })(new Request("http://localhost/api/payments/create-order", {
+    method: "POST",
+    body: JSON.stringify({ creatorId: creator.id }),
+  }), { user: { ...fixtureUser, email: "riya@example.test" } });
 
-  const response = await handler({ json: readBody }, { user: fixtureUser });
+  expect(response.status).toBe(201);
+  expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({ amount: 49900, currency: "INR" }));
+  expect(database.payment.create).toHaveBeenCalledWith({ data: expect.objectContaining({ amount: 499, orderId: "order_blindly_1" }) });
+  expect(await response.json()).toMatchObject({ keyId: "rzp_test_public", orderId: "order_blindly_1", amount: 49900 });
+});
 
-  expect(response.status).toBe(501);
-  expect(await response.json()).toEqual({ error: "This feature is not available yet" });
-  expect(readBody).not.toHaveBeenCalled();
+it("does not start checkout when Razorpay credentials are absent", async () => {
+  const database = { user: { findFirst: vi.fn() } };
+  const response = await createPaymentOrderHandler({ database, env: {} })(
+    new Request("http://localhost/api/payments/create-order", { method: "POST", body: JSON.stringify({ creatorId: creator.id }) }),
+    { user: fixtureUser },
+  );
+
+  expect(response.status).toBe(503);
+  expect(database.user.findFirst).not.toHaveBeenCalled();
+});
+
+it("verifies a captured Razorpay payment and activates the subscription once", async () => {
+  const secret = "test-secret";
+  const orderId = "order_blindly_1";
+  const paymentId = "pay_blindly_1";
+  const signature = createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest("hex");
+  const transaction = {
+    payment: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    subscription: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      upsert: vi.fn().mockResolvedValue({ id: "subscription-1", status: "ACTIVE" }),
+    },
+    transaction: { create: vi.fn().mockResolvedValue({ id: "transaction-1" }) },
+    creatorProfile: { update: vi.fn().mockResolvedValue({}) },
+    community: { findFirst: vi.fn().mockResolvedValue(null) },
+    notification: { create: vi.fn().mockResolvedValue({}) },
+  };
+  const database = {
+    payment: { findFirst: vi.fn().mockResolvedValue({
+      id: "payment-record-1",
+      amount: 499,
+      metadata: JSON.stringify({ creatorId: creator.id }),
+    }) },
+    $transaction: vi.fn(async (callback) => callback(transaction)),
+  };
+  const response = await createPaymentVerificationHandler({
+    database,
+    env: { RAZORPAY_KEY_ID: "rzp_test_public", RAZORPAY_KEY_SECRET: secret },
+    createGateway: () => ({ payments: { fetch: vi.fn().mockResolvedValue({
+      order_id: orderId,
+      amount: 49900,
+      currency: "INR",
+      status: "captured",
+      method: "upi",
+    }) } }),
+  })(new Request("http://localhost/api/payments/verify", {
+    method: "POST",
+    body: JSON.stringify({ razorpayOrderId: orderId, razorpayPaymentId: paymentId, razorpaySignature: signature }),
+  }), { user: fixtureUser });
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ success: true, alreadyVerified: false });
+  expect(transaction.subscription.upsert).toHaveBeenCalledWith(expect.objectContaining({
+    create: expect.objectContaining({ creatorId: creator.id, price: 499, status: "ACTIVE" }),
+  }));
+  expect(transaction.creatorProfile.update).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: creator.id } }));
+});
+
+it("rejects a forged Razorpay signature before reading payment records", async () => {
+  const database = { payment: { findFirst: vi.fn() } };
+  const response = await createPaymentVerificationHandler({
+    database,
+    env: { RAZORPAY_KEY_ID: "rzp_test_public", RAZORPAY_KEY_SECRET: "test-secret" },
+  })(new Request("http://localhost/api/payments/verify", {
+    method: "POST",
+    body: JSON.stringify({ razorpayOrderId: "order-1", razorpayPaymentId: "pay-1", razorpaySignature: "0".repeat(64) }),
+  }), { user: fixtureUser });
+
+  expect(response.status).toBe(400);
+  expect(database.payment.findFirst).not.toHaveBeenCalled();
 });
 
 it("returns active non-subscribed creators as subscription recommendations", async () => {

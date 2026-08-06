@@ -28,13 +28,18 @@ const initials = (name) =>
     .join("")
     .toUpperCase();
 
-function AccountAvatar({ name, size = "h-10 w-10" }) {
+function AccountAvatar({ name, src, size = "h-10 w-10" }) {
+  const [failedSrc, setFailedSrc] = useState(null);
+
   return (
     <span
-      className={`grid shrink-0 place-items-center rounded-full bg-brand-100 text-xs font-extrabold text-brand-700 ${size}`}
+      className={`grid aspect-square shrink-0 place-items-center overflow-hidden rounded-full bg-brand-100 text-xs font-extrabold text-brand-700 ${size}`}
       aria-label={`${name} avatar`}
     >
-      {initials(name)}
+      {src && src !== failedSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element -- verified profile media may use an external storage host.
+        <img src={src} alt="" className="h-full w-full object-cover object-center" onError={() => setFailedSrc(src)} />
+      ) : initials(name)}
     </span>
   );
 }
@@ -108,7 +113,7 @@ export function UserMenu({ name, label, sub, items, user }) {
         onClick={() => setOpen((value) => !value)}
         className="flex items-center gap-2.5 rounded-full pl-1 pr-1 hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
       >
-        <AccountAvatar name={displayName} size="h-[38px] w-[38px]" />
+        <AccountAvatar name={displayName} src={user?.avatar} size="h-[38px] w-[38px]" />
         {displayLabel ? (
           <span className="hidden text-left leading-tight sm:block">
             <span className="block text-[13.5px] font-bold">{displayLabel}</span>
@@ -126,7 +131,7 @@ export function UserMenu({ name, label, sub, items, user }) {
       {open ? (
         <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-[248px] overflow-hidden rounded-2xl border border-line bg-white py-2 shadow-[0_18px_44px_-16px_rgba(15,15,20,.35)]">
           <div className="flex items-center gap-3 px-4 pb-3 pt-1">
-            <AccountAvatar name={displayName} />
+            <AccountAvatar name={displayName} src={user?.avatar} />
             <div className="min-w-0 leading-tight">
               <p className="truncate text-[13.5px] font-bold">{displayLabel}</p>
               {displaySub ? <p className="truncate text-[12px] text-muted">{displaySub}</p> : null}

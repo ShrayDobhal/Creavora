@@ -1,30 +1,46 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
+const { push, getCreator } = vi.hoisted(() => ({
+  push: vi.fn(),
+  getCreator: vi.fn().mockResolvedValue({
+    creator: {
+      id: "creator-1",
+      name: "Asha Rao",
+      handle: "asha-rao",
+      avatar: "https://cdn.example.test/asha.jpg",
+      subscriptionPrice: 499,
+    },
+    posts: [],
+  }),
+}));
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push }),
+  useSearchParams: () => new URLSearchParams("creator=asha-rao"),
+}));
+
+vi.mock("@/services/consumer-api", () => ({
+  getCreator,
+  createPaymentOrder: vi.fn(),
+  verifyPayment: vi.fn(),
 }));
 
 import CheckoutPage from "@/app/checkout/page";
 
-afterEach(() => {
-  cleanup();
-  vi.unstubAllGlobals();
-});
+afterEach(() => cleanup());
 
-it("renders checkout as a truthful unavailable Blindly route", () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-    new Response(JSON.stringify({ walletBalance: 0 }), { status: 200 }),
-  ));
-
+it("shows the creator's database price and Razorpay payment choices", async () => {
   render(<CheckoutPage />);
 
-  expect(screen.getByRole("heading", { name: "Checkout is not available yet" })).toBeVisible();
-  expect(screen.getByText(/Blindly subscriptions and payments are unavailable/i)).toBeVisible();
-  expect(screen.queryByRole("button", { name: /pay.+securely/i })).not.toBeInTheDocument();
-  expect(screen.queryAllByText(/Crevora|Available balance|XP rewarded|₹499|₹1,299|₹4,999/i)).toHaveLength(0);
+  await waitFor(() => expect(getCreator).toHaveBeenCalledWith(expect.objectContaining({ handle: "asha-rao" })));
+  expect(await screen.findByRole("heading", { name: "Asha Rao" })).toBeVisible();
+  expect(screen.getAllByText(/₹499/).length).toBeGreaterThan(0);
+  expect(screen.getByText("UPI")).toBeVisible();
+  expect(screen.getByText("Cards")).toBeVisible();
+  expect(screen.getByText("Net banking")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Pay ₹499 securely" })).toBeEnabled();
 });

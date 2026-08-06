@@ -21,7 +21,8 @@ import {
   Megaphone,
   Wallet,
 } from "lucide-react";
-import { Avatar, Verified } from "../ui/Media.jsx";
+import { Verified } from "../ui/Media.jsx";
+import { ConsumerAvatar } from "@/components/consumer/CreatorCard";
 import { Logo, UserMenu } from "./FanLayout.jsx";
 import { Home, User } from "lucide-react";
 
@@ -115,6 +116,7 @@ export function CreatorTopBar({
           label={user?.name || "Creator"}
           sub="Creator Portal"
           items={creatorMenu}
+          user={user}
         />
       </div>
     </header>
@@ -179,9 +181,9 @@ export default function CreatorLayout({ children, topbar }) {
       <div>
         <aside className="no-scrollbar fixed bottom-0 left-0 top-[76px] z-20 hidden w-[244px] flex-col overflow-y-auto overscroll-contain border-r border-line bg-white px-4 py-4 lg:flex">
           {user && (
-            <Link href={`/creator/${user.handle}`} className="block rounded-2xl bg-brand-50/70 p-3.5 hover:bg-brand-50">
+            <Link href="/studio/profile" className="block rounded-2xl bg-brand-50/70 p-3.5 hover:bg-brand-50">
               <div className="flex items-center gap-3">
-                <Avatar name={user.name} src={user.avatar} size={46} />
+                <ConsumerAvatar creator={user} size="h-[46px] w-[46px]" />
                 <div className="min-w-0">
                   <p className="flex items-center gap-1 text-[14.5px] font-bold">
                     {user.name} <Verified size={14} />

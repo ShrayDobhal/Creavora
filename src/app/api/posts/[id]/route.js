@@ -4,6 +4,7 @@ import { withAuth } from "@/lib/middleware";
 import { socialPostUpdateSchema, validateBody } from "@/lib/validators";
 import { consumerErrorResponse } from "@/lib/consumer/http";
 import { presentPost } from "@/lib/consumer/presenters";
+import { resolvePremiumAvailability } from "@/lib/consumer/premium";
 
 const postInclude = (viewerId) => ({
   creator: {
@@ -26,7 +27,14 @@ export function createPostGet(database = db) {
         include: postInclude(user.id),
       });
       if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
-      return NextResponse.json(presentPost({ ...post, creatorFollowers: post.creator.followers }, user.id));
+      const premiumAccess = await resolvePremiumAvailability(database, user.id, [post]);
+      return NextResponse.json(
+        presentPost(
+          { ...post, creatorFollowers: post.creator.followers },
+          user.id,
+          premiumAccess.get(post.id),
+        ),
+      );
     } catch (error) {
       return consumerErrorResponse(error, "Failed to load post");
     }

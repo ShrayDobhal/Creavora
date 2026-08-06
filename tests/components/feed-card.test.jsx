@@ -108,25 +108,24 @@ describe("FeedCard", () => {
     expect(screen.queryByLabelText(/shares/i)).not.toBeInTheDocument();
   });
 
-  it("shows unavailable work without paid-release claims", () => {
+  it("shows a premium lock and subscription action after both free previews", () => {
     const { container } = render(
       <FeedCard
         post={{
           ...post,
           content: null,
-          mediaUrl: null,
+          mediaUrl: "https://cdn.example.test/premium.jpg",
           isPremium: true,
-          availability: "coming_soon",
+          availability: "locked",
         }}
         onLike={vi.fn()}
         onBookmark={vi.fn()}
       />,
     );
 
-    expect(
-      screen.getByText("This post is not available in the current release."),
-    ).toBeVisible();
-    expect(container).not.toHaveTextContent(/premium|subscribe|unlock|upgrade|₹/i);
+    expect(screen.getByText("Premium content")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Subscribe to unlock" })).toHaveAttribute("href", "/checkout?creator=asha-rao");
+    expect(container).toHaveTextContent("two free premium previews");
   });
 
   it("loads and creates comments through explicit callbacks", async () => {

@@ -98,12 +98,12 @@ export async function importBlindlyDemoContent({ database, now }) {
       update: userData,
       create: { id, ...userData },
     });
-    creators.push({ ...fixture, user });
-
+    const subscriptionPrice = 299 + (index % 4) * 100;
+    creators.push({ ...fixture, user, subscriptionPrice });
     await database.creatorProfile.upsert({
       where: { userId: user.id },
-      update: { category: fixture.category },
-      create: { id: `${DEMO_ID_PREFIX}-profile-${fixture.handle}`, userId: user.id, category: fixture.category },
+      update: { category: fixture.category, subscriptionPrice },
+      create: { id: `${DEMO_ID_PREFIX}-profile-${fixture.handle}`, userId: user.id, category: fixture.category, subscriptionPrice },
     });
   }
 
@@ -122,8 +122,8 @@ export async function importBlindlyDemoContent({ database, now }) {
       category: fixture.category,
       mediaUrl: fixture.mediaUrl,
       mediaType: "image",
-      isPremium: false,
-      price: 0,
+      isPremium: true,
+      price: creator.subscriptionPrice,
       likesCount: 1,
       commentsCount: postIndex === 0 ? 1 : 0,
       viewsCount: 240 + index * 37,

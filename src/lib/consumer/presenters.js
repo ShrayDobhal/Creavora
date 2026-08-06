@@ -32,17 +32,21 @@ export const presentComment = (row, viewerId) => ({
   viewer: { canManage: row.userId === viewerId },
 });
 
-export const presentPost = (row, viewerId) => {
-  const isUnavailable = Boolean(row.isPremium);
+export const presentPost = (row, viewerId, premiumAccess = null) => {
+  const availability = row.isPremium
+    ? premiumAccess?.availability || (row.creatorId === viewerId ? "available" : "locked")
+    : "available";
+  const isLocked = availability === "locked";
 
   return {
     id: row.id,
-    content: isUnavailable ? null : sanitizePublicCopy(row.content),
-    mediaUrl: isUnavailable ? null : row.mediaUrl,
-    mediaType: isUnavailable ? null : row.mediaType,
+    content: isLocked ? null : sanitizePublicCopy(row.content),
+    mediaUrl: row.mediaUrl,
+    mediaType: row.mediaType,
     category: row.category ?? row.creator?.creatorProfile?.category ?? null,
     isPremium: row.isPremium,
-    availability: isUnavailable ? "coming_soon" : "available",
+    availability,
+    previewIndex: availability === "preview" ? premiumAccess?.previewIndex || 1 : null,
     publishedAt: row.publishedAt,
     counts: {
       likes: row.likesCount,
@@ -56,6 +60,7 @@ export const presentPost = (row, viewerId) => {
       isBookmarked: includesViewer(row.bookmarks, viewerId),
       isFollowing: includesViewer(row.creatorFollowers, viewerId),
       canManage: row.creatorId === viewerId,
+      hasPremiumAccess: availability === "available",
     },
   };
 };
