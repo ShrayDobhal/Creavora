@@ -17,6 +17,7 @@ function LoginForm() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleAvailable, setGoogleAvailable] = useState(null);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -71,7 +72,7 @@ function LoginForm() {
             Sign in to discover creators and return to your following feed.
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          {googleAvailable === false ? <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             {error && (
               <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600">
                 {error}
@@ -125,9 +126,9 @@ function LoginForm() {
                 <>Sign In</>
               )}
             </button>
-          </form>
+          </form> : null}
 
-          <AuthProviderOptions role="USER" redirect={redirect} />
+          <AuthProviderOptions role="USER" redirect={redirect} standalone={googleAvailable !== false} onProviderStatus={setGoogleAvailable} />
 
           <p className="mt-6 text-center text-[13.5px] text-muted">
             Don&apos;t have an account?{" "}

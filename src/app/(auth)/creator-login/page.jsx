@@ -17,6 +17,7 @@ function CreatorLoginForm() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleAvailable, setGoogleAvailable] = useState(null);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -74,7 +75,7 @@ function CreatorLoginForm() {
             Sign in to manage your creator profile and studio.
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          {googleAvailable === false ? <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             {error && (
               <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-[13px] font-semibold text-rose-400">
                 {error}
@@ -128,9 +129,9 @@ function CreatorLoginForm() {
                 <>Access Creator Studio</>
               )}
             </button>
-          </form>
+          </form> : null}
 
-          <AuthProviderOptions role="CREATOR" redirect={redirect} dark />
+          <AuthProviderOptions role="CREATOR" redirect={redirect} dark standalone={googleAvailable !== false} onProviderStatus={setGoogleAvailable} />
 
           <p className="mt-6 text-center text-[13.5px] text-neutral-400">
             Apply to become a creator?{" "}

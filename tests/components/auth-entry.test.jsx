@@ -29,7 +29,7 @@ afterEach(() => {
 
 async function completeLogin({ email, submitName }) {
   const user = userEvent.setup();
-  await user.type(screen.getByRole("textbox", { name: /email/i }), email);
+  await user.type(await screen.findByRole("textbox", { name: /email/i }), email);
   await user.type(screen.getByLabelText("Password"), "Test1234");
   expect(screen.getByRole("button", { name: "Show password" })).toBeVisible();
   await user.click(screen.getByRole("button", { name: submitName }));

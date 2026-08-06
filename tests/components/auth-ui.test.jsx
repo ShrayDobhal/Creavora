@@ -34,6 +34,8 @@ describe("provider-aware login UI", () => {
 
     const google = await screen.findByRole("link", { name: /continue with google/i });
     expect(google).toHaveAttribute("href", `/api/auth/google/start?role=${role}&redirect=${encodeURIComponent(role === "CREATOR" ? "/studio/content" : "/")}`);
+    expect(screen.queryByRole("textbox", { name: /email/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /forgot password/i })).toHaveAttribute("href", "/forgot-password");
   });
 
