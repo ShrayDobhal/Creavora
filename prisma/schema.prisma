@@ -65,11 +65,12 @@ model User {
   conversationParticipants ConversationParticipant[]
 
   // Community relations
-  ownedCommunities Community[]       @relation("CommunityOwner")
-  communityMembers CommunityMember[]
-  communityPosts   CommunityPost[]
-  communityReplies CommunityReply[]
-  pollVotes        PollVote[]
+  ownedCommunities   Community[]         @relation("CommunityOwner")
+  communityMembers   CommunityMember[]
+  communityPosts     CommunityPost[]
+  communityReplies   CommunityReply[]
+  communityPostLikes CommunityPostLike[]
+  pollVotes          PollVote[]
 
   // Other relations
   collections        Collection[]
@@ -553,6 +554,7 @@ model CommunityPost {
   authorId     String
   content      String
   mediaUrl     String?
+  kind         String    @default("POST") // POST, DISCUSSION, ANNOUNCEMENT
   isPinned     Boolean   @default(false)
   likesCount   Int       @default(0)
   repliesCount Int       @default(0)
@@ -560,14 +562,28 @@ model CommunityPost {
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
-  community Community        @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  author    User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  community Community           @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author    User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
   replies   CommunityReply[]
+  likes     CommunityPostLike[]
   poll      Poll?
 
   @@index([communityId])
   @@index([authorId])
   @@index([createdAt])
+}
+
+model CommunityPostLike {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId])
 }
 
 model CommunityReply {

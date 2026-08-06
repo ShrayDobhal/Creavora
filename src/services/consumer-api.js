@@ -233,6 +233,14 @@ export function getStudioSubscribers({ signal } = {}) {
   return request("/api/studio/subscribers", { signal });
 }
 
+export function getStudioCommunity({ signal } = {}) {
+  return request("/api/studio/community", { signal });
+}
+
+export function mutateStudioCommunity(input, { signal } = {}) {
+  return request("/api/studio/community", { method: "POST", signal, body: input });
+}
+
 export function joinFreeSubscription(creatorId, { signal } = {}) {
   return request("/api/subscriptions", {
     method: "POST",

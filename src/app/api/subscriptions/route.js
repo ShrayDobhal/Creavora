@@ -115,6 +115,21 @@ const subscriptionSelect = {
   },
 };
 
+async function addCommunityMember(database, creatorId, userId) {
+  if (!database.community?.findFirst || !database.communityMember?.upsert) return;
+  const community = await database.community.findFirst({ where: { ownerId: creatorId, deletedAt: null }, select: { id: true } });
+  if (!community) return;
+  await database.communityMember.upsert({
+    where: { communityId_userId: { communityId: community.id, userId } },
+    create: { communityId: community.id, userId, role: "MEMBER" },
+    update: {},
+  });
+  if (database.communityMember.count && database.community.update) {
+    const memberCount = await database.communityMember.count({ where: { communityId: community.id } });
+    await database.community.update({ where: { id: community.id }, data: { memberCount } });
+  }
+}
+
 export function createSubscriptionPost({ database = db } = {}) {
   return async (req, { user }) => {
     let creatorId = "";
@@ -174,6 +189,7 @@ export function createSubscriptionPost({ database = db } = {}) {
           { status: 409 },
         );
       }
+      await addCommunityMember(database, creatorId, user.id);
       return NextResponse.json(result, { status: result.created ? 201 : 200 });
     } catch (error) {
       if (error?.code === "P2002" && creatorId) {

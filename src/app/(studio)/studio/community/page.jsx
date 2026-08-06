@@ -1,383 +1,189 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowRight,
-  BarChart3,
-  Bell,
   Calendar,
-  Check,
-  ChevronDown,
   Heart,
-  Image as ImageIcon,
+  LoaderCircle,
   MessageCircle,
-  MessageSquare,
-  MoreHorizontal,
   Radio,
-  Share2,
-  SlidersHorizontal,
+  RefreshCw,
+  Send,
+  Trophy,
   Users,
-  X,
 } from "lucide-react";
-import { Card, SectionHead, Tabs } from "@/ui/Bits.jsx";
-import { Avatar, Photo, Verified } from "@/ui/Media.jsx";
+import { AsyncState } from "@/components/consumer/AsyncState";
+import { Avatar, Verified } from "@/ui/Media.jsx";
+import { Card, Tabs } from "@/ui/Bits.jsx";
+import { getStudioCommunity, mutateStudioCommunity } from "@/services/consumer-api";
 
-const overview = [
-  { icon: Users, tint: "bg-brand-50 text-brand-600", label: "Total Members", value: "2,458" },
-  { icon: Users, tint: "bg-emerald-50 text-emerald-600", label: "Online Now", value: "124" },
-  { icon: MessageSquare, tint: "bg-sky-50 text-sky-600", label: "Posts Today", value: "87" },
-  { icon: MessageCircle, tint: "bg-violet-50 text-violet-600", label: "Total Discussions", value: "1,245" },
-];
+const tabs = ["Feed", "Discussions", "Announcements", "Rooms", "Events", "Members", "Leaderboard"];
 
-const events = [
-  { title: "Live Q&A with Ananya", when: "25 May • 7:00 PM", tag: "Live", tone: "bg-rose-50 text-rose-500" },
-  { title: "Content Planning Workshop", when: "28 May • 5:00 PM", tag: "Upcoming", tone: "bg-emerald-50 text-emerald-600" },
-  { title: "Creator Networking Room", when: "29 May • 8:00 PM", tag: "Upcoming", tone: "bg-emerald-50 text-emerald-600" },
-];
+const formatDate = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(date);
+};
 
-const contributors = [
-  ["Neha Verma", "320 pts", "🥇"],
-  ["Riya Malhotra", "280 pts", "🥈"],
-  ["Kavya Singh", "210 pts", "🥉"],
-  ["Sneha Iyer", "150 pts", "4"],
-  ["Mehak Arora", "120 pts", "5"],
-];
+const EmptyPanel = ({ title, body }) => (
+  <div className="rounded-2xl border border-dashed border-line bg-white px-5 py-12 text-center">
+    <p className="font-black">{title}</p>
+    <p className="mt-1 text-sm text-muted">{body}</p>
+  </div>
+);
 
-const guidelines = [
-  "Be kind and respectful",
-  "No self-promotion or spam",
-  "Share value and support others",
-  "Keep discussions relevant",
-];
-
-export default function StudioCommunity() {
-  const [tab, setTab] = useState("Feed");
+function CommunityPostCard({ post, pending, onLike, onReply }) {
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [reply, setReply] = useState("");
 
   return (
-    <div className="grid min-w-0 gap-5 px-3 py-5 sm:px-6 2xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start gap-3.5">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
-            <Users size={21} />
-          </span>
-          <div className="min-w-0">
-            <h1 className="text-[25px] font-extrabold tracking-tight">Creator Community</h1>
-            <p className="mt-1 text-[14px] text-muted">
-              A place for creators to connect, share, learn and grow together.
-            </p>
-          </div>
-        </div>
-
-        <Tabs
-          items={[
-            "Feed",
-            "Discussions",
-            "Announcements",
-            "Rooms",
-            "Events",
-            "Members",
-            "Leaderboard",
-          ]}
-          value={tab}
-          onChange={setTab}
-          className="mt-4 border-b border-line"
-        />
-
-        {/* composer */}
-        <Card className="mt-5 min-w-0 p-4">
-          <div className="flex items-center gap-3">
-            <Avatar name="Ananya Sharma" size={42} />
-            <input
-              placeholder="What's on your mind, Ananya?"
-              className="h-11 min-w-0 flex-1 rounded-xl bg-canvas px-4 text-[14px] outline-none placeholder:text-muted"
-            />
-          </div>
-          <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
-            {[
-              { icon: ImageIcon, label: "Photo / Video" },
-              { icon: BarChart3, label: "Poll" },
-              { icon: Radio, label: "Live Room" },
-              { icon: Calendar, label: "Event" },
-              { icon: MoreHorizontal, label: "More" },
-            ].map(({ icon: Icon, label }) => (
-              <button
-                key={label}
-                className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-line px-3.5 text-[13px] font-semibold hover:bg-canvas"
-              >
-                <Icon size={15} className="text-ink/70" /> {label}
-              </button>
-            ))}
-            <button className="h-10 rounded-xl bg-brand-600 px-6 text-[13.5px] font-bold text-white hover:bg-brand-700 sm:ml-auto">
-              Post
-            </button>
-          </div>
-        </Card>
-
-        {/* featured announcement */}
-        <Card className="mt-4 bg-brand-50/50 p-4">
-          <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
-              <Bell size={18} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13.5px] font-bold">Featured Announcement</p>
-              <p className="mt-1 flex items-center gap-2 text-[12.5px] text-muted">
-                By Ananya Sharma • 2 days ago
-                <span className="rounded-md bg-brand-100 px-2 py-0.5 text-[11px] font-bold text-brand-700">
-                  Pinned
-                </span>
-              </p>
-            </div>
-            <button className="text-muted">
-              <X size={17} />
-            </button>
-          </div>
-
-          <p className="mt-3 text-[15.5px] font-extrabold">
-            Welcome to the Crevora Creator Community! 🎉
+    <Card className="overflow-hidden bg-white p-4 sm:p-5">
+      <div className="flex min-w-0 items-start gap-3">
+        <Avatar name={post.author.name} src={post.author.avatar} size={42} />
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-1.5 text-sm font-black">
+            {post.author.name}{post.author.verified ? <Verified size={13} /> : null}
+            <span className="font-medium text-muted">@{post.author.handle}</span>
           </p>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted">
-            This is our space to support, collaborate and grow together. Feel free to introduce
-            yourself and share your journey!
-          </p>
-
-          <div className="mt-3 flex items-center gap-2.5">
-            <div className="flex -space-x-2">
-              {["Neha", "Riya", "Kavya"].map((n) => (
-                <Avatar key={n} name={n} size={24} ring="#fff" />
-              ))}
-            </div>
-            <span className="text-[12.5px] font-semibold text-muted">128</span>
-            <button className="ml-auto text-[12.5px] font-semibold text-brand-600">
-              56 Comments
-            </button>
-          </div>
-        </Card>
-
-        <div className="mt-6 flex items-center justify-between">
-          <h2 className="text-[19px] font-extrabold tracking-tight">All Posts</h2>
-          <div className="flex items-center gap-2.5">
-            <button className="flex h-10 items-center gap-2 rounded-xl border border-line bg-white px-4 text-[13px] font-semibold">
-              Latest <ChevronDown size={13} className="text-muted" />
-            </button>
-            <button className="grid h-10 w-10 place-items-center rounded-xl border border-line bg-white text-muted">
-              <SlidersHorizontal size={16} />
-            </button>
-          </div>
+          <p className="mt-0.5 text-xs text-muted">{formatDate(post.createdAt)}</p>
         </div>
-
-        <Card className="mt-4 divide-y divide-line">
-          {/* post 1 — photos */}
-          <CommunityPost
-            author="Neha Verma"
-            badge={["Top Creator", "bg-brand-50 text-brand-700"]}
-            time="1h ago"
-            body="Just finished my new photoshoot! 📸 Behind the scenes will be up on my exclusive soon. What type of content do you guys love the most?"
-            tags={["#photoshoot", "#bts", "#content"]}
-            likes={45}
-            comments={32}
-            media={
-              <div className="grid w-full max-w-[360px] grid-cols-3 gap-1.5">
-                {[0, 1, 2].map((i) => (
-                  <Photo key={i} seed={`neha-shoot-${i}`} className="h-[105px] rounded-lg" />
-                ))}
-              </div>
-            }
-          />
-
-          {/* post 2 — poll */}
-          <CommunityPost
-            author="Riya Malhotra"
-            time="3h ago"
-            body="Let's talk about creator burnout. How do you stay consistent and take care of your mental health?"
-            tags={["#wellness"]}
-            likes={38}
-            comments={27}
-            media={
-              <div className="w-full max-w-[360px] rounded-xl bg-canvas p-3.5">
-                <p className="text-[12.5px] font-bold">How do you manage burnout?</p>
-                <div className="mt-3 space-y-2.5">
-                  {[
-                    ["Take Breaks", 60],
-                    ["Plan & Schedule", 25],
-                    ["Meditation / Exercise", 15],
-                  ].map(([label, pct]) => (
-                    <div key={label}>
-                      <p className="flex items-center justify-between text-[11.5px] font-semibold">
-                        {label} <span className="text-muted">{pct}%</span>
-                      </p>
-                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white">
-                        <div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-3 border-t border-line pt-2 text-[11px] text-muted">120 votes</p>
-              </div>
-            }
-          />
-
-          {/* post 3 */}
-          <CommunityPost
-            author="Kavya Singh"
-            badge={["New Member", "bg-emerald-50 text-emerald-600"]}
-            time="5h ago"
-            body="Hey everyone! I'm Kavya, a lifestyle creator from Jaipur. Excited to be here and learn from all of you! ✨"
-            likes={22}
-            comments={18}
-          />
-
-          {/* post 4 — live promo */}
-          <CommunityPost
-            author="Ananya Sharma"
-            verified
-            badge={["Creator", "bg-brand-50 text-brand-700"]}
-            time="1d ago"
-            body={`We're going LIVE this Saturday at 7 PM IST 🎥\nTopic: How I plan my content & stay productive\nDon't miss it! See you there 💜`}
-            likes={89}
-            comments={61}
-            media={
-              <Photo
-                seed="live-promo"
-                dark
-                className="h-[132px] w-full max-w-[360px] rounded-xl bg-gradient-to-br from-brand-600 to-[#e05fd6]"
-              >
-                <div className="absolute inset-0 p-3.5">
-                  <span className="flex w-fit items-center gap-1.5 rounded-md bg-white/20 px-2 py-1 text-[10.5px] font-bold text-white backdrop-blur">
-                    <Radio size={10} /> Live Session
-                  </span>
-                  <p className="mt-2 max-w-[170px] text-[13.5px] font-extrabold leading-tight text-white">
-                    How I plan my content &amp; stay productive
-                  </p>
-                  <p className="mt-1 text-[11px] text-white/80">25 May, 7:00 PM IST</p>
-                  <button className="mt-2 flex h-7 items-center gap-1.5 rounded-lg bg-white/90 px-2.5 text-[11.5px] font-bold text-ink">
-                    <Bell size={11} /> Remind Me
-                  </button>
-                </div>
-              </Photo>
-            }
-          />
-        </Card>
+        <span className="rounded-full bg-brand-50 px-2.5 py-1 text-[10px] font-black text-brand-700">{post.kind.toLowerCase()}</span>
       </div>
-
-      <aside className="hidden min-w-0 space-y-4 2xl:block">
-        <Card className="p-4">
-          <h3 className="text-[15px] font-bold">Community Overview</h3>
-          <div className="mt-3.5 space-y-3.5">
-            {overview.map(({ icon: Icon, tint, label, value }) => (
-              <div key={label} className="flex items-center gap-3">
-                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${tint}`}>
-                  <Icon size={17} />
-                </span>
-                <span className="flex-1 text-[13.5px] font-semibold">{label}</span>
-                <span className="text-[14px] font-extrabold">{value}</span>
+      <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-ink/85">{post.content}</p>
+      <div className="mt-4 flex items-center gap-3 border-t border-line pt-3">
+        <button type="button" disabled={pending} onClick={() => onLike(post.id)} aria-pressed={post.viewerLiked} className={`inline-flex min-h-10 items-center gap-2 rounded-full px-2 text-sm font-bold disabled:opacity-50 ${post.viewerLiked ? "text-rose-600" : "text-muted"}`}>
+          <Heart size={18} className={post.viewerLiked ? "fill-current" : ""} /> {post.likesCount.toLocaleString("en-IN")}
+        </button>
+        <button type="button" onClick={() => setCommentsOpen((value) => !value)} aria-expanded={commentsOpen} className="inline-flex min-h-10 items-center gap-2 rounded-full px-2 text-sm font-bold text-muted">
+          <MessageCircle size={18} /> {post.repliesCount.toLocaleString("en-IN")}
+        </button>
+      </div>
+      {commentsOpen ? (
+        <div className="mt-3 space-y-3 border-t border-line pt-4">
+          {post.replies.length ? post.replies.map((comment) => (
+            <div key={comment.id} className="flex gap-2.5 rounded-xl bg-canvas p-3">
+              <Avatar name={comment.author.name} src={comment.author.avatar} size={32} />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black">{comment.author.name} <span className="font-medium text-muted">{formatDate(comment.createdAt)}</span></p>
+                <p className="mt-1 text-sm leading-6">{comment.content}</p>
               </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <SectionHead title="Upcoming Events" />
-          <div className="mt-3.5 space-y-3.5">
-            {events.map((e) => (
-              <div key={e.title} className="flex items-center gap-3">
-                <Avatar name={e.title} size={38} />
-                <div className="min-w-0 flex-1 leading-tight">
-                  <p className="truncate text-[13.5px] font-bold">{e.title}</p>
-                  <p className="mt-0.5 text-[12px] text-muted">{e.when}</p>
-                </div>
-                <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${e.tone}`}>
-                  {e.tag}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <SectionHead
-            title="Top Contributors"
-            right={
-              <button className="flex h-9 items-center gap-1.5 rounded-lg border border-line px-3 text-[12.5px] font-semibold">
-                This Month <ChevronDown size={13} />
-              </button>
-            }
-          />
-          <div className="mt-3.5 space-y-3.5">
-            {contributors.map(([name, pts, rank]) => (
-              <div key={name} className="flex items-center gap-3">
-                <span className="w-4 text-center text-[13px] font-bold text-muted">{rank}</span>
-                <Avatar name={name} size={34} />
-                <p className="min-w-0 flex-1 truncate text-[13.5px] font-bold">{name}</p>
-                <span className="shrink-0 text-[12.5px] font-bold text-brand-600">{pts}</span>
-              </div>
-            ))}
-          </div>
-          <button className="mt-4 flex items-center gap-2 text-[13px] font-bold text-brand-600">
-            View Leaderboard <ArrowRight size={14} />
-          </button>
-        </Card>
-
-        <Card className="p-4">
-          <h3 className="text-[15px] font-bold">Community Guidelines</h3>
-          <ul className="mt-3.5 space-y-2.5">
-            {guidelines.map((g) => (
-              <li key={g} className="flex items-center gap-2.5 text-[13px]">
-                <Check size={15} className="shrink-0 text-emerald-500" strokeWidth={3} />
-                {g}
-              </li>
-            ))}
-          </ul>
-          <button className="mt-4 flex items-center gap-2 text-[13px] font-bold text-brand-600">
-            View All Guidelines <ArrowRight size={14} />
-          </button>
-        </Card>
-      </aside>
-    </div>
+            </div>
+          )) : <p className="text-sm text-muted">No comments yet</p>}
+          <form onSubmit={(event) => { event.preventDefault(); const content = reply.trim(); if (!content) return; onReply(post.id, content).then((result) => { if (result) setReply(""); }); }} className="flex items-end gap-2">
+            <label htmlFor={`community-reply-${post.id}`} className="sr-only">Add a comment</label>
+            <textarea id={`community-reply-${post.id}`} value={reply} onChange={(event) => setReply(event.target.value)} maxLength={1500} rows={2} placeholder="Add a comment" className="min-w-0 flex-1 resize-none rounded-xl border border-line bg-canvas px-3 py-2 text-sm outline-none focus:border-brand-500" />
+            <button type="submit" disabled={!reply.trim() || pending} aria-label="Post comment" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-600 text-white disabled:opacity-50"><Send size={17} /></button>
+          </form>
+        </div>
+      ) : null}
+    </Card>
   );
 }
 
-function CommunityPost({ author, verified, badge, time, body, tags, likes, comments, media }) {
+export default function StudioCommunity() {
+  const [tab, setTab] = useState("Feed");
+  const [data, setData] = useState(null);
+  const [status, setStatus] = useState("loading");
+  const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [pending, setPending] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [communityForm, setCommunityForm] = useState({ name: "", description: "" });
+  const [postContent, setPostContent] = useState("");
+  const [roomForm, setRoomForm] = useState({ title: "", description: "", scheduledAt: "" });
+  const [eventForm, setEventForm] = useState({ title: "", description: "", startAt: "", location: "", type: "ONLINE" });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getStudioCommunity({ signal: controller.signal })
+      .then((workspace) => { setData(workspace); setStatus("success"); })
+      .catch((loadError) => {
+        if (loadError.name === "AbortError") return;
+        setError(loadError.message);
+        setStatus("error");
+      });
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  const mutate = async (input) => {
+    if (pending) return null;
+    setPending(true);
+    setActionError("");
+    try {
+      const result = await mutateStudioCommunity(input);
+      setReloadKey((value) => value + 1);
+      return result;
+    } catch (mutationError) {
+      setActionError(mutationError.message);
+      return null;
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const visiblePosts = useMemo(() => {
+    const posts = data?.posts || [];
+    if (tab === "Discussions") return posts.filter((post) => post.kind === "DISCUSSION");
+    if (tab === "Announcements") return posts.filter((post) => post.kind === "ANNOUNCEMENT");
+    return posts;
+  }, [data?.posts, tab]);
+
+  if (status !== "success" || !data) {
+    return <main className="p-6"><AsyncState status={status} error={error} onRetry={() => setReloadKey((value) => value + 1)} /></main>;
+  }
+
+  if (!data.community) {
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+        <h1 className="text-3xl font-black">Create your creator community</h1>
+        <p className="mt-2 text-sm leading-6 text-muted">Start a real community workspace for posts, discussions, rooms, events and members</p>
+        <form onSubmit={(event) => { event.preventDefault(); mutate({ action: "create-community", ...communityForm }); }} className="mt-6 space-y-4 rounded-2xl border border-line bg-white p-5">
+          <label className="block text-sm font-bold">Community name<input required minLength={3} maxLength={80} value={communityForm.name} onChange={(event) => setCommunityForm((current) => ({ ...current, name: event.target.value }))} className="mt-2 h-11 w-full rounded-xl border border-line px-3 outline-none focus:border-brand-500" /></label>
+          <label className="block text-sm font-bold">Description<textarea maxLength={500} rows={4} value={communityForm.description} onChange={(event) => setCommunityForm((current) => ({ ...current, description: event.target.value }))} className="mt-2 w-full rounded-xl border border-line px-3 py-2 outline-none focus:border-brand-500" /></label>
+          {actionError ? <p role="alert" className="text-sm font-semibold text-rose-600">{actionError}</p> : null}
+          <button type="submit" disabled={pending || communityForm.name.trim().length < 3} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-bold text-white disabled:opacity-50">{pending ? <LoaderCircle size={16} className="animate-spin" /> : null} Create community</button>
+        </form>
+      </main>
+    );
+  }
+
+  const postKind = tab === "Discussions" ? "DISCUSSION" : tab === "Announcements" ? "ANNOUNCEMENT" : "POST";
+
   return (
-    <div className="relative flex min-w-0 flex-wrap gap-3.5 p-4">
-      <Avatar name={author} size={40} />
-      <div className="min-w-0 basis-[calc(100%-54px)]">
-        <p className="flex flex-wrap items-center gap-2 pr-8 text-[14px] font-bold">
-          <span className="min-w-0 truncate">{author}</span>
-          {verified && <Verified size={13} />}
-          {badge && (
-            <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${badge[1]}`}>
-              {badge[0]}
-            </span>
-          )}
-          <span className="text-[12px] font-medium text-muted">• {time}</span>
-        </p>
-        <p className="mt-1.5 whitespace-pre-line text-[13.5px] leading-relaxed">{body}</p>
-        {tags && (
-          <p className="mt-2 flex flex-wrap gap-1.5">
-            {tags.map((t) => (
-              <span key={t} className="rounded-md bg-canvas px-2 py-0.5 text-[11.5px] font-semibold text-muted">
-                {t}
-              </span>
-            ))}
-          </p>
-        )}
-        <div className="mt-3 flex items-center gap-6 text-[12.5px] font-semibold">
-          <span className="flex items-center gap-1.5 text-rose-500">
-            <Heart size={15} className="fill-rose-500" /> {likes}
-          </span>
-          <span className="flex items-center gap-1.5 text-ink/70">
-            <MessageCircle size={15} /> {comments}
-          </span>
-          <span className="flex items-center gap-1.5 text-ink/70">
-            <Share2 size={15} /> Share
-          </span>
-        </div>
+    <main className="grid min-w-0 gap-5 px-3 py-5 sm:px-6 2xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-w-0">
+        <header className="flex items-start gap-3.5">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600"><Users size={21} /></span>
+          <div><h1 className="text-2xl font-black tracking-tight">{data.community.name}</h1><p className="mt-1 text-sm text-muted">{data.community.description || "Your creator community"}</p></div>
+        </header>
+
+        <Tabs items={tabs} value={tab} onChange={setTab} className="mt-5 border-b border-line" />
+        {actionError ? <div className="mt-4 flex items-center justify-between rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700" role="alert"><span>{actionError}</span><button type="button" onClick={() => setActionError("")}><RefreshCw size={15} /></button></div> : null}
+
+        {["Feed", "Discussions", "Announcements"].includes(tab) ? (
+          <>
+            <form onSubmit={(event) => { event.preventDefault(); const content = postContent.trim(); if (!content) return; mutate({ action: "create-post", kind: postKind, content }).then((result) => { if (result) setPostContent(""); }); }} className="mt-5 rounded-2xl border border-line bg-white p-4">
+              <label htmlFor="community-post" className="text-sm font-black">{tab === "Feed" ? "Share with your community" : tab === "Discussions" ? "Start a discussion" : "Publish an announcement"}</label>
+              <textarea id="community-post" value={postContent} onChange={(event) => setPostContent(event.target.value)} maxLength={3000} rows={3} placeholder="Write something useful for your community" className="mt-3 w-full resize-y rounded-xl border border-line bg-canvas px-3 py-2.5 text-sm leading-6 outline-none focus:border-brand-500" />
+              <div className="mt-3 flex justify-end"><button type="submit" disabled={!postContent.trim() || pending} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-bold text-white disabled:opacity-50">{pending ? <LoaderCircle size={15} className="animate-spin" /> : null} Publish</button></div>
+            </form>
+            <div className="mt-5 space-y-4">{visiblePosts.length ? visiblePosts.map((post) => <CommunityPostCard key={post.id} post={post} pending={pending} onLike={(postId) => mutate({ action: "toggle-like", postId })} onReply={(postId, content) => mutate({ action: "reply", postId, content })} />) : <EmptyPanel title={`No ${tab.toLowerCase()} yet`} body="Your first persisted community entry will appear here" />}</div>
+          </>
+        ) : null}
+
+        {tab === "Rooms" ? <section className="mt-5 space-y-5"><form onSubmit={(event) => { event.preventDefault(); mutate({ action: "create-room", ...roomForm }).then((result) => { if (result) setRoomForm({ title: "", description: "", scheduledAt: "" }); }); }} className="grid gap-3 rounded-2xl border border-line bg-white p-4 sm:grid-cols-2"><h2 className="sm:col-span-2 text-lg font-black">Schedule a room</h2><input required value={roomForm.title} onChange={(event) => setRoomForm((current) => ({ ...current, title: event.target.value }))} placeholder="Room title" className="h-11 rounded-xl border border-line px-3" /><input required type="datetime-local" value={roomForm.scheduledAt} onChange={(event) => setRoomForm((current) => ({ ...current, scheduledAt: event.target.value }))} className="h-11 rounded-xl border border-line px-3" /><textarea value={roomForm.description} onChange={(event) => setRoomForm((current) => ({ ...current, description: event.target.value }))} placeholder="Description" className="rounded-xl border border-line px-3 py-2 sm:col-span-2" /><button disabled={pending} className="min-h-10 rounded-xl bg-brand-600 px-4 text-sm font-bold text-white sm:col-span-2">Schedule room</button></form><div className="grid gap-4 md:grid-cols-2">{data.rooms.length ? data.rooms.map((room) => <Card key={room.id} className="p-4"><Radio size={18} className="text-brand-600" /><h3 className="mt-3 font-black">{room.title}</h3><p className="mt-1 text-sm text-muted">{room.description || "Creator hangout room"}</p><p className="mt-3 text-xs font-bold text-brand-700">{formatDate(room.scheduledAt)}</p><span className="mt-3 inline-flex rounded-full bg-brand-50 px-2.5 py-1 text-[10px] font-black text-brand-700">{room.status}</span></Card>) : <div className="md:col-span-2"><EmptyPanel title="No rooms scheduled" body="Create the first real community room" /></div>}</div></section> : null}
+
+        {tab === "Events" ? <section className="mt-5 space-y-5"><form onSubmit={(event) => { event.preventDefault(); mutate({ action: "create-event", ...eventForm }).then((result) => { if (result) setEventForm({ title: "", description: "", startAt: "", location: "", type: "ONLINE" }); }); }} className="grid gap-3 rounded-2xl border border-line bg-white p-4 sm:grid-cols-2"><h2 className="sm:col-span-2 text-lg font-black">Create an event</h2><input required value={eventForm.title} onChange={(event) => setEventForm((current) => ({ ...current, title: event.target.value }))} placeholder="Event title" className="h-11 rounded-xl border border-line px-3" /><input required type="datetime-local" value={eventForm.startAt} onChange={(event) => setEventForm((current) => ({ ...current, startAt: event.target.value }))} className="h-11 rounded-xl border border-line px-3" /><input value={eventForm.location} onChange={(event) => setEventForm((current) => ({ ...current, location: event.target.value }))} placeholder="Location or meeting link" className="h-11 rounded-xl border border-line px-3" /><select value={eventForm.type} onChange={(event) => setEventForm((current) => ({ ...current, type: event.target.value }))} className="h-11 rounded-xl border border-line px-3"><option>ONLINE</option><option>OFFLINE</option><option>HYBRID</option></select><textarea value={eventForm.description} onChange={(event) => setEventForm((current) => ({ ...current, description: event.target.value }))} placeholder="Description" className="rounded-xl border border-line px-3 py-2 sm:col-span-2" /><button disabled={pending} className="min-h-10 rounded-xl bg-brand-600 px-4 text-sm font-bold text-white sm:col-span-2">Create event</button></form><div className="grid gap-4 md:grid-cols-2">{data.events.length ? data.events.map((event) => <Card key={event.id} className="p-4"><Calendar size={18} className="text-brand-600" /><h3 className="mt-3 font-black">{event.title}</h3><p className="mt-1 text-sm text-muted">{event.description || event.type}</p><p className="mt-3 text-xs font-bold text-brand-700">{formatDate(event.startAt)}</p><p className="mt-1 text-xs text-muted">{event.location || event.type}</p></Card>) : <div className="md:col-span-2"><EmptyPanel title="No events created" body="Create the first persisted community event" /></div>}</div></section> : null}
+
+        {tab === "Members" ? <section className="mt-5 grid gap-3 sm:grid-cols-2">{data.members.map((member) => <Card key={member.id} className="flex items-center gap-3 p-4"><Avatar name={member.name} src={member.avatar} size={42} /><div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{member.name}</p><p className="truncate text-xs text-muted">@{member.handle}</p></div><span className="rounded-full bg-brand-50 px-2.5 py-1 text-[10px] font-black text-brand-700">{member.role}</span></Card>)}</section> : null}
+
+        {tab === "Leaderboard" ? <section className="mt-5 overflow-hidden rounded-2xl border border-line bg-white">{data.leaderboard.map((member, index) => <div key={member.id} className="flex items-center gap-3 border-b border-line p-4 last:border-0"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-50 text-sm font-black text-brand-700">{index + 1}</span><Avatar name={member.name} src={member.avatar} size={38} /><div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{member.name}</p><p className="text-xs text-muted">{member.posts} posts · {member.replies} comments · {member.likesReceived} likes received</p></div><span className="flex items-center gap-1 text-sm font-black text-brand-700"><Trophy size={15} /> {member.points}</span></div>)}</section> : null}
       </div>
-      {media ? <div className="ml-[54px] min-w-0 w-[calc(100%-54px)] overflow-hidden">{media}</div> : null}
-      <button type="button" className="absolute right-4 top-4 text-muted" aria-label={`More actions for ${author}'s post`}>
-        <MoreHorizontal size={17} />
-      </button>
-    </div>
+
+      <aside className="space-y-4 2xl:block">
+        <Card className="p-5"><h2 className="font-black">Community overview</h2><div className="mt-4 grid grid-cols-2 gap-3">{[["Members", data.community.counts.members], ["Posts", data.community.counts.posts], ["Rooms", data.community.counts.rooms], ["Events", data.community.counts.events]].map(([label, value]) => <div key={label} className="rounded-xl bg-canvas p-3"><p className="text-xl font-black">{value.toLocaleString("en-IN")}</p><p className="mt-1 text-xs text-muted">{label}</p></div>)}</div></Card>
+        <Card className="p-5"><h2 className="font-black">How ranking works</h2><p className="mt-2 text-sm leading-6 text-muted">Members earn 10 points for a post, 5 for a comment and 2 for each like received</p></Card>
+      </aside>
+    </main>
   );
 }

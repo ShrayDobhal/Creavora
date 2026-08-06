@@ -40,7 +40,7 @@ export default function StudioPromotionsPage() {
     <div className="px-6 py-6 space-y-6 max-w-[800px]">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[25px] font-extrabold tracking-tight">Promotions &amp; Campaigns 📢</h1>
+          <h1 className="text-[25px] font-extrabold tracking-tight">Promotions &amp; Campaigns</h1>
           <p className="text-[14px] text-muted">Create subscription discount coupons, manage active promotions, and track usage.</p>
         </div>
         <button

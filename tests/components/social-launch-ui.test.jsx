@@ -123,6 +123,21 @@ describe("social launch UI", () => {
     expect(onPublished).toHaveBeenCalledOnce();
   });
 
+  it("previews the selected image in both post and profile-grid crops", async () => {
+    const user = userEvent.setup();
+    render(<PostComposer user={{ name: "Nisha" }} onPublished={vi.fn()} />);
+
+    await user.upload(screen.getByLabelText("Add image"), webpFile());
+    const preview = await screen.findByAltText("Selected image preview");
+    expect(preview).toHaveClass("object-contain");
+
+    await user.click(screen.getByRole("button", { name: "Profile grid" }));
+    expect(preview).toHaveClass("aspect-square", "object-cover");
+
+    await user.click(screen.getByRole("button", { name: "Full post" }));
+    expect(preview).toHaveClass("object-contain");
+  });
+
   it("keeps text publishing available after the exact unavailable image message", async () => {
     const user = userEvent.setup();
     signImageUpload.mockRejectedValue(new Error("Image uploads are not configured yet"));

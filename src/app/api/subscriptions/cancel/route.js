@@ -46,6 +46,16 @@ export function createCancelSubscriptionPost({ database = db } = {}) {
           },
         },
       });
+      if (database.community?.findFirst && database.communityMember?.deleteMany) {
+        const community = await database.community.findFirst({ where: { ownerId: subscription.creatorId, deletedAt: null }, select: { id: true } });
+        if (community) {
+          await database.communityMember.deleteMany({ where: { communityId: community.id, userId: user.id, role: { not: "OWNER" } } });
+          if (database.communityMember.count && database.community.update) {
+            const memberCount = await database.communityMember.count({ where: { communityId: community.id } });
+            await database.community.update({ where: { id: community.id }, data: { memberCount } });
+          }
+        }
+      }
       return NextResponse.json({ subscription });
     } catch (error) {
       return consumerErrorResponse(error, "Failed to cancel subscription");

@@ -88,6 +88,7 @@ export function PostComposer({ user, onPublished }) {
   const [isPublishing, setIsPublishing] = useState(false);
   const [imageUploadsUnavailable, setImageUploadsUnavailable] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [previewMode, setPreviewMode] = useState("post");
   const fileInput = useRef(null);
   const previewUrlRef = useRef("");
 
@@ -100,6 +101,7 @@ export function PostComposer({ user, onPublished }) {
     if (previewUrlRef.current) URL.revokeObjectURL?.(previewUrlRef.current);
     previewUrlRef.current = "";
     setPreviewUrl("");
+    setPreviewMode("post");
     if (fileInput.current) fileInput.current.value = "";
   }
 
@@ -200,9 +202,14 @@ export function PostComposer({ user, onPublished }) {
       </div>
       {previewUrl ? (
         <div className="relative mt-3">
+          <div className="mb-2 flex flex-wrap items-center gap-2" aria-label="Image preview style">
+            <button type="button" aria-pressed={previewMode === "post"} onClick={() => setPreviewMode("post")} className={`rounded-full px-3 py-1.5 text-xs font-bold ${previewMode === "post" ? "bg-brand-600 text-white" : "border border-line bg-white text-ink"}`}>Full post</button>
+            <button type="button" aria-pressed={previewMode === "grid"} onClick={() => setPreviewMode("grid")} className={`rounded-full px-3 py-1.5 text-xs font-bold ${previewMode === "grid" ? "bg-brand-600 text-white" : "border border-line bg-white text-ink"}`}>Profile grid</button>
+            <span className="text-xs text-muted">Preview only</span>
+          </div>
           <div className="grid min-h-48 overflow-hidden rounded-xl border border-line bg-canvas">
             {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
-            <img src={previewUrl} alt="Selected image preview" className="max-h-72 min-h-48 w-full object-contain" />
+            <img src={previewUrl} alt="Selected image preview" className={previewMode === "grid" ? "aspect-square w-full object-cover" : "max-h-72 min-h-48 w-full object-contain"} />
           </div>
           <button type="button" onClick={clearImage} className="absolute right-3 top-3 z-10 grid h-10 w-10 place-items-center rounded-full bg-black/75 text-white shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500" aria-label="Remove image">
             <X size={16} />

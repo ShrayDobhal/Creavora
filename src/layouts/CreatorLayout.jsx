@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
-  ChevronDown,
   Command,
   Crown,
   DollarSign,
@@ -25,7 +24,6 @@ import {
 import { Avatar, Verified } from "../ui/Media.jsx";
 import { Logo, UserMenu } from "./FanLayout.jsx";
 import { Home, User } from "lucide-react";
-import { slug } from "../data.js";
 
 const creatorMenu = [
   { href: "/studio/settings", label: "Edit Profile", icon: User },
@@ -37,7 +35,7 @@ const creatorMenu = [
 ];
 
 const nav = [
-  { href: "/studio/content", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { href: "/studio", label: "Dashboard", icon: LayoutDashboard, end: true },
   { href: "/studio/content", label: "Content", icon: LayoutGrid },
   { href: "/studio/live", label: "Live & Events", icon: Tv },
   { href: "/studio/messages", label: "Messages", icon: MessageSquare },
@@ -75,16 +73,19 @@ export function CreatorTopBar({
 
       {!title && (
         <div className="hidden flex-1 justify-center md:flex">
-          <label className="relative flex w-full max-w-[540px] items-center">
+          <form action="/studio/search" method="get" role="search" className="relative flex w-full max-w-[540px] items-center">
             <Search size={17} className="absolute left-4 text-muted" />
             <input
+              name="q"
+              type="search"
+              aria-label="Search creators, posts, and communities"
               placeholder={placeholder}
               className="h-11 w-full rounded-full border border-line bg-canvas pl-11 pr-16 text-[14px] outline-none placeholder:text-muted focus:border-brand-300 focus:bg-white"
             />
             <span className="absolute right-4 flex items-center gap-0.5 text-[12px] font-semibold text-muted">
               <Command size={12} /> K
             </span>
-          </label>
+          </form>
         </div>
       )}
       {title && <div className="flex-1" />}
@@ -117,42 +118,6 @@ export function CreatorTopBar({
         />
       </div>
     </header>
-  );
-}
-
-function ProfileCard() {
-  return (
-    <Link href="/creator/ananyasharma" className="block rounded-2xl bg-brand-50/70 p-3.5 hover:bg-brand-50">
-      <div className="flex items-center gap-3">
-        <Avatar name="Ananya Sharma" size={46} />
-        <div className="min-w-0">
-          <p className="flex items-center gap-1 text-[14.5px] font-bold">
-            Ananya Sharma <Verified size={14} />
-          </p>
-          <p className="text-[12px] text-muted">@ananyasharma</p>
-        </div>
-      </div>
-      <span className="mt-2.5 inline-block rounded-md bg-brand-100 px-2 py-0.5 text-[11px] font-bold text-brand-700">
-        Creator Account
-      </span>
-    </Link>
-  );
-}
-
-function PlanCard() {
-  return (
-    <div className="rounded-2xl bg-brand-50/70 p-5 text-center">
-      <Crown size={26} className="mx-auto fill-brand-500 text-brand-500" />
-      <p className="mt-2.5 text-[14.5px] font-bold">You&apos;re on Premium Plan</p>
-      <p className="mt-2 text-[12.5px] leading-snug text-muted">
-        Your plan renews on
-        <br />
-        25 May 2024
-      </p>
-      <button className="mt-3.5 h-9 w-full rounded-lg border border-brand-200 bg-white text-[13px] font-bold text-brand-700 hover:bg-brand-50 cursor-pointer">
-        Manage Plan
-      </button>
-    </div>
   );
 }
 
@@ -212,7 +177,7 @@ export default function CreatorLayout({ children, topbar }) {
         unreadNotifications={unreadNotifications}
       />
       <div>
-        <aside className="no-scrollbar fixed bottom-0 left-0 top-[76px] z-20 hidden w-[244px] flex-col overflow-y-auto border-r border-line bg-white px-4 py-4 lg:flex">
+        <aside className="fixed bottom-0 left-0 top-[76px] z-20 hidden w-[244px] flex-col overflow-hidden border-r border-line bg-white px-4 py-4 lg:flex">
           {user && (
             <Link href={`/creator/${user.handle}`} className="block rounded-2xl bg-brand-50/70 p-3.5 hover:bg-brand-50">
               <div className="flex items-center gap-3">
@@ -252,9 +217,6 @@ export default function CreatorLayout({ children, topbar }) {
               );
             })}
           </nav>
-          <div className="mt-auto pb-6 pt-6">
-            <PlanCard />
-          </div>
         </aside>
         <main className="min-h-[calc(100dvh-76px)] min-w-0 overflow-x-hidden bg-canvas lg:ml-[244px]">{children}</main>
       </div>

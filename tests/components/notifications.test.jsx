@@ -30,7 +30,7 @@ const notificationItems = [
   },
 ];
 
-it("opens an actionable notification and marks only that item read", async () => {
+it("marks the notification inbox read on entry and keeps actionable links", async () => {
   const fetchMock = vi.fn((url, options = {}) => Promise.resolve(new Response(
     JSON.stringify(options.method === "POST" ? { success: true } : notificationItems),
     { status: 200 },
@@ -41,14 +41,15 @@ it("opens an actionable notification and marks only that item read", async () =>
 
   const postLink = await screen.findByRole("link", { name: /studio update/i });
   expect(postLink).toHaveAttribute("href", "/post/post-1");
-  fireEvent.click(postLink);
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
     "/api/notifications",
     expect.objectContaining({
       method: "POST",
-      body: JSON.stringify({ id: "notification-1" }),
     }),
   ));
+  const readCall = fetchMock.mock.calls.find(([, options]) => options?.method === "POST");
+  expect(readCall?.[1]).not.toHaveProperty("body");
+  expect(screen.queryByRole("button", { name: /mark all read/i })).not.toBeInTheDocument();
 });
 
 it("persists per-row removal and clearing without fabricating an actor", async () => {

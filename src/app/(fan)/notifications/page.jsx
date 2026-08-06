@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Bell,
-  CheckCheck,
   Heart,
   MessageSquare,
   RefreshCw,
@@ -60,8 +59,17 @@ export default function NotificationsPage() {
     getNotifications({ signal: controller.signal })
       .then((data) => {
         if (!Array.isArray(data)) throw new Error("Notifications could not be loaded");
-        setItems(data);
+        const hadUnread = data.some((item) => !item.read);
+        setItems(data.map((item) => ({ ...item, read: true })));
         setStatus("success");
+        if (hadUnread) {
+          markNotificationsRead()
+            .then(() => {
+              window.dispatchEvent(new Event("notifications-update"));
+              window.dispatchEvent(new Event("user-update"));
+            })
+            .catch((readError) => setActionError(readError.message));
+        }
       })
       .catch((error) => {
         if (error.name === "AbortError") return;
@@ -75,22 +83,6 @@ export default function NotificationsPage() {
     setStatus("loading");
     setLoadError("");
     setReloadKey((current) => current + 1);
-  };
-
-  const handleMarkAllRead = async () => {
-    if (pendingAction) return;
-    setPendingAction("read");
-    setActionError("");
-    try {
-      await markNotificationsRead();
-      setItems((current) => current.map((item) => ({ ...item, read: true })));
-      window.dispatchEvent(new Event("notifications-update"));
-      window.dispatchEvent(new Event("user-update"));
-    } catch (error) {
-      setActionError(error.message);
-    } finally {
-      setPendingAction(null);
-    }
   };
 
   const handleClearAll = async () => {
@@ -147,14 +139,6 @@ export default function NotificationsPage() {
 
         {status === "success" && items.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={handleMarkAllRead}
-              disabled={Boolean(pendingAction)}
-              className="flex h-9 items-center gap-1.5 rounded-xl border border-line bg-white px-3.5 text-[12.5px] font-bold text-ink disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <CheckCheck size={14} /> {pendingAction === "read" ? "Marking read…" : "Mark all read"}
-            </button>
             <button
               type="button"
               onClick={handleClearAll}
