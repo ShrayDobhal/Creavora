@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { hashPassword, hashRefreshToken, generateTokenPair, setAuthCookies } from "@/lib/auth";
+import { hashPassword, hashRefreshToken, generateTokenPair, setAuthCookies, REFRESH_SESSION_MS } from "@/lib/auth";
 import { registerSchema, validateBody } from "@/lib/validators";
 
 export async function POST(req) {
@@ -59,7 +59,7 @@ export async function POST(req) {
       data: {
         userId: user.id,
         tokenHash: hashRefreshToken(refreshToken),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + REFRESH_SESSION_MS),
         userAgent: req.headers.get("user-agent") || "unknown",
       },
     });
