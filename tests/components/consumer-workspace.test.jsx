@@ -541,6 +541,9 @@ it("joins a real recommended creator and cancels the persisted subscription", as
   ));
   expect(await screen.findByText("You now have free access to Asha Rao.")).toBeVisible();
   expect(screen.queryByRole("button", { name: "Join Asha Rao for free" })).not.toBeInTheDocument();
+  const activeAvatar = screen.getByLabelText("Asha Rao avatar");
+  expect(activeAvatar).toHaveClass("aspect-square", "h-14", "w-14");
+  expect(activeAvatar.querySelector("img")).toHaveClass("object-cover", "object-center");
 
   fireEvent.click(screen.getByRole("button", { name: "Cancel subscription to Asha Rao" }));
   await waitFor(() => expect(fetch).toHaveBeenCalledWith(

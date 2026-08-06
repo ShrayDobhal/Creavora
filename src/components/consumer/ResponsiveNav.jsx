@@ -17,6 +17,7 @@ export default function ResponsiveNav({
   pathname: providedPathname,
   variant = "desktop",
   unreadNotifications,
+  onNotificationsOpen,
 }) {
   const currentPathname = usePathname() || "";
   const pathname = providedPathname ?? currentPathname;
@@ -37,6 +38,7 @@ export default function ResponsiveNav({
             <Link
               key={href}
               href={href}
+              onClick={label === "Notifications" ? onNotificationsOpen : undefined}
               aria-current={active ? "page" : undefined}
               className={isMobile
                 ? `relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-[11px] font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 ${

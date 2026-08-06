@@ -145,11 +145,14 @@ export default function SubscriptionsPage() {
               {subscriptions.map((subscription) => (
                 <Card key={subscription.id} className="p-5">
                   <div className="flex min-w-0 items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <Link href={`/creator/${encodeURIComponent(subscription.creator.handle)}`} className="block truncate font-extrabold text-ink hover:underline">
-                        {subscription.creator.name}
-                      </Link>
-                      {subscription.creator.roleTitle && <p className="mt-0.5 text-xs text-muted">{subscription.creator.roleTitle}</p>}
+                    <div className="flex min-w-0 items-center gap-3">
+                      <ConsumerAvatar creator={subscription.creator} size="h-14 w-14" />
+                      <div className="min-w-0">
+                        <Link href={`/creator/${encodeURIComponent(subscription.creator.handle)}`} className="block truncate font-extrabold text-ink hover:underline">
+                          {subscription.creator.name}
+                        </Link>
+                        {subscription.creator.roleTitle && <p className="mt-0.5 text-xs text-muted">{subscription.creator.roleTitle}</p>}
+                      </div>
                     </div>
                     <span className="shrink-0 rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">{subscription.status}</span>
                   </div>

@@ -20,7 +20,7 @@ export function ConsumerAvatar({ creator, size = "h-12 w-12" }) {
 
   return (
     <span
-      className={`grid shrink-0 place-items-center overflow-hidden rounded-full bg-brand-100 font-extrabold text-brand-700 ${size}`}
+      className={`grid aspect-square shrink-0 place-items-center overflow-hidden rounded-full bg-brand-100 font-extrabold text-brand-700 ${size}`}
       aria-label={`${creator.name} avatar`}
     >
       {showImage ? (
@@ -28,7 +28,7 @@ export function ConsumerAvatar({ creator, size = "h-12 w-12" }) {
         <img
           src={creator.avatar}
           alt=""
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover object-center"
           onError={() => setFailed(true)}
         />
       ) : (

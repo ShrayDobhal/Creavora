@@ -177,7 +177,7 @@ export default function CreatorLayout({ children, topbar }) {
         unreadNotifications={unreadNotifications}
       />
       <div>
-        <aside className="fixed bottom-0 left-0 top-[76px] z-20 hidden w-[244px] flex-col overflow-hidden border-r border-line bg-white px-4 py-4 lg:flex">
+        <aside className="no-scrollbar fixed bottom-0 left-0 top-[76px] z-20 hidden w-[244px] flex-col overflow-y-auto overscroll-contain border-r border-line bg-white px-4 py-4 lg:flex">
           {user && (
             <Link href={`/creator/${user.handle}`} className="block rounded-2xl bg-brand-50/70 p-3.5 hover:bg-brand-50">
               <div className="flex items-center gap-3">

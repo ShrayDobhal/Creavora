@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -158,6 +158,31 @@ describe("Fan navigation", () => {
     render(<FanLayout><p>Release content</p></FanLayout>);
 
     expect((await screen.findAllByText("1")).length).toBeGreaterThan(0);
+  });
+
+  it("clears the user notification badge immediately and persists all notifications as read", async () => {
+    let markedRead = false;
+    const fetchMock = vi.fn((path, options = {}) => {
+      if (path === "/api/auth/me") {
+        return Promise.resolve(new Response(JSON.stringify({ name: "Leela Menon", handle: "leela" }), { status: 200 }));
+      }
+      if (path === "/api/notifications" && options.method === "POST") {
+        markedRead = true;
+        return Promise.resolve(new Response(JSON.stringify({ success: true }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(markedRead ? [] : [{ id: "notice-1", read: false }]), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FanLayout><p>Release content</p></FanLayout>);
+    expect((await screen.findAllByText("1")).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByRole("link", { name: "Notifications" })[0]);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      "/api/notifications",
+      expect.objectContaining({ method: "POST" }),
+    ));
+    await waitFor(() => expect(screen.queryAllByText("1")).toHaveLength(0));
   });
 
   it("keeps successful identity state when the notification request fails", async () => {

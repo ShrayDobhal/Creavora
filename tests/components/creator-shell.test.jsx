@@ -35,7 +35,7 @@ describe("creator shell", () => {
     const content = screen.getByRole("link", { name: "Content" });
     expect(dashboard).not.toHaveClass("bg-brand-50");
     expect(content).toHaveClass("bg-brand-50");
-    expect(content.closest("aside")).toHaveClass("fixed", "overflow-hidden");
+    expect(content.closest("aside")).toHaveClass("fixed", "overflow-y-auto", "overscroll-contain");
   });
 
   it("submits creator searches to the real studio search route", () => {

@@ -161,7 +161,7 @@ export function UserMenu({ name, label, sub, items, user }) {
   );
 }
 
-export function TopBar({ user, unreadNotifications }) {
+export function TopBar({ user, unreadNotifications, onNotificationsOpen }) {
   return (
     <header className="fixed inset-x-0 top-0 z-40 flex h-[72px] min-w-0 items-center gap-4 border-b border-line bg-white px-3 shadow-[0_1px_0_rgba(15,15,20,.04)] sm:px-6">
       <div className="shrink-0 sm:w-[196px]">
@@ -180,6 +180,7 @@ export function TopBar({ user, unreadNotifications }) {
         <Link href="/feed#create-post" className="hidden min-h-10 items-center gap-2 rounded-full bg-brand-600 px-4 text-sm font-bold text-white hover:bg-brand-700 sm:inline-flex"><Plus size={17} /> Create post</Link>
         <Link
           href="/notifications"
+          onClick={onNotificationsOpen}
           aria-label="Notifications"
           className="relative grid h-10 w-10 place-items-center rounded-full text-ink hover:bg-canvas"
         >
@@ -199,6 +200,22 @@ export function TopBar({ user, unreadNotifications }) {
 export default function FanLayout({ children, topbar }) {
   const [user, setUser] = useState(null);
   const [unreadNotifications, setUnreadNotifications] = useState(null);
+
+  const handleNotificationsOpen = () => {
+    setUnreadNotifications(0);
+    fetch("/api/notifications", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("Unable to mark notifications read");
+        window.dispatchEvent(new Event("notifications-update"));
+      })
+      .catch(() => {
+        window.setTimeout(() => window.dispatchEvent(new Event("notifications-update")), 500);
+      });
+  };
 
   useEffect(() => {
     let userController;
@@ -256,14 +273,14 @@ export default function FanLayout({ children, topbar }) {
 
   return (
     <div className="min-h-dvh overflow-x-clip bg-white pt-[72px]">
-      <TopBar {...topbar} user={user} unreadNotifications={unreadNotifications} />
+      <TopBar {...topbar} user={user} unreadNotifications={unreadNotifications} onNotificationsOpen={handleNotificationsOpen} />
       <div>
         <aside className="no-scrollbar fixed bottom-0 left-0 top-[72px] z-20 hidden w-[244px] overflow-y-auto border-r border-line bg-white px-4 py-4 lg:block">
-          <ConsumerWorkspaceNav unreadNotifications={unreadNotifications} />
+          <ConsumerWorkspaceNav unreadNotifications={unreadNotifications} onNotificationsOpen={handleNotificationsOpen} />
         </aside>
         <main className="min-h-[calc(100dvh-72px)] min-w-0 overflow-x-hidden bg-canvas pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:ml-[244px] lg:pb-0">{children}</main>
       </div>
-      <ResponsiveNav variant="mobile" unreadNotifications={unreadNotifications} />
+      <ResponsiveNav variant="mobile" unreadNotifications={unreadNotifications} onNotificationsOpen={handleNotificationsOpen} />
     </div>
   );
 }
