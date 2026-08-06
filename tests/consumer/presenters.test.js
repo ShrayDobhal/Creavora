@@ -8,6 +8,7 @@ describe("presentPost", () => {
       creatorId: "c1",
       content: "Members note",
       mediaUrl: "https://cdn.test/a.jpg",
+      thumbnailUrl: "https://cdn.test/a-preview.jpg",
       mediaType: "image",
       isPremium: true,
       price: 399,
@@ -34,7 +35,7 @@ describe("presentPost", () => {
 
     expect(presented).toMatchObject({
       content: null,
-      mediaUrl: "https://cdn.test/a.jpg",
+      mediaUrl: "https://cdn.test/a-preview.jpg",
       availability: "locked",
       counts: { likes: 8, comments: 2, views: 20, shares: 1 },
     });
@@ -80,7 +81,7 @@ describe("presentPost", () => {
     const postRow = {
       id: "p1",
       creatorId: "c1",
-      mediaUrl: "https://cdn.test/a.jpg",
+      mediaUrl: "https://cdn.test/a-preview.jpg",
       mediaType: "image",
       isPremium: false,
       likesCount: 0,

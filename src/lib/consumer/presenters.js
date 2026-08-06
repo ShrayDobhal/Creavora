@@ -41,7 +41,7 @@ export const presentPost = (row, viewerId, premiumAccess = null) => {
   return {
     id: row.id,
     content: isLocked ? null : sanitizePublicCopy(row.content),
-    mediaUrl: row.mediaUrl,
+    mediaUrl: isLocked ? row.thumbnailUrl || null : row.mediaUrl,
     mediaType: row.mediaType,
     category: row.category ?? row.creator?.creatorProfile?.category ?? null,
     isPremium: row.isPremium,

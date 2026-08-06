@@ -608,6 +608,7 @@ describe("consumer API contracts", () => {
       creatorId: "creator-1",
       content: "Subscriber-only lesson",
       mediaUrl: "https://cdn.example.test/lesson.jpg",
+      thumbnailUrl: "https://cdn.example.test/lesson-preview.jpg",
       mediaType: "image",
       isPremium: true,
       price: 499,
@@ -628,7 +629,7 @@ describe("consumer API contracts", () => {
     })(new Request("http://localhost/api/search?q=lesson&type=posts"), authContext);
 
     expect(await json(response)).toMatchObject({
-      posts: [{ id: "post-premium", content: null, mediaUrl: "https://cdn.example.test/lesson.jpg", availability: "locked" }],
+      posts: [{ id: "post-premium", content: null, mediaUrl: "https://cdn.example.test/lesson-preview.jpg", availability: "locked" }],
     });
   });
 

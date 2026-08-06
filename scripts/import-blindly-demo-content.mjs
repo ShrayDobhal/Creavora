@@ -122,6 +122,7 @@ export async function importBlindlyDemoContent({ database, now }) {
       category: fixture.category,
       mediaUrl: fixture.mediaUrl,
       mediaType: "image",
+      thumbnailUrl: fixture.mediaUrl,
       isPremium: true,
       price: creator.subscriptionPrice,
       likesCount: 1,
