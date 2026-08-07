@@ -3,6 +3,39 @@ import { db } from "@/lib/db";
 import { withCreatorAuth } from "@/lib/middleware";
 import { createPostSchema, validateBody } from "@/lib/validators";
 
+export function createStudioPostsGet(database = db) {
+  return async (_req, { user: creator }) => {
+    try {
+      const posts = await database.post.findMany({
+        where: { creatorId: creator.id, deletedAt: null },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: 100,
+        select: {
+          id: true,
+          content: true,
+          category: true,
+          mediaUrl: true,
+          mediaType: true,
+          thumbnailUrl: true,
+          isPremium: true,
+          price: true,
+          likesCount: true,
+          commentsCount: true,
+          viewsCount: true,
+          sharesCount: true,
+          scheduledAt: true,
+          publishedAt: true,
+          createdAt: true,
+        },
+      });
+      return NextResponse.json({ items: posts });
+    } catch (error) {
+      console.error("GET Creator Posts Error:", error);
+      return NextResponse.json({ error: "Failed to load creator content" }, { status: 500 });
+    }
+  };
+}
+
 // POST create creator post
 export const POST = withCreatorAuth(async (req, { user: creator }) => {
   try {
@@ -70,3 +103,5 @@ export const POST = withCreatorAuth(async (req, { user: creator }) => {
     return NextResponse.json({ error: "Failed to upload post" }, { status: 500 });
   }
 });
+
+export const GET = withCreatorAuth(createStudioPostsGet());

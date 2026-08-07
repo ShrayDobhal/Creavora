@@ -56,13 +56,13 @@ export default function ProfilePage() {
           {profile.coverImage ? <><img src={profile.coverImage} alt="Profile cover" className="h-full w-full object-cover" />{/* eslint-disable-line @next/next/no-img-element -- uploaded profile media uses a verified external host */}</> : null}
         </div>
         <div className="px-4 pb-5 sm:px-6">
-          <div className="-mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex min-w-0 items-end gap-3">
-              <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-white bg-brand-100 text-2xl font-black text-brand-700">
+          <div className="relative z-10 -mt-10 w-fit">
+            <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-white bg-brand-100 text-2xl font-black text-brand-700">
                 {profile.avatar ? <><img src={profile.avatar} alt={`${profile.name} avatar`} className="h-full w-full object-cover" />{/* eslint-disable-line @next/next/no-img-element -- uploaded profile media uses a verified external host */}</> : profile.name.slice(0, 1).toUpperCase()}
-              </div>
-              <div className="min-w-0 pb-1"><h1 className="truncate text-2xl font-black">{profile.name}</h1><p className="truncate text-sm text-muted">@{profile.handle}</p></div>
             </div>
+          </div>
+          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0"><h1 className="truncate text-2xl font-black">{profile.name}</h1><p className="truncate text-sm text-muted">@{profile.handle}</p></div>
             <button type="button" onClick={() => setEditing((current) => !current)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-line px-4 text-sm font-bold hover:bg-canvas"><Pencil size={16} /> {editing ? "Close editor" : "Edit profile"}</button>
           </div>
           {profile.roleTitle ? <p className="mt-4 text-sm font-bold text-ink/85">{profile.roleTitle}</p> : null}

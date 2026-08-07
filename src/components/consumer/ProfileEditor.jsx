@@ -81,6 +81,7 @@ async function prepareImage(file) {
 function initialValues(profile) {
   return {
     name: profile.name || "",
+    handle: profile.handle || "",
     bio: profile.bio || "",
     phone: profile.phone || "",
     location: profile.location || "",
@@ -218,6 +219,7 @@ export function ProfileEditor({ profile, onSaved }) {
       ]);
       const saved = await updateProfile({
         name: values.name.trim(),
+        handle: values.handle.trim().replace(/^@+/, "").toLowerCase(),
         bio: values.bio.trim() || null,
         phone: values.phone.trim() || null,
         location: values.location.trim() || null,
@@ -274,6 +276,7 @@ export function ProfileEditor({ profile, onSaved }) {
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Name" value={values.name} onChange={(value) => updateValue("name", value)} required />
+        <Field label="Handle" value={values.handle} maxLength={30} onChange={(value) => updateValue("handle", value.replace(/^@+/, "").toLowerCase())} required />
         <Field label="Phone number" type="tel" value={values.phone} maxLength={20} onChange={(value) => updateValue("phone", value)} />
         <Field label="City / State" value={values.location} onChange={(value) => updateValue("location", value)} />
         <Field label="Address" value={values.address} maxLength={240} onChange={(value) => updateValue("address", value)} />

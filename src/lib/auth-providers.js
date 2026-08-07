@@ -117,7 +117,7 @@ export async function fetchGoogleUserInfo({ accessToken, fetchImpl = fetch }) {
 
 function googleHandle(email, subject, attempt = 0) {
   const base = email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20) || "member";
-  return `${base}_${createHash("sha256").update(`${subject}:${attempt}`).digest("hex").slice(0, 8)}`;
+  return attempt === 0 ? base : `${base}_${createHash("sha256").update(`${subject}:${attempt}`).digest("hex").slice(0, 8)}`;
 }
 
 export async function resolveGoogleUser({ database, profile, intentRole, requestedHandle = null }) {

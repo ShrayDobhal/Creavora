@@ -4,6 +4,7 @@ import { withAuth } from "@/lib/middleware";
 import { updateProfileSchema, validateBody } from "@/lib/validators";
 import {
   getCurrentProfile,
+  HANDLE_TAKEN,
   INVALID_PROFILE_MEDIA,
   PROFILE_NOT_FOUND,
   updateCurrentProfile,
@@ -16,6 +17,9 @@ const errorResponse = (error, fallbackMessage) => {
   if (error?.message === PROFILE_NOT_FOUND) return notFoundResponse();
   if (error?.message === INVALID_PROFILE_MEDIA) {
     return NextResponse.json({ error: "Validation failed", details: [{ field: "media", message: error.message }] }, { status: 400 });
+  }
+  if (error?.message === HANDLE_TAKEN || error?.code === "P2002") {
+    return NextResponse.json({ error: HANDLE_TAKEN }, { status: 409 });
   }
   if (error instanceof SyntaxError) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });

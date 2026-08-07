@@ -17,6 +17,8 @@ export default function StudioSettingsPage() {
   const [profile, setProfile] = useState(null);
   const [category, setCategory] = useState("Lifestyle");
   const [price, setPrice] = useState("0");
+  const [payoutMethod, setPayoutMethod] = useState("UPI");
+  const [payoutDetails, setPayoutDetails] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -32,6 +34,8 @@ export default function StudioSettingsPage() {
         setProfile(currentProfile);
         setCategory(settings.category || "Lifestyle");
         setPrice(String(settings.subscriptionPrice ?? 0));
+        setPayoutMethod(settings.payoutMethod || "UPI");
+        setPayoutDetails(settings.payoutDetails || "");
       })
       .catch((loadError) => {
         if (loadError.name !== "AbortError") setError(loadError.message || "Unable to load creator settings");
@@ -55,10 +59,14 @@ export default function StudioSettingsPage() {
           bio: profile.bio || "",
           category,
           subscriptionPrice: Number(price),
+          payoutMethod,
+          payoutDetails,
         }),
       }).then(parseResponse);
       setCategory(saved.category);
       setPrice(String(saved.subscriptionPrice));
+      setPayoutMethod(saved.payoutMethod || "UPI");
+      setPayoutDetails(saved.payoutDetails || "");
       setSuccess(true);
     } catch (saveError) {
       setError(saveError.message || "Unable to save subscription settings");
@@ -124,6 +132,32 @@ export default function StudioSettingsPage() {
             <button type="submit" disabled={saving} className="ml-auto flex min-h-11 items-center gap-1.5 rounded-xl bg-brand-600 px-6 text-[13.5px] font-bold text-white transition hover:bg-brand-700 disabled:cursor-wait disabled:opacity-60">
               {saving ? <><Loader2 size={16} className="animate-spin" /> Saving</> : "Save subscription"}
             </button>
+          </div>
+        </Card>
+      </form>
+
+      <form onSubmit={handleSubscriptionSave} aria-label="Creator payout settings">
+        <Card className="space-y-4 p-4 sm:p-6">
+          <div className="border-b border-line pb-3">
+            <h2 className="text-[17px] font-extrabold">Payout destination</h2>
+            <p className="mt-1 text-xs leading-5 text-muted">Choose where approved creator payouts should be sent</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="payout-method" className="mb-1.5 block text-[12.5px] font-semibold">Method</label>
+              <select id="payout-method" value={payoutMethod} onChange={(event) => setPayoutMethod(event.target.value)} className="h-11 w-full rounded-xl border border-line bg-white px-4 text-sm outline-none focus:border-brand-400">
+                <option value="UPI">UPI</option>
+                <option value="BANK_TRANSFER">Bank transfer</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="payout-details" className="mb-1.5 block text-[12.5px] font-semibold">{payoutMethod === "UPI" ? "UPI ID" : "Masked bank destination"}</label>
+              <input id="payout-details" required value={payoutDetails} onChange={(event) => setPayoutDetails(event.target.value)} maxLength={120} placeholder={payoutMethod === "UPI" ? "name@bank" : "Bank name and last four digits"} className="h-11 w-full rounded-xl border border-line px-4 text-sm outline-none focus:border-brand-400" />
+            </div>
+          </div>
+          <p className="text-xs leading-5 text-muted">Blindly records payout requests for review. Funds are not marked paid until processing is completed.</p>
+          <div className="flex justify-end border-t border-line pt-4">
+            <button type="submit" disabled={saving} className="flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-6 text-sm font-bold text-white disabled:opacity-60">{saving ? <Loader2 size={16} className="animate-spin" /> : null} Save payout destination</button>
           </div>
         </Card>
       </form>

@@ -13,7 +13,7 @@ const saved = {
   id: creator.id,
   name: "Asha Rao",
   bio: "Textile artist",
-  creatorProfile: { category: "Art", subscriptionPrice: 499 },
+  creatorProfile: { category: "Art", subscriptionPrice: 499, payoutMethod: "UPI", payoutDetails: "asha@upi" },
 };
 
 describe("creator subscription settings API", () => {
@@ -30,6 +30,8 @@ describe("creator subscription settings API", () => {
       bio: "Textile artist",
       category: "Art",
       subscriptionPrice: 499,
+      payoutMethod: "UPI",
+      payoutDetails: "asha@upi",
     });
   });
 

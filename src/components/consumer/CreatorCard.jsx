@@ -61,8 +61,9 @@ export function CreatorCard({ creator, onFollow }) {
   }
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
-      <div className="h-24 bg-gradient-to-br from-[#241541] via-brand-700 to-[#d1609f]">
+    <article className="group relative flex h-full min-h-[390px] flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-xl">
+      <Link href={`/creator/${creator.handle}`} className="absolute inset-0 z-0 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500" aria-label={`Open ${creator.name}'s profile`} />
+      <div className="pointer-events-none h-36 shrink-0 bg-gradient-to-br from-[#241541] via-brand-700 to-[#d1609f]">
         {creator.coverImage ? (
           <EditorialImage
             src={creator.coverImage}
@@ -72,7 +73,7 @@ export function CreatorCard({ creator, onFollow }) {
           />
         ) : null}
       </div>
-      <div className="p-4">
+      <div className="pointer-events-none relative z-[1] flex flex-1 flex-col p-4">
         <div className="-mt-10 flex items-end justify-between gap-3">
           <ConsumerAvatar creator={creator} size="h-16 w-16 ring-4 ring-white" />
           {onFollow ? (
@@ -80,8 +81,8 @@ export function CreatorCard({ creator, onFollow }) {
               type="button"
               aria-pressed={isFollowing}
               disabled={pending}
-              onClick={handleFollow}
-              className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-bold transition disabled:opacity-60 ${
+              onClick={(event) => { event.preventDefault(); event.stopPropagation(); handleFollow(); }}
+              className={`pointer-events-auto relative z-10 inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-bold transition disabled:opacity-60 ${
                 isFollowing
                   ? "border border-line bg-white text-ink"
                   : "bg-brand-600 text-white hover:bg-brand-700"
@@ -91,17 +92,17 @@ export function CreatorCard({ creator, onFollow }) {
             </button>
           ) : null}
         </div>
-        <Link href={`/creator/${creator.handle}`} className="mt-3 flex items-center gap-1.5 font-extrabold hover:underline">
+        <p className="mt-4 flex items-center gap-1.5 font-extrabold transition-colors group-hover:text-brand-700">
           {creator.name}
           {creator.verified ? <BadgeCheck size={16} className="fill-blue-500 text-white" /> : null}
-        </Link>
+        </p>
         <p className="text-xs text-muted">@{creator.handle}</p>
         {creator.roleTitle || creator.category ? (
-          <p className="mt-2 text-sm text-ink/75">{creator.roleTitle || creator.category}</p>
-        ) : null}
-        {creator.bio ? <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted">{creator.bio}</p> : null}
+          <p className="mt-3 min-h-5 text-sm text-ink/75">{creator.roleTitle || creator.category}</p>
+        ) : <span className="mt-3 min-h-5" />}
+        {creator.bio ? <p className="mt-2 line-clamp-2 min-h-[44px] text-sm leading-relaxed text-muted">{creator.bio}</p> : <p className="mt-2 min-h-[44px] text-sm text-muted">View profile and published work</p>}
         {typeof creator.followerCount === "number" ? (
-          <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-muted">
+          <p className="mt-auto flex items-center gap-1.5 pt-4 text-xs font-semibold text-muted">
             <Users size={14} /> {creator.followerCount.toLocaleString("en-IN")} followers
           </p>
         ) : null}

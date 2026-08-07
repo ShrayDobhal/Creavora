@@ -201,13 +201,14 @@ export default function SubscriptionsPage() {
               <h2 id="subscription-recommendations" className="text-lg font-extrabold text-ink">Recommended Creators for You</h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {recommendations.map((recommendation) => (
-                  <Card key={recommendation.id} className="min-w-0 p-4 sm:p-5">
-                    <div className="flex min-w-0 items-center gap-3">
+                  <Card key={recommendation.id} className="group relative min-w-0 p-4 transition hover:-translate-y-1 hover:shadow-lg sm:p-5">
+                    <Link href={`/creator/${encodeURIComponent(recommendation.handle)}`} className="absolute inset-0 z-0 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500" aria-label={`Open ${recommendation.name}'s profile`} />
+                    <div className="pointer-events-none relative z-[1] flex min-w-0 items-center gap-3">
                       <ConsumerAvatar creator={recommendation} size="h-14 w-14" />
                       <div className="min-w-0">
-                        <Link href={`/creator/${encodeURIComponent(recommendation.handle)}`} className="block truncate font-extrabold text-ink hover:underline">
+                        <p className="block truncate font-extrabold text-ink group-hover:text-brand-700">
                           {recommendation.name}
-                        </Link>
+                        </p>
                         <p className="mt-0.5 truncate text-xs text-muted">{recommendation.category || recommendation.roleTitle || "Creator"}</p>
                         {typeof recommendation.followerCount === "number" ? (
                           <p className="mt-1 text-xs font-semibold text-muted">{recommendation.followerCount.toLocaleString("en-IN")} followers</p>
@@ -222,7 +223,7 @@ export default function SubscriptionsPage() {
                     {recommendation.subscriptionPrice > 0 ? (
                       <Link
                         href={`/creator/${encodeURIComponent(recommendation.handle)}`}
-                        className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-brand-600 px-3 py-2 text-sm font-bold text-white"
+                        className="relative z-10 mt-4 inline-flex min-h-10 items-center rounded-lg bg-brand-600 px-3 py-2 text-sm font-bold text-white"
                         aria-label={`View ${recommendation.name} subscription plan`}
                       >
                         View monthly plan
@@ -230,9 +231,9 @@ export default function SubscriptionsPage() {
                     ) : (
                     <button
                       type="button"
-                      onClick={() => join(recommendation)}
+                      onClick={(event) => { event.preventDefault(); event.stopPropagation(); join(recommendation); }}
                       disabled={pendingCreatorId === recommendation.id}
-                      className="mt-4 rounded-lg bg-brand-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"
+                      className="relative z-10 mt-4 rounded-lg bg-brand-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"
                       aria-label={`Join ${recommendation.name} for free`}
                     >
                       {pendingCreatorId === recommendation.id ? "Joining…" : "Join for free"}

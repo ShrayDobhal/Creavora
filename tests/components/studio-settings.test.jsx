@@ -17,7 +17,7 @@ describe("creator subscription pricing UI", () => {
         ? { name: "Asha Rao", bio: "Textile artist", category: "Art", subscriptionPrice: 749 }
         : String(url) === "/api/profile"
           ? { name: "Asha Rao", bio: "Textile artist", handle: "asha", profileVisibility: "PUBLIC", counts: { followers: 4, following: 2, posts: 3 } }
-          : { name: "Asha Rao", bio: "Textile artist", category: "Art", subscriptionPrice: 499 }),
+          : { name: "Asha Rao", bio: "Textile artist", category: "Art", subscriptionPrice: 499, payoutMethod: "UPI", payoutDetails: "" }),
       { status: 200, headers: { "content-type": "application/json" } },
     )));
     vi.stubGlobal("fetch", fetchMock);
@@ -40,6 +40,8 @@ describe("creator subscription pricing UI", () => {
           bio: "Textile artist",
           category: "Art",
           subscriptionPrice: 749,
+          payoutMethod: "UPI",
+          payoutDetails: "",
         }),
       }),
     ));

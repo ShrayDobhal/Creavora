@@ -55,7 +55,9 @@ function RegisterForm() {
   const normalizedHandle = handle.trim().replace(/^@+/, "").toLowerCase();
   const googleHref = useMemo(() => {
     const redirect = role === "CREATOR" ? "/studio/content" : "/";
-    return `/api/auth/google/start?intent=register&role=${role}&handle=${encodeURIComponent(normalizedHandle)}&redirect=${encodeURIComponent(redirect)}`;
+    return role === "CREATOR"
+      ? `/api/auth/google/start?intent=register&role=CREATOR&handle=${encodeURIComponent(normalizedHandle)}&redirect=${encodeURIComponent(redirect)}`
+      : `/api/auth/google/start?role=USER&redirect=${encodeURIComponent(redirect)}`;
   }, [normalizedHandle, role]);
   const oauthError = searchParams.get("error");
   const pageError = oauthError === "handle_unavailable"
@@ -77,7 +79,7 @@ function RegisterForm() {
 
         <main className="mx-auto my-auto w-full max-w-[430px] py-10">
           <h1 className="text-[32px] font-extrabold tracking-tight">Create your account</h1>
-          <p className="mt-2 text-[15px] text-muted">Choose your account type and claim your Blindly handle</p>
+          <p className="mt-2 text-[15px] text-muted">Choose how you want to join Blindly</p>
 
           <div className="mt-8 space-y-5">
             {pageError ? <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-700">{pageError}</p> : null}
@@ -89,7 +91,7 @@ function RegisterForm() {
               ))}
             </div>
 
-            <div>
+            {role === "CREATOR" ? <div>
               <label htmlFor="register-handle" className="mb-1.5 block text-[13px] font-semibold text-ink/80">Choose your handle</label>
               <div className="relative flex items-center">
                 <span className="absolute left-4 text-[14px] font-semibold text-muted">@</span>
@@ -121,9 +123,9 @@ function RegisterForm() {
                 {["unavailable", "invalid", "error"].includes(availability) ? <XCircle aria-label="Handle unavailable" size={19} className="absolute right-4 text-rose-600" /> : null}
               </div>
               <p aria-live="polite" className={`mt-2 min-h-5 text-[12.5px] font-semibold ${availability === "available" ? "text-emerald-700" : ["unavailable", "invalid", "error"].includes(availability) ? "text-rose-700" : "text-muted"}`}>{message}</p>
-            </div>
+            </div> : <div className="rounded-2xl border border-brand-100 bg-brand-50/60 p-4"><p className="text-sm font-black text-brand-900">Your account is ready in one step</p><p className="mt-1 text-xs leading-5 text-muted">Continue with Google. Blindly will use the part of your email before @ as your first handle. You can change your name and handle later in Settings.</p></div>}
 
-            {availability === "available" ? (
+            {role === "USER" || availability === "available" ? (
               <a href={googleHref} className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-line bg-white text-[14.5px] font-bold text-ink shadow-sm transition hover:border-brand-300 hover:bg-brand-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500">
                 <GoogleMark /> Continue with Google
               </a>
@@ -132,7 +134,7 @@ function RegisterForm() {
                 <GoogleMark /> Continue with Google
               </div>
             )}
-            <p className="text-center text-[12px] leading-relaxed text-muted">Google provides your verified name and email. Your selected handle and account type are saved after sign-in.</p>
+            <p className="text-center text-[12px] leading-relaxed text-muted">Google securely provides your verified name and email. Blindly never receives your Google password.</p>
           </div>
         </main>
 

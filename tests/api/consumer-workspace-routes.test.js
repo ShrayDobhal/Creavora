@@ -666,6 +666,13 @@ it("verifies a captured Razorpay payment and activates the subscription once", a
     create: expect.objectContaining({ creatorId: creator.id, price: 499, status: "ACTIVE" }),
   }));
   expect(transaction.creatorProfile.update).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: creator.id } }));
+  expect(transaction.transaction.create).toHaveBeenCalledTimes(2);
+  expect(transaction.transaction.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+    userId: creator.id,
+    amount: 499,
+    type: "EARNING",
+    status: "COMPLETED",
+  }) });
 });
 
 it("rejects a forged Razorpay signature before reading payment records", async () => {

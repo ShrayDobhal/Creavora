@@ -119,6 +119,17 @@ export function createPaymentVerificationHandler({
             metadata: JSON.stringify({ creatorId: metadata.creatorId, orderId: razorpayOrderId, paymentId: payment.id }),
           },
         });
+        await transaction.transaction.create({
+          data: {
+            userId: metadata.creatorId,
+            amount: payment.amount,
+            type: "EARNING",
+            method: "SUBSCRIPTION",
+            reference: razorpayPaymentId,
+            status: "COMPLETED",
+            metadata: JSON.stringify({ subscriberId: user.id, orderId: razorpayOrderId, paymentId: payment.id }),
+          },
+        });
         await transaction.creatorProfile.update({
           where: { userId: metadata.creatorId },
           data: {

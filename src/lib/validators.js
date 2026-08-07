@@ -176,6 +176,7 @@ export const searchSchema = z.object({
 
 export const updateProfileSchema = z.object({
   name: z.string().min(2).max(100).trim().optional(),
+  handle: handleSchema.optional(),
   bio: z.string().max(500).nullable().optional(),
   avatar: z.string().url().nullable().optional(),
   coverImage: z.string().url().nullable().optional(),
@@ -198,6 +199,8 @@ export const creatorSettingsSchema = z.object({
     "Travel", "Education", "Comedy", "Art", "Technology", "Lifestyle",
   ]),
   subscriptionPrice: z.number().int().min(0).max(100000),
+  payoutMethod: z.enum(["BANK_TRANSFER", "UPI"]).nullable().optional(),
+  payoutDetails: z.string().trim().max(120).transform((value) => value || null).nullable().optional(),
 }).strict();
 
 export const updateCommentSchema = z.object({

@@ -10,6 +10,7 @@ const PROFILE_INCLUDE = {
 
 const PROFILE_NOT_FOUND = "Profile not found";
 const INVALID_PROFILE_MEDIA = "Invalid profile media";
+const HANDLE_TAKEN = "This handle is already taken";
 
 const profileNotFound = () => {
   throw new Error(PROFILE_NOT_FOUND);
@@ -60,6 +61,14 @@ export async function getCurrentProfile(database, userId) {
 export async function updateCurrentProfile(database, userId, input) {
   await findActiveProfile(database, userId);
 
+  if (input.handle) {
+    const existing = await database.user.findFirst({
+      where: { id: { not: userId }, handle: { equals: input.handle, mode: "insensitive" }, deletedAt: null },
+      select: { id: true },
+    });
+    if (existing) throw new Error(HANDLE_TAKEN);
+  }
+
   for (const field of ["avatar", "coverImage"]) {
     if (input[field]) await assertOwnedMedia(database, userId, input[field]);
   }
@@ -76,4 +85,4 @@ export async function updateCurrentProfile(database, userId, input) {
   return getCurrentProfile(database, userId);
 }
 
-export { INVALID_PROFILE_MEDIA, PROFILE_NOT_FOUND };
+export { HANDLE_TAKEN, INVALID_PROFILE_MEDIA, PROFILE_NOT_FOUND };

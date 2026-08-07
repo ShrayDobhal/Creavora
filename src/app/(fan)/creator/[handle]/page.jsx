@@ -96,16 +96,16 @@ export default function CreatorProfilePage({ handleOverride, backHref = "/feed",
           <Link href={backHref} aria-label="Go back" className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-black/45 text-white backdrop-blur"><ArrowLeft size={18} /></Link>
         </div>
         <div className="px-5 pb-6 sm:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="relative z-10 -mt-12 flex min-w-0 items-end gap-4 sm:-mt-14">
-              <ConsumerAvatar creator={creator} size="h-24 w-24 ring-4 ring-white sm:h-28 sm:w-28" />
-              <div className="min-w-0 pb-1">
+          <div className="relative z-10 -mt-12 w-fit sm:-mt-14">
+            <ConsumerAvatar creator={creator} size="h-24 w-24 ring-4 ring-white sm:h-28 sm:w-28" />
+          </div>
+          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
                 <h1 id="creator-name" className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
                   {creator.name}
                   {creator.verified ? <BadgeCheck size={22} className="fill-blue-500 text-white" /> : null}
                 </h1>
                 <p className="mt-1 text-sm text-muted">@{creator.handle}</p>
-              </div>
             </div>
             {isOwnProfile ? (
               <Link href="/studio/settings" className="inline-flex h-11 items-center justify-center rounded-full bg-brand-600 px-6 text-sm font-extrabold text-white hover:bg-brand-700">

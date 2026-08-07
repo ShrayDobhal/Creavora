@@ -80,6 +80,22 @@ body {
 .animate-float { animation: float 5.5s ease-in-out infinite; }
 .animate-float-delayed { animation: float 6.4s ease-in-out 850ms infinite; }
 
+.landing-lift {
+  transition: transform 320ms cubic-bezier(.22, 1, .36, 1), box-shadow 320ms ease, border-color 320ms ease;
+}
+.landing-lift:hover {
+  transform: translateY(-7px);
+  border-color: var(--color-brand-200);
+  box-shadow: 0 24px 48px -30px rgba(63, 35, 141, .45);
+}
+.landing-hero-media img {
+  transition: transform 1.1s cubic-bezier(.22, 1, .36, 1), filter 700ms ease;
+}
+.landing-hero-media:hover img {
+  transform: scale(1.035);
+  filter: saturate(1.06) contrast(1.02);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

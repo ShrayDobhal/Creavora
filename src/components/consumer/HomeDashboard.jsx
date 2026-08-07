@@ -306,7 +306,7 @@ export default function HomeDashboard({
             {data.creators.length ? (
               <div className="mt-4 flex max-w-full gap-4 overflow-x-auto pb-2">
                 {data.creators.map((creator) => (
-                  <div key={creator.id} className="w-64 shrink-0"><CreatorCard creator={creator} onFollow={onFollow} /></div>
+                  <div key={creator.id} className="w-72 shrink-0"><CreatorCard creator={creator} onFollow={onFollow} /></div>
                 ))}
               </div>
             ) : (

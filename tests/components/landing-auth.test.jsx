@@ -50,14 +50,14 @@ describe("Landing auth entry points", () => {
     );
   });
 
-  it("grounds community proof in product routes visitors can inspect", () => {
+  it("connects useful landing content to product routes visitors can open", () => {
     render(<Landing />);
 
     expect(
-      screen.getByRole("heading", { name: /community proof you can inspect/i }),
+      screen.getByRole("heading", { name: /discover the work and keep the connection/i }),
     ).toBeVisible();
     expect(
-      screen.getByText(/no anonymous testimonials or inflated totals/i),
+      screen.getByText(/move naturally from a creator profile/i),
     ).toBeVisible();
     expect(screen.getByRole("link", { name: /browse discovery/i })).toHaveAttribute(
       "href",

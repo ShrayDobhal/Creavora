@@ -9,7 +9,7 @@ const selectSettings = {
   name: true,
   bio: true,
   creatorProfile: {
-    select: { category: true, subscriptionPrice: true },
+    select: { category: true, subscriptionPrice: true, payoutMethod: true, payoutDetails: true },
   },
 };
 
@@ -18,6 +18,8 @@ const presentSettings = (user) => ({
   bio: user.bio ?? "",
   category: user.creatorProfile?.category ?? "Lifestyle",
   subscriptionPrice: user.creatorProfile?.subscriptionPrice ?? 0,
+  payoutMethod: user.creatorProfile?.payoutMethod ?? "UPI",
+  payoutDetails: user.creatorProfile?.payoutDetails ?? "",
 });
 
 export function createStudioSettingsGet(database = db) {
@@ -58,10 +60,14 @@ export function createStudioSettingsPatch(database = db) {
             userId: user.id,
             category: data.category,
             subscriptionPrice: data.subscriptionPrice,
+            payoutMethod: data.payoutMethod,
+            payoutDetails: data.payoutDetails,
           },
           update: {
             category: data.category,
             subscriptionPrice: data.subscriptionPrice,
+            payoutMethod: data.payoutMethod,
+            payoutDetails: data.payoutDetails,
           },
         });
         return transaction.user.findUnique({ where: { id: user.id }, select: selectSettings });

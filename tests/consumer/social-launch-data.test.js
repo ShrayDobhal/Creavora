@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { LAUNCH_CATEGORIES, LAUNCH_FEED_FIXTURES } from "../../prisma/seed.mjs";
-import { getCurrentProfile, updateCurrentProfile } from "@/lib/consumer/profile";
+import { getCurrentProfile, HANDLE_TAKEN, updateCurrentProfile } from "@/lib/consumer/profile";
 import { presentCreator } from "@/lib/consumer/presenters";
 
 const approvedImageHosts = new Set(["images.unsplash.com", "images.pexels.com"]);
@@ -85,6 +85,28 @@ describe("Blindly social launch feed data", () => {
     expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
       data: { address: null },
     }));
+  });
+
+  it("rejects a handle already owned by another active account", async () => {
+    const profile = {
+      id: "user-1",
+      name: "Nisha Kapoor",
+      email: "nisha@example.test",
+      handle: "nisha-kapoor",
+      _count: { followers: 0, following: 0, posts: 0 },
+    };
+    const database = {
+      user: {
+        findFirst: vi.fn()
+          .mockResolvedValueOnce(profile)
+          .mockResolvedValueOnce({ id: "user-2" }),
+        updateMany: vi.fn(),
+      },
+    };
+
+    await expect(updateCurrentProfile(database, profile.id, { handle: "already-used" }))
+      .rejects.toThrow(HANDLE_TAKEN);
+    expect(database.user.updateMany).not.toHaveBeenCalled();
   });
 
   it("keeps source launch post copy free of importer namespace markers", () => {
