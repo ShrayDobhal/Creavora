@@ -150,7 +150,7 @@ export default function LivePage() {
             )}
           </section>
           <section aria-labelledby="scheduled-title">
-            <h2 id="scheduled-title" className="text-2xl font-black">Upcoming sessions</h2>
+            <h2 id="scheduled-title" className="text-2xl font-black">Upcoming interactions</h2>
             {scheduled.length ? (
               <div className="mt-4 grid min-w-0 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {scheduled.map((session) => <SessionCard key={session.id} session={session} />)}

@@ -41,6 +41,7 @@ const profileRow = {
   roleTitle: "Running Coach",
   location: "Bengaluru",
   address: "Bandra West, Mumbai 400050",
+  phone: "+91 98765 43210",
   website: "https://neha.example.test",
   profileVisibility: "PUBLIC",
   deletedAt: null,
@@ -83,7 +84,7 @@ describe("Blindly social launch profile API", () => {
       new Request("http://localhost/api/profile"), { user: { id: "user-1" } },
     );
     expect(await response.json()).toMatchObject({
-      handle: "neha-runs", location: "Bengaluru", address: "Bandra West, Mumbai 400050", counts: { followers: 12, following: 8, posts: 4 },
+      handle: "neha-runs", location: "Bengaluru", address: "Bandra West, Mumbai 400050", phone: "+91 98765 43210", counts: { followers: 12, following: 8, posts: 4 },
     });
     expect(findFirst).toHaveBeenCalledWith({
       where: { id: "user-1", deletedAt: null },

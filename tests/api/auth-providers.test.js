@@ -154,15 +154,20 @@ describe("Google OAuth callback", () => {
 });
 
 describe("Google account resolution", () => {
-  it("never creates or elevates an account from the creator portal", async () => {
-    const user = { findUnique: vi.fn().mockResolvedValue(null), findMany: vi.fn().mockResolvedValue([]), create: vi.fn() };
+  it("creates a new creator account and profile for a verified Google identity", async () => {
+    const created = { id: "creator-1", role: "CREATOR" };
+    const user = { findUnique: vi.fn().mockResolvedValue(null), findMany: vi.fn().mockResolvedValue([]), create: vi.fn().mockResolvedValue(created) };
     const database = { $transaction: vi.fn((callback) => callback({ user })) };
     await expect(resolveGoogleUser({
       database,
       profile: { subject: "sub-1", email: "creator@example.test", name: "Creator" },
       intentRole: "CREATOR",
-    })).rejects.toThrow("Creator account not found");
-    expect(user.create).not.toHaveBeenCalled();
+    })).resolves.toBe(created);
+    expect(user.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      email: "creator@example.test",
+      role: "CREATOR",
+      creatorProfile: { create: { category: "Lifestyle", subscriptionPrice: 0 } },
+    }) });
   });
 
   it("retries with a collision-resistant handle when the first generated handle is already used", async () => {

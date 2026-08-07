@@ -76,19 +76,22 @@ export default function SavedPage() {
           {posts.map((post) => (
             <Card key={post.id} className="overflow-hidden sm:flex">
               {post.mediaUrl ? (
-                <EditorialImage src={post.mediaUrl} alt={`Post by ${post.creator.name}`} className="h-48 w-full object-cover sm:h-auto sm:w-52" fallbackLabel="Post media unavailable" />
+                <Link href={`/post/${encodeURIComponent(post.id)}`} aria-label={`Open saved post by ${post.creator.name}`} className="block shrink-0 sm:w-52">
+                  <EditorialImage src={post.mediaUrl} alt={`Post by ${post.creator.name}`} className="h-48 w-full object-cover sm:h-full" fallbackLabel="Post media unavailable" />
+                </Link>
               ) : (
-                <div className="grid h-32 w-full shrink-0 place-items-center bg-brand-50 text-brand-700 sm:h-auto sm:w-52"><Bookmark size={28} /></div>
+                <Link href={`/post/${encodeURIComponent(post.id)}`} aria-label={`Open saved post by ${post.creator.name}`} className="grid h-32 w-full shrink-0 place-items-center bg-brand-50 text-brand-700 sm:h-auto sm:w-52"><Bookmark size={28} /></Link>
               )}
               <div className="flex min-w-0 flex-1 flex-col p-5">
                 <Link href={`/creator/${encodeURIComponent(post.creator.handle)}`} className="font-extrabold text-ink hover:underline">
                   {post.creator.name}
                 </Link>
                 {post.creator.roleTitle && <p className="text-xs text-muted">{post.creator.roleTitle}</p>}
-                <p className="mt-3 flex-1 text-sm leading-relaxed text-ink">{post.content || "This post is not currently available."}</p>
+                <Link href={`/post/${encodeURIComponent(post.id)}`} className="mt-3 flex-1 rounded-lg text-sm leading-relaxed text-ink hover:text-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500">{post.content || "Open this saved premium post"}</Link>
                 <div className="mt-4 flex items-center gap-4 border-t border-line pt-3 text-xs text-muted">
                   <span className="inline-flex items-center gap-1"><Heart size={14} /> {post.counts.likes}</span>
                   <span className="inline-flex items-center gap-1"><MessageSquare size={14} /> {post.counts.comments}</span>
+                  <Link href={`/post/${encodeURIComponent(post.id)}`} className="font-bold text-brand-700 hover:underline">Open post</Link>
                   <button
                     onClick={() => handleRemove(post)}
                     disabled={removingId === post.id}

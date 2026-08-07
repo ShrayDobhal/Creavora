@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus, LoaderCircle, Save, X } from "lucide-react";
+import { Crop, ImagePlus, LoaderCircle, Save, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   completeImageUpload,
@@ -8,6 +8,7 @@ import {
   updateProfile,
   uploadSignedImage,
 } from "@/services/consumer-api";
+import ImageCropEditor from "./ImageCropEditor";
 
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const maxImageBytes = 4 * 1024 * 1024;
@@ -81,10 +82,9 @@ function initialValues(profile) {
   return {
     name: profile.name || "",
     bio: profile.bio || "",
-    roleTitle: profile.roleTitle || "",
+    phone: profile.phone || "",
     location: profile.location || "",
     address: profile.address || "",
-    profileVisibility: profile.profileVisibility || "PUBLIC",
   };
 }
 
@@ -92,17 +92,23 @@ export function ProfileEditor({ profile, onSaved }) {
   const [values, setValues] = useState(() => initialValues(profile));
   const [avatarFile, setAvatarFile] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
+  const [avatarSource, setAvatarSource] = useState(null);
+  const [coverSource, setCoverSource] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState("");
   const [coverPreview, setCoverPreview] = useState("");
+  const [cropKind, setCropKind] = useState(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const avatarInput = useRef(null);
   const coverInput = useRef(null);
+  const previewUrls = useRef({ avatar: "", cover: "" });
+  const sourceUrls = useRef({ avatar: "", cover: "" });
 
   useEffect(() => () => {
-    if (avatarPreview) URL.revokeObjectURL?.(avatarPreview);
-    if (coverPreview) URL.revokeObjectURL?.(coverPreview);
-  }, [avatarPreview, coverPreview]);
+    for (const url of new Set([...Object.values(previewUrls.current), ...Object.values(sourceUrls.current)])) {
+      if (url) URL.revokeObjectURL?.(url);
+    }
+  }, []);
 
   function updateValue(field, value) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -128,13 +134,60 @@ export function ProfileEditor({ profile, onSaved }) {
       event.target.value = "";
       return;
     }
-    const setFile = kind === "avatar" ? setAvatarFile : setCoverFile;
-    const setPreview = kind === "avatar" ? setAvatarPreview : setCoverPreview;
-    setFile(prepared);
-    setPreview((current) => {
-      if (current) URL.revokeObjectURL?.(current);
-      return canCreateObjectUrl() ? URL.createObjectURL(prepared) : "";
-    });
+    for (const url of new Set([previewUrls.current[kind], sourceUrls.current[kind]])) {
+      if (url) URL.revokeObjectURL?.(url);
+    }
+    const url = canCreateObjectUrl() ? URL.createObjectURL(prepared) : "";
+    previewUrls.current[kind] = url;
+    sourceUrls.current[kind] = url;
+    const source = { file: prepared, url };
+    if (kind === "avatar") {
+      setAvatarFile(prepared);
+      setAvatarSource(source);
+      setAvatarPreview(url);
+    } else {
+      setCoverFile(prepared);
+      setCoverSource(source);
+      setCoverPreview(url);
+    }
+    setCropKind(kind);
+  }
+
+  async function applyCrop(kind, cropped) {
+    if (cropped.size > maxImageBytes) throw new Error("Cropped image must be 4 MiB or smaller");
+    if (previewUrls.current[kind] && previewUrls.current[kind] !== sourceUrls.current[kind]) {
+      URL.revokeObjectURL?.(previewUrls.current[kind]);
+    }
+    const url = canCreateObjectUrl() ? URL.createObjectURL(cropped) : "";
+    previewUrls.current[kind] = url;
+    if (kind === "avatar") {
+      setAvatarFile(cropped);
+      setAvatarPreview(url);
+    } else {
+      setCoverFile(cropped);
+      setCoverPreview(url);
+    }
+    setCropKind(null);
+  }
+
+  function removeImage(kind) {
+    for (const url of new Set([previewUrls.current[kind], sourceUrls.current[kind]])) {
+      if (url) URL.revokeObjectURL?.(url);
+    }
+    previewUrls.current[kind] = "";
+    sourceUrls.current[kind] = "";
+    if (kind === "avatar") {
+      setAvatarFile(null);
+      setAvatarSource(null);
+      setAvatarPreview("");
+      if (avatarInput.current) avatarInput.current.value = "";
+    } else {
+      setCoverFile(null);
+      setCoverSource(null);
+      setCoverPreview("");
+      if (coverInput.current) coverInput.current.value = "";
+    }
+    if (cropKind === kind) setCropKind(null);
   }
 
   async function uploadAsset(file, kind) {
@@ -166,10 +219,9 @@ export function ProfileEditor({ profile, onSaved }) {
       const saved = await updateProfile({
         name: values.name.trim(),
         bio: values.bio.trim() || null,
-        roleTitle: values.roleTitle.trim() || null,
+        phone: values.phone.trim() || null,
         location: values.location.trim() || null,
         address: values.address.trim() || null,
-        profileVisibility: values.profileVisibility,
         ...(avatar ? { avatar } : {}),
         ...(coverImage ? { coverImage } : {}),
       });
@@ -202,15 +254,27 @@ export function ProfileEditor({ profile, onSaved }) {
           </label>
         </div>
       </div>
-      {avatarPreview || coverPreview ? (
+      {cropKind && (cropKind === "avatar" ? avatarSource : coverSource) ? (
+        <ImageCropEditor
+          key={`${cropKind}:${cropKind === "avatar" ? avatarSource?.url : coverSource?.url}`}
+          file={cropKind === "avatar" ? avatarSource.file : coverSource.file}
+          sourceUrl={cropKind === "avatar" ? avatarSource.url : coverSource.url}
+          alt={cropKind === "avatar" ? "Selected avatar" : "Selected cover image"}
+          aspectOptions={cropKind === "avatar" ? [{ label: "Square 1:1", value: 1 }] : [{ label: "Cover 16:5", value: 16 / 5 }]}
+          initialAspect={cropKind === "avatar" ? 1 : 16 / 5}
+          onApply={(cropped) => applyCrop(cropKind, cropped)}
+          onCancel={() => setCropKind(null)}
+        />
+      ) : null}
+      {!cropKind && (avatarPreview || coverPreview) ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          {avatarPreview ? <ImagePreview url={avatarPreview} label="Selected avatar" onRemove={() => { setAvatarFile(null); setAvatarPreview(""); if (avatarInput.current) avatarInput.current.value = ""; }} /> : null}
-          {coverPreview ? <ImagePreview url={coverPreview} label="Selected cover image" onRemove={() => { setCoverFile(null); setCoverPreview(""); if (coverInput.current) coverInput.current.value = ""; }} /> : null}
+          {avatarPreview ? <ImagePreview url={avatarPreview} label="Selected avatar" aspectClass="aspect-square" onEdit={() => setCropKind("avatar")} onRemove={() => removeImage("avatar")} /> : null}
+          {coverPreview ? <ImagePreview url={coverPreview} label="Selected cover image" aspectClass="aspect-[16/5]" onEdit={() => setCropKind("cover")} onRemove={() => removeImage("cover")} /> : null}
         </div>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Name" value={values.name} onChange={(value) => updateValue("name", value)} required />
-        <Field label="Role" value={values.roleTitle} onChange={(value) => updateValue("roleTitle", value)} />
+        <Field label="Phone number" type="tel" value={values.phone} maxLength={20} onChange={(value) => updateValue("phone", value)} />
         <Field label="City / State" value={values.location} onChange={(value) => updateValue("location", value)} />
         <Field label="Address" value={values.address} maxLength={240} onChange={(value) => updateValue("address", value)} />
       </div>
@@ -218,17 +282,6 @@ export function ProfileEditor({ profile, onSaved }) {
         <label htmlFor="profile-bio" className="mb-1.5 block text-sm font-bold text-ink">Bio</label>
         <textarea id="profile-bio" value={values.bio} onChange={(event) => updateValue("bio", event.target.value)} maxLength={500} rows={4} className="w-full rounded-xl border border-line bg-canvas px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:bg-white" />
       </div>
-      <fieldset>
-        <legend className="mb-2 text-sm font-bold text-ink">Profile visibility</legend>
-        <div className="flex flex-wrap gap-3">
-          {[{ value: "PUBLIC", label: "Public" }, { value: "FOLLOWERS", label: "Followers" }].map(({ value, label }) => (
-            <label key={value} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line px-3 text-sm font-semibold">
-              <input type="radio" name="profileVisibility" value={value} checked={values.profileVisibility === value} onChange={(event) => updateValue("profileVisibility", event.target.value)} />
-              {label}
-            </label>
-          ))}
-        </div>
-      </fieldset>
       {error ? <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">{error}</p> : null}
       <div className="flex justify-end border-t border-line pt-4">
         <button type="submit" disabled={saving || values.name.trim().length < 2} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-bold text-white hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-60">
@@ -250,11 +303,12 @@ function Field({ label, value, onChange, type = "text", required = false, maxLen
   );
 }
 
-function ImagePreview({ url, label, onRemove }) {
+function ImagePreview({ url, label, aspectClass, onEdit, onRemove }) {
   return (
     <div className="relative overflow-hidden rounded-xl border border-line bg-canvas">
       {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
-      <img src={url} alt={label} className="h-32 w-full object-cover" />
+      <img src={url} alt={label} className={`${aspectClass} w-full object-cover`} />
+      <button type="button" onClick={onEdit} className="absolute bottom-2 left-2 inline-flex min-h-9 items-center gap-1 rounded-full bg-white/95 px-3 text-xs font-black text-ink shadow" aria-label={`Edit crop for ${label}`}><Crop size={14} /> Edit crop</button>
       <button type="button" onClick={onRemove} className="absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-black/65 text-white" aria-label={`Remove ${label}`}><X size={16} /></button>
     </div>
   );

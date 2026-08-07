@@ -84,7 +84,7 @@ export default function CreatorProfilePage({ handleOverride, backHref = "/feed",
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
       <section className="overflow-hidden rounded-3xl border border-line bg-white" aria-labelledby="creator-name">
-        <div className="relative h-44 bg-gradient-to-br from-[#201238] via-brand-800 to-[#d15f94] sm:h-56">
+        <div className="relative aspect-[16/5] w-full bg-gradient-to-br from-[#201238] via-brand-800 to-[#d15f94]">
           {creator.coverImage ? (
             <EditorialImage
               src={creator.coverImage}

@@ -180,6 +180,10 @@ export const updateProfileSchema = z.object({
   roleTitle: z.string().max(50).nullable().optional(),
   location: z.string().max(80).nullable().optional(),
   address: z.string().trim().max(240).transform((value) => value || null).nullable().optional(),
+  phone: z.string().trim().max(20).refine(
+    (value) => !value || /^\+?[0-9][0-9\s-]{7,18}$/.test(value),
+    "Enter a valid phone number",
+  ).transform((value) => value || null).nullable().optional(),
   website: z.string().url().max(2048).nullable().optional(),
   profileVisibility: z.enum(["PUBLIC", "FOLLOWERS"]).optional(),
 }).strict();

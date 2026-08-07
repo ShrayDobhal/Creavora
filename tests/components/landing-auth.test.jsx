@@ -29,6 +29,10 @@ describe("Landing auth entry points", () => {
       "href",
       "/register",
     );
+    expect(screen.getByRole("link", { name: /create a fan account/i })).toHaveAttribute(
+      "href",
+      "/api/auth/google/start?role=USER&redirect=%2F",
+    );
     expect(screen.getByRole("link", { name: /creator login/i })).toHaveAttribute(
       "href",
       "/creator-login",

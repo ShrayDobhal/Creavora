@@ -158,14 +158,16 @@ export async function resolveGoogleUser({ database, profile, intentRole }) {
           }
           return { ...byEmail, googleSubject: profile.subject };
         }
-        if (intentRole !== "USER") throw new Error("Creator account not found");
         return transaction.user.create({ data: {
           name: profile.name || "Blindly member",
           email: profile.email,
           handle: googleHandle(profile.email, profile.subject, attempt),
           googleSubject: profile.subject,
-          role: "USER",
+          role: intentRole,
           passwordHash: null,
+          ...(intentRole === "CREATOR" ? {
+            creatorProfile: { create: { category: "Lifestyle", subscriptionPrice: 0 } },
+          } : {}),
         } });
       });
     } catch (error) {

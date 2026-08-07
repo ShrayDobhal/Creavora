@@ -192,7 +192,7 @@ export function FeedCard({
                 <EditorialImage
                   src={post.mediaUrl}
                   alt={mediaAlt}
-                  className="aspect-[4/3] max-h-[680px] w-full bg-neutral-100 object-cover transition-opacity hover:opacity-95"
+                  className="max-h-[720px] w-full bg-neutral-100 object-contain transition-opacity hover:opacity-95"
                   fallbackLabel="Media unavailable"
                 />
               </Link>

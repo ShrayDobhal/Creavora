@@ -50,6 +50,7 @@ const profile = {
   avatar: null,
   coverImage: null,
   roleTitle: "Photographer",
+  phone: "+91 98765 43210",
   location: "Mumbai, Maharashtra",
   address: "Bandra West, Mumbai 400050",
   website: "https://nisha.example.test",
@@ -128,7 +129,11 @@ describe("social launch UI", () => {
     render(<PostComposer user={{ name: "Nisha" }} onPublished={vi.fn()} />);
 
     await user.upload(screen.getByLabelText("Add image"), webpFile());
-    const preview = await screen.findByAltText("Selected image preview");
+    expect(await screen.findByRole("region", { name: "Crop image" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Portrait 4:5" })).toBeVisible();
+    expect(screen.getByRole("slider", { name: "Zoom" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Keep original" }));
+    const preview = screen.getByAltText("Selected image preview");
     expect(preview).toHaveClass("object-contain");
 
     await user.click(screen.getByRole("button", { name: "Profile grid" }));
@@ -178,6 +183,9 @@ describe("social launch UI", () => {
     render(<ProfileEditor profile={profile} onSaved={onSaved} />);
     expect(screen.getByLabelText("City / State")).toHaveValue("Mumbai, Maharashtra");
     expect(screen.getByLabelText("Address")).toHaveValue("Bandra West, Mumbai 400050");
+    expect(screen.getByLabelText("Phone number")).toHaveValue("+91 98765 43210");
+    expect(screen.queryByLabelText("Role")).not.toBeInTheDocument();
+    expect(screen.queryByText("Profile visibility")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Website")).not.toBeInTheDocument();
     await user.clear(screen.getByLabelText("Address"));
     await user.clear(screen.getByLabelText("City / State"));
@@ -255,14 +263,16 @@ describe("social launch UI", () => {
     expect(screen.queryByRole("button", { name: "Post options" })).not.toBeInTheDocument();
   });
 
-  it("renders only working profile, privacy, and sign out settings controls", async () => {
+  it("renders only profile and sign out settings controls without visibility settings", async () => {
     getProfile.mockResolvedValue(profile);
     render(<SettingsPage />);
 
     expect(await screen.findByRole("heading", { name: "Settings" })).toBeVisible();
     expect(screen.queryByText(/billing|wallet|achievements/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Profile" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Privacy" })).toBeVisible();
+    expect(screen.getByText("Profile")).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("button", { name: "Privacy" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Phone number")).toBeVisible();
+    expect(screen.queryByText("Profile visibility")).not.toBeInTheDocument();
   });
 
   it("keeps the shared consumer shell and settings editor within the phone viewport", async () => {

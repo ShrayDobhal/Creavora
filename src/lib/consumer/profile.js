@@ -26,6 +26,7 @@ const presentProfile = (user) => ({
   roleTitle: user.roleTitle,
   location: user.location,
   address: user.address,
+  phone: user.phone,
   website: user.website,
   profileVisibility: user.profileVisibility,
   counts: {

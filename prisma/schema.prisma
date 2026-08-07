@@ -26,6 +26,7 @@ model User {
   roleTitle         String? // e.g. "Fashion Creator"
   location          String?
   address           String?
+  phone             String?
   website           String?
   profileVisibility String    @default("PUBLIC")
   verified          Boolean   @default(false)

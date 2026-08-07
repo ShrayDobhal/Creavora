@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus, LoaderCircle, X } from "lucide-react";
+import { Crop, ImagePlus, LoaderCircle, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   completeImageUpload,
@@ -9,6 +9,7 @@ import {
   uploadSignedImage,
 } from "@/services/consumer-api";
 import { CATEGORY_OPTIONS } from "@/lib/consumer/constants";
+import ImageCropEditor from "./ImageCropEditor";
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const UNAVAILABLE_MESSAGE = "Image uploads are not configured yet";
@@ -83,7 +84,11 @@ export function PostComposer({ user, onPublished }) {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("Lifestyle");
   const [image, setImage] = useState(null);
+  const [sourceImage, setSourceImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [sourceAspect, setSourceAspect] = useState(1);
+  const [cropOpen, setCropOpen] = useState(false);
   const [error, setError] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
   const [imageUploadsUnavailable, setImageUploadsUnavailable] = useState(false);
@@ -91,16 +96,25 @@ export function PostComposer({ user, onPublished }) {
   const [previewMode, setPreviewMode] = useState("post");
   const fileInput = useRef(null);
   const previewUrlRef = useRef("");
+  const sourceUrlRef = useRef("");
 
   useEffect(() => () => {
-    if (previewUrlRef.current) URL.revokeObjectURL?.(previewUrlRef.current);
+    for (const url of new Set([previewUrlRef.current, sourceUrlRef.current])) {
+      if (url) URL.revokeObjectURL?.(url);
+    }
   }, []);
 
   function clearImage() {
     setImage(null);
-    if (previewUrlRef.current) URL.revokeObjectURL?.(previewUrlRef.current);
+    setSourceImage(null);
+    for (const url of new Set([previewUrlRef.current, sourceUrlRef.current])) {
+      if (url) URL.revokeObjectURL?.(url);
+    }
     previewUrlRef.current = "";
+    sourceUrlRef.current = "";
     setPreviewUrl("");
+    setSourceUrl("");
+    setCropOpen(false);
     setPreviewMode("post");
     if (fileInput.current) fileInput.current.value = "";
   }
@@ -127,10 +141,28 @@ export function PostComposer({ user, onPublished }) {
       return;
     }
 
+    const dimensions = await imageDimensions(prepared);
     setImage(prepared);
-    if (previewUrlRef.current) URL.revokeObjectURL?.(previewUrlRef.current);
-    previewUrlRef.current = canCreateObjectUrl() ? URL.createObjectURL(prepared) : "";
+    setSourceImage(prepared);
+    setSourceAspect(dimensions.width / dimensions.height);
+    for (const url of new Set([previewUrlRef.current, sourceUrlRef.current])) {
+      if (url) URL.revokeObjectURL?.(url);
+    }
+    const nextUrl = canCreateObjectUrl() ? URL.createObjectURL(prepared) : "";
+    previewUrlRef.current = nextUrl;
+    sourceUrlRef.current = nextUrl;
+    setPreviewUrl(nextUrl);
+    setSourceUrl(nextUrl);
+    setCropOpen(true);
+  }
+
+  async function applyCrop(cropped) {
+    if (cropped.size > MAX_IMAGE_BYTES) throw new Error("Cropped image must be 4 MiB or smaller");
+    if (previewUrlRef.current && previewUrlRef.current !== sourceUrlRef.current) URL.revokeObjectURL?.(previewUrlRef.current);
+    previewUrlRef.current = canCreateObjectUrl() ? URL.createObjectURL(cropped) : "";
+    setImage(cropped);
     setPreviewUrl(previewUrlRef.current);
+    setCropOpen(false);
   }
 
   async function handleSubmit(event) {
@@ -200,16 +232,33 @@ export function PostComposer({ user, onPublished }) {
           {CATEGORY_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
         </select>
       </div>
-      {previewUrl ? (
+      {cropOpen && sourceImage && sourceUrl ? (
+        <div className="mt-3">
+          <ImageCropEditor
+            file={sourceImage}
+            sourceUrl={sourceUrl}
+            aspectOptions={[
+              { label: "Original", value: sourceAspect },
+              { label: "Square 1:1", value: 1 },
+              { label: "Portrait 4:5", value: 4 / 5 },
+              { label: "Landscape 16:9", value: 16 / 9 },
+            ]}
+            initialAspect={sourceAspect}
+            onApply={applyCrop}
+            onCancel={() => setCropOpen(false)}
+          />
+        </div>
+      ) : previewUrl ? (
         <div className="relative mt-3">
           <div className="mb-2 flex flex-wrap items-center gap-2" aria-label="Image preview style">
             <button type="button" aria-pressed={previewMode === "post"} onClick={() => setPreviewMode("post")} className={`rounded-full px-3 py-1.5 text-xs font-bold ${previewMode === "post" ? "bg-brand-600 text-white" : "border border-line bg-white text-ink"}`}>Full post</button>
             <button type="button" aria-pressed={previewMode === "grid"} onClick={() => setPreviewMode("grid")} className={`rounded-full px-3 py-1.5 text-xs font-bold ${previewMode === "grid" ? "bg-brand-600 text-white" : "border border-line bg-white text-ink"}`}>Profile grid</button>
-            <span className="text-xs text-muted">Preview only</span>
+            <button type="button" onClick={() => setCropOpen(true)} className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-bold"><Crop size={13} /> Edit crop</button>
+            <span className="text-xs text-muted">This is how your post will appear</span>
           </div>
           <div className="grid min-h-48 overflow-hidden rounded-xl border border-line bg-canvas">
             {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
-            <img src={previewUrl} alt="Selected image preview" className={previewMode === "grid" ? "aspect-square w-full object-cover" : "max-h-72 min-h-48 w-full object-contain"} />
+            <img src={previewUrl} alt="Selected image preview" className={previewMode === "grid" ? "aspect-square w-full object-cover" : "max-h-[560px] min-h-48 w-full object-contain"} />
           </div>
           <button type="button" onClick={clearImage} className="absolute right-3 top-3 z-10 grid h-10 w-10 place-items-center rounded-full bg-black/75 text-white shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500" aria-label="Remove image">
             <X size={16} />

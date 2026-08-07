@@ -37,6 +37,7 @@ describe("Blindly social launch feed data", () => {
       roleTitle: "Photographer",
       location: "Mumbai, Maharashtra",
       address: "Bandra West, Mumbai 400050",
+      phone: "+91 98765 43210",
       website: null,
       profileVisibility: "PUBLIC",
       deletedAt: null,
@@ -52,6 +53,7 @@ describe("Blindly social launch feed data", () => {
     expect(await getCurrentProfile(database, "user-1")).toMatchObject({
       location: "Mumbai, Maharashtra",
       address: "Bandra West, Mumbai 400050",
+      phone: "+91 98765 43210",
     });
 
     await updateCurrentProfile(database, "user-1", { address: "Indiranagar, Bengaluru 560038" });

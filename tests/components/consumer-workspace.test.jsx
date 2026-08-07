@@ -490,6 +490,8 @@ it("loads saved posts and removes a bookmark through the persisted endpoint", as
   render(<SavedPage />);
 
   expect(await screen.findByText("A new studio piece")).toBeVisible();
+  expect(screen.getByRole("link", { name: "A new studio piece" })).toHaveAttribute("href", "/post/post-1");
+  expect(screen.getByRole("link", { name: "Open post" })).toHaveAttribute("href", "/post/post-1");
   fireEvent.click(screen.getByRole("button", { name: "Remove saved post by Asha Rao" }));
   await waitFor(() => expect(fetch).toHaveBeenCalledWith(
     "/api/posts/post-1/bookmark",
