@@ -11,7 +11,6 @@ vi.mock("next/navigation", () => ({
 
 import Landing from "@/app/landing/page";
 import FanLayout, { TopBar } from "@/layouts/FanLayout";
-import { CATEGORY_OPTIONS } from "@/lib/consumer/constants";
 
 describe("Landing auth entry points", () => {
   afterEach(() => {
@@ -44,39 +43,38 @@ describe("Landing auth entry points", () => {
 
     expect(container.querySelector('a[href="#"]')).not.toBeInTheDocument();
     expect(screen.queryAllByRole("button")).toHaveLength(0);
-    expect(screen.getByRole("link", { name: /browse active creator profiles/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /browse all creators/i })).toHaveAttribute(
       "href",
       "/explore",
     );
   });
 
-  it("connects useful landing content to product routes visitors can open", () => {
+  it("presents the complete product journey with working entry points", () => {
     render(<Landing />);
 
     expect(
-      screen.getByRole("heading", { name: /discover the work and keep the connection/i }),
+      screen.getByRole("heading", { name: /more than content.*a place to belong/i }),
     ).toBeVisible();
-    expect(
-      screen.getByText(/move naturally from a creator profile/i),
-    ).toBeVisible();
-    expect(screen.getByRole("link", { name: /browse discovery/i })).toHaveAttribute(
-      "href",
-      "/explore",
-    );
-    expect(screen.getByRole("link", { name: /open the following feed/i })).toHaveAttribute(
-      "href",
-      "/feed",
-    );
-    expect(screen.queryByRole("link", { name: /saved|collection/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /three simple steps/i })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /everything your favorite creators share/i })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /build more than an audience/i })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /designed around meaningful creator relationships/i })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /questions before you join/i })).toBeVisible();
+    expect(screen.getAllByRole("link", { name: /join as a fan/i })[0]).toHaveAttribute("href", "/register?role=USER");
+    expect(screen.getAllByRole("link", { name: /open creator portal|enter creator portal/i })[0]).toHaveAttribute("href", "/creator-login");
   });
 
-  it("renders the shared release taxonomy instead of a landing-only category list", () => {
+  it("renders all featured categories in the compact landing directory", () => {
     render(<Landing />);
 
-    CATEGORY_OPTIONS.forEach((category) => {
-      expect(screen.getByText(category)).toBeVisible();
+    [
+      "Fashion", "Gaming", "Technology", "Fitness", "Education", "Photography", "Comedy",
+      "Food", "Travel", "Music", "Sports", "Business", "Lifestyle", "Art",
+    ].forEach((category) => {
+      expect(screen.getByRole("link", { name: category })).toBeVisible();
     });
-    expect(screen.queryByText("Business")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Photography" })).toHaveAttribute("href", "/explore?q=Photography");
+    expect(screen.getByRole("link", { name: "Business" })).toHaveAttribute("href", "/explore?q=Business");
   });
 });
 

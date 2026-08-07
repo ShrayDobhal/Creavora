@@ -96,6 +96,56 @@ body {
   filter: saturate(1.06) contrast(1.02);
 }
 
+.landing-category-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 300ms cubic-bezier(.22, 1, .36, 1), box-shadow 300ms ease, filter 300ms ease;
+}
+.landing-category-card::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 5rem;
+  height: 5rem;
+  right: -2.5rem;
+  bottom: -3rem;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: .08;
+  transform: scale(.65);
+  transition: transform 380ms cubic-bezier(.22, 1, .36, 1), opacity 300ms ease;
+}
+.landing-category-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 38px -28px rgba(39, 23, 91, .55);
+  filter: saturate(1.06);
+}
+.landing-category-card:hover::after {
+  opacity: .13;
+  transform: scale(1.5);
+}
+
+.landing-arrow-link svg {
+  transition: transform 250ms ease;
+}
+.landing-arrow-link:hover svg {
+  transform: translateX(5px);
+}
+
+@supports (animation-timeline: view()) {
+  .landing-section > div {
+    animation: landing-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 5% cover 24%;
+  }
+}
+
+@keyframes landing-reveal {
+  from { opacity: .25; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
