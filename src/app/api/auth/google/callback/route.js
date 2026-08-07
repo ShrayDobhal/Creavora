@@ -20,11 +20,12 @@ function clearOAuthCookies(response, env) {
   return response;
 }
 
-function failureResponse(env, role = "USER") {
+function failureResponse(env, role = "USER", registration = false) {
   const origin = trustedAppOrigin(env) || "http://localhost";
-  const login = role === "CREATOR" ? "/creator-login" : "/login";
+  const login = registration ? "/register" : role === "CREATOR" ? "/creator-login" : "/login";
   const url = new URL(login, origin);
-  url.searchParams.set("error", "google_sign_in_failed");
+  url.searchParams.set("error", registration ? "handle_unavailable" : "google_sign_in_failed");
+  if (registration) url.searchParams.set("role", role);
   return clearOAuthCookies(NextResponse.redirect(url), env);
 }
 
@@ -39,6 +40,7 @@ export function createGoogleCallbackGet({
   return async function googleCallback(request) {
     const cookies = parseCookieHeader(request);
     const role = cookies[OAUTH_COOKIE_NAMES.role] === "CREATOR" ? "CREATOR" : "USER";
+    const requestedHandle = cookies[OAUTH_COOKIE_NAMES.handle] || null;
     if (!getAuthProviderStatus(env).google) {
       return clearOAuthCookies(
         NextResponse.json({ error: "Google sign-in is not configured" }, { status: 503 }),
@@ -54,13 +56,13 @@ export function createGoogleCallbackGet({
     try {
       const accessToken = await exchangeCode({ env, code, verifier: cookies[OAUTH_COOKIE_NAMES.verifier] });
       const profile = await getUserInfo({ accessToken });
-      const user = await resolveUser({ database, profile, intentRole: role });
+      const user = await resolveUser({ database, profile, intentRole: role, requestedHandle });
       await issueAuthSession({ database, user, request });
       const fallback = role === "CREATOR" ? "/studio/content" : "/";
       const redirect = safeRedirectPath(cookies[OAUTH_COOKIE_NAMES.redirect], fallback);
       return clearOAuthCookies(NextResponse.redirect(new URL(redirect, trustedAppOrigin(env))), env);
-    } catch {
-      return failureResponse(env, role);
+    } catch (error) {
+      return failureResponse(env, role, Boolean(requestedHandle && /handle/i.test(error?.message || "")));
     }
   };
 }

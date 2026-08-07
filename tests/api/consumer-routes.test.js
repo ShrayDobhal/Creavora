@@ -342,6 +342,10 @@ describe("consumer API contracts", () => {
     expect(response.status).toBe(201);
     const messages = createMany.mock.calls[0][0].data.map(({ message }) => message).join(" ");
     expect(messages).not.toMatch(/premium|subscribe|unlock|upgrade|₹/i);
+    expect(createMany.mock.calls[0][0].data[0]).toMatchObject({
+      actionUrl: "/post/post-1",
+      metadata: JSON.stringify({ postId: "post-1" }),
+    });
   });
 
   it("validates creator directory filters and returns a cursor page", async () => {

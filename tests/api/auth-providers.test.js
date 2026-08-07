@@ -86,6 +86,33 @@ describe("Google OAuth start", () => {
     expect(setCookie).toContain("SameSite=lax");
     expect(setCookie).toContain("Path=/api/auth/google/callback");
   });
+
+  it("checks and carries an available requested handle only for registration", async () => {
+    const findFirst = vi.fn().mockResolvedValue(null);
+    const response = await createGoogleStartGet({
+      env: configuredEnv,
+      database: { user: { findFirst } },
+      randomToken: vi.fn().mockReturnValueOnce("s".repeat(43)).mockReturnValueOnce("v".repeat(43)),
+    })(new Request("https://blindly.example/api/auth/google/start?intent=register&role=CREATOR&handle=New_Creator"));
+
+    expect(response.status).toBe(307);
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { handle: { equals: "new_creator", mode: "insensitive" } },
+      select: { id: true },
+    });
+    expect(response.headers.get("set-cookie")).toContain("blindly_oauth_handle=new_creator");
+  });
+
+  it("returns registration to handle selection when the requested handle is taken", async () => {
+    const response = await createGoogleStartGet({
+      env: configuredEnv,
+      database: { user: { findFirst: vi.fn().mockResolvedValue({ id: "existing" }) } },
+    })(new Request("https://blindly.example/api/auth/google/start?intent=register&role=USER&handle=taken_name"));
+
+    const location = new URL(response.headers.get("location"));
+    expect(location.pathname).toBe("/register");
+    expect(location.searchParams.get("error")).toBe("handle_unavailable");
+  });
 });
 
 describe("Google OAuth callback", () => {
@@ -168,6 +195,20 @@ describe("Google account resolution", () => {
       role: "CREATOR",
       creatorProfile: { create: { category: "Lifestyle", subscriptionPrice: 0 } },
     }) });
+  });
+
+  it("creates a new Google account with the available requested handle", async () => {
+    const created = { id: "user-1", role: "USER", handle: "my_handle" };
+    const user = { findUnique: vi.fn().mockResolvedValue(null), findMany: vi.fn().mockResolvedValue([]), create: vi.fn().mockResolvedValue(created) };
+    const database = { $transaction: vi.fn((callback) => callback({ user })) };
+
+    await expect(resolveGoogleUser({
+      database,
+      profile: { subject: "sub-1", email: "fan@example.test", name: "Fan" },
+      intentRole: "USER",
+      requestedHandle: "my_handle",
+    })).resolves.toBe(created);
+    expect(user.create).toHaveBeenCalledWith({ data: expect.objectContaining({ handle: "my_handle" }) });
   });
 
   it("retries with a collision-resistant handle when the first generated handle is already used", async () => {

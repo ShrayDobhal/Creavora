@@ -2,20 +2,59 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { withAuth } from "@/lib/middleware";
 
-// GET notifications for authenticated user
-export const GET = withAuth(async (req, { user }) => {
+function metadataActionUrl(notification) {
   try {
-    const notifications = await db.notification.findMany({
+    const metadata = JSON.parse(notification.metadata || "{}");
+    if (typeof metadata.postId === "string") return `/post/${encodeURIComponent(metadata.postId)}`;
+    if (metadata.eventId || metadata.sessionId) return "/live";
+    if (metadata.conversationId) return "/messages";
+  } catch {
+    // Older notifications may not contain JSON metadata.
+  }
+  if (notification.type === "LIVE" || /\b(event|session|interaction|hangout)\b/i.test(`${notification.title} ${notification.message}`)) return "/live";
+  if (notification.type === "MESSAGE") return "/messages";
+  if (notification.type === "WALLET") return "/wallet";
+  return null;
+}
+
+async function legacyPostActionUrl(database, notification) {
+  const match = notification.title?.match(/^new post by\s+(.+?)(?:!)?$/i);
+  if (!match) return null;
+  const post = await database.post.findFirst({
+    where: {
+      creator: { name: { equals: match[1].trim(), mode: "insensitive" } },
+      createdAt: { lte: notification.createdAt },
+      deletedAt: null,
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  return post ? `/post/${post.id}` : null;
+}
+
+export function createNotificationsGet(database = db) {
+  return async (req, { user }) => {
+  try {
+    const notifications = await database.notification.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" }
     });
-
-    return NextResponse.json(notifications);
+    const presented = await Promise.all(notifications.map(async (notification) => ({
+      ...notification,
+      actionUrl: notification.actionUrl
+        || metadataActionUrl(notification)
+        || await legacyPostActionUrl(database, notification),
+    })));
+    return NextResponse.json(presented);
   } catch (error) {
     console.error("GET Notifications Error:", error);
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
-});
+  };
+}
+
+// GET notifications for authenticated user
+export const GET = withAuth(createNotificationsGet());
 
 // POST marks one notification read when an id is supplied, otherwise all.
 export const POST = withAuth(async (req, { user }) => {

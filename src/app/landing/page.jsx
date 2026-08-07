@@ -96,7 +96,7 @@ export default function Landing() {
                 Discover independent creators, follow new releases, and keep the conversations you care about in one place.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
-                <Link href="/api/auth/google/start?role=USER&redirect=%2F" className="group flex h-12 items-center gap-3 rounded-full bg-brand-600 px-6 text-sm font-bold text-white shadow-[0_18px_34px_-14px_rgba(107,63,239,.65)] hover:bg-brand-700">
+                <Link href="/register?role=USER" className="group flex h-12 items-center gap-3 rounded-full bg-brand-600 px-6 text-sm font-bold text-white shadow-[0_18px_34px_-14px_rgba(107,63,239,.65)] hover:bg-brand-700">
                   Create a fan account
                   <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
                 </Link>
@@ -187,7 +187,7 @@ export default function Landing() {
             <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-4xl">One platform, two clear entry points</h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-muted">Join as a fan to discover creators, or enter the creator portal to manage your studio.</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Link href="/api/auth/google/start?role=USER&redirect=%2F" className="flex h-12 items-center rounded-full bg-brand-600 px-6 text-sm font-bold text-white hover:bg-brand-700">Join as a fan</Link>
+              <Link href="/register?role=USER" className="flex h-12 items-center rounded-full bg-brand-600 px-6 text-sm font-bold text-white hover:bg-brand-700">Join as a fan</Link>
               <Link href="/creator-login" className="flex h-12 items-center rounded-full border border-brand-200 bg-white px-6 text-sm font-bold text-brand-700 hover:bg-brand-100">Enter creator portal</Link>
             </div>
             <Link href="/register?role=CREATOR" className="mt-5 text-sm font-bold text-brand-700 hover:underline">Register as a creator</Link>

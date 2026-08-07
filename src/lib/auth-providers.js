@@ -10,6 +10,7 @@ export const OAUTH_COOKIE_NAMES = {
   verifier: "blindly_oauth_verifier",
   redirect: "blindly_oauth_redirect",
   role: "blindly_oauth_role",
+  handle: "blindly_oauth_handle",
 };
 
 export function trustedAppOrigin(env = process.env) {
@@ -119,7 +120,11 @@ function googleHandle(email, subject, attempt = 0) {
   return `${base}_${createHash("sha256").update(`${subject}:${attempt}`).digest("hex").slice(0, 8)}`;
 }
 
-export async function resolveGoogleUser({ database, profile, intentRole }) {
+export async function resolveGoogleUser({ database, profile, intentRole, requestedHandle = null }) {
+  const normalizedRequestedHandle = requestedHandle?.trim().toLowerCase() || null;
+  if (normalizedRequestedHandle && !/^[a-z0-9_]{3,30}$/.test(normalizedRequestedHandle)) {
+    throw new Error("Requested handle is invalid");
+  }
   let lastConflict;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
@@ -161,7 +166,7 @@ export async function resolveGoogleUser({ database, profile, intentRole }) {
         return transaction.user.create({ data: {
           name: profile.name || "Blindly member",
           email: profile.email,
-          handle: googleHandle(profile.email, profile.subject, attempt),
+          handle: normalizedRequestedHandle || googleHandle(profile.email, profile.subject, attempt),
           googleSubject: profile.subject,
           role: intentRole,
           passwordHash: null,
@@ -172,6 +177,7 @@ export async function resolveGoogleUser({ database, profile, intentRole }) {
       });
     } catch (error) {
       if (error?.code !== "P2002") throw error;
+      if (normalizedRequestedHandle) throw new Error("Requested handle is no longer available");
       lastConflict = error;
     }
   }
@@ -182,5 +188,11 @@ export function oauthIntent(requestUrl) {
   const url = new URL(requestUrl);
   const role = url.searchParams.get("role") === "CREATOR" ? "CREATOR" : "USER";
   const fallback = role === "CREATOR" ? "/studio/content" : "/";
-  return { role, redirect: safeRedirectPath(url.searchParams.get("redirect"), fallback) };
+  const handle = (url.searchParams.get("handle") || "").trim().replace(/^@+/, "").toLowerCase();
+  return {
+    role,
+    redirect: safeRedirectPath(url.searchParams.get("redirect"), fallback),
+    handle,
+    registration: url.searchParams.get("intent") === "register",
+  };
 }

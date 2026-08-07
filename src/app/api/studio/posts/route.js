@@ -57,7 +57,9 @@ export const POST = withCreatorAuth(async (req, { user: creator }) => {
           title: `New Post by ${creator.name}!`,
           message: `${creator.name} uploaded a new post: "${data.content.substring(0, 30)}..."`,
           type: "SYSTEM",
-          read: false
+          read: false,
+          actionUrl: `/post/${post.id}`,
+          metadata: JSON.stringify({ postId: post.id })
         }))
       });
     }

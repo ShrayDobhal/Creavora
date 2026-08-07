@@ -15,6 +15,7 @@ const EXACT_PUBLIC_ROUTES = new Set([
   "/forgot-password",
   "/reset-password",
   "/api/auth/providers",
+  "/api/auth/handle-availability",
   "/api/auth/google/start",
   "/api/auth/google/callback",
   "/api/auth/forgot-password",

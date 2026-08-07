@@ -12,6 +12,17 @@ export const passwordSchema = z
     "Password must contain at least one uppercase letter, one lowercase letter, and one number"
   );
 
+export const handleSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, "Handle must be at least 3 characters")
+  .max(30, "Handle must be at most 30 characters")
+  .regex(
+    /^[a-z0-9_]+$/,
+    "Handle can only contain letters, numbers, and underscores"
+  );
+
 export const registerSchema = z.object({
   name: z
     .string()
@@ -25,16 +36,7 @@ export const registerSchema = z.object({
     .trim()
     .toLowerCase(),
   password: passwordSchema,
-  handle: z
-    .string()
-    .min(3, "Handle must be at least 3 characters")
-    .max(30, "Handle must be at most 30 characters")
-    .regex(
-      /^[a-zA-Z0-9_]+$/,
-      "Handle can only contain letters, numbers, and underscores"
-    )
-    .trim()
-    .toLowerCase(),
+  handle: handleSchema,
   role: z.enum(["USER", "CREATOR"], {
     errorMap: () => ({ message: "Role must be USER or CREATOR" }),
   }),

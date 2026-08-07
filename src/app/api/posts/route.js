@@ -96,6 +96,8 @@ export function createPostPost({ database = db, logError = console.error } = {})
               message: `${user.name} shared a new post`,
               type: "SYSTEM",
               read: false,
+              actionUrl: `/post/${post.id}`,
+              metadata: JSON.stringify({ postId: post.id }),
             })),
           });
         }

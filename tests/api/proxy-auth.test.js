@@ -28,6 +28,7 @@ describe("actual consumer auth boundaries", () => {
       "/forgot-password",
       "/reset-password",
       "/api/auth/providers",
+      "/api/auth/handle-availability",
       "/api/auth/google/start",
       "/api/auth/google/callback",
       "/api/auth/forgot-password",
