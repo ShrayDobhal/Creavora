@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { withAuth } from "@/lib/middleware";
 import { uploadCompleteSchema, validateBody } from "@/lib/validators";
 import * as r2Storage from "@/lib/storage/r2";
+import * as bunnyStream from "@/lib/storage/bunny-stream";
 import { validImageSignature } from "@/lib/storage/image-validation";
 
 const INVALID_UPLOAD = "Uploaded image did not match the signed metadata";
@@ -10,7 +11,7 @@ const INVALID_UPLOAD = "Uploaded image did not match the signed metadata";
 const validationResponse = (details) =>
   NextResponse.json({ error: "Validation failed", details }, { status: 400 });
 
-export function createUploadCompletePost({ storage = r2Storage, database = db } = {}) {
+export function createUploadCompletePost({ storage = r2Storage, stream = bunnyStream, database = db } = {}) {
   return async (req, { user }) => {
     let body;
     try {
@@ -32,6 +33,33 @@ export function createUploadCompletePost({ storage = r2Storage, database = db } 
     if (!asset) return NextResponse.json({ error: "Upload asset not found" }, { status: 404 });
     if (asset.verifiedAt) {
       return NextResponse.json({ assetId: asset.id, publicUrl: asset.publicUrl, verified: true });
+    }
+    if (asset.storageProvider === "BUNNY_STREAM") {
+      if (!stream.getBunnyStreamConfiguration().configured) {
+        return NextResponse.json({ error: "Video upload storage is temporarily unavailable" }, { status: 503 });
+      }
+      try {
+        const videoId = asset.key.replace(/^bunny-stream\//, "");
+        const video = await stream.getVideo({ videoId });
+        if ([5, 8].includes(video.status)) {
+          await database.mediaAsset.updateMany({
+            where: { id: asset.id, ownerId: user.id, deletedAt: null, verifiedAt: null },
+            data: { deletedAt: new Date() },
+          });
+          return NextResponse.json({ error: "Bunny Stream could not process this video" }, { status: 400 });
+        }
+        if (video.status === 6) {
+          return NextResponse.json({ error: "Video upload is still finishing. Please retry" }, { status: 409 });
+        }
+        const activated = await database.mediaAsset.updateMany({
+          where: { id: asset.id, ownerId: user.id, deletedAt: null, verifiedAt: null },
+          data: { verifiedAt: new Date() },
+        });
+        if (activated.count === 0) return NextResponse.json({ error: "Upload asset is no longer available" }, { status: 409 });
+        return NextResponse.json({ assetId: asset.id, publicUrl: asset.publicUrl, verified: true, processing: video.status !== 3 });
+      } catch {
+        return NextResponse.json({ error: "Failed to verify Bunny Stream video" }, { status: 502 });
+      }
     }
     if (asset.storageProvider === "DATABASE") {
       return NextResponse.json({ error: "Upload has not finished yet" }, { status: 409 });

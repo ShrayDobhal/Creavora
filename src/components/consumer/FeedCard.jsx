@@ -174,6 +174,17 @@ export function FeedCard({
             post.mediaType?.toLowerCase().startsWith("video") ? (
               videoFailed ? (
                 <div role="img" aria-label={mediaAlt} className="grid min-h-48 place-items-center bg-canvas p-5 text-sm font-semibold text-muted">Media unavailable</div>
+              ) : post.mediaUrl.includes("iframe.mediadelivery.net") ? (
+                <div className="aspect-video w-full bg-black">
+                  <iframe
+                    src={post.mediaUrl}
+                    title={mediaAlt}
+                    loading="lazy"
+                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                    className="h-full w-full border-0"
+                  />
+                </div>
               ) : (
                 <div className="relative bg-black">
                   <video

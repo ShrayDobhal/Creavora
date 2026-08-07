@@ -13,9 +13,11 @@ import {
 } from "@/app/api/profile/route";
 import { createUploadSignPost } from "@/app/api/uploads/sign/route";
 import { createUploadCompletePost } from "@/app/api/uploads/complete/route";
-import { createDatabaseUploadPut } from "@/app/api/uploads/[id]/data/route";
+import { createDatabaseUploadPut, createUploadDataPut } from "@/app/api/uploads/[id]/data/route";
 import { createMediaGet } from "@/app/api/media/[id]/route";
 import { createUploadIntent } from "@/lib/storage/r2";
+import { uploadObject as uploadBunnyObject } from "@/lib/storage/bunny";
+import { createVideoUploadIntent } from "@/lib/storage/bunny-stream";
 import { createPostPost } from "@/app/api/posts/route";
 import {
   createPostDelete,
@@ -472,6 +474,179 @@ describe("Blindly database image upload API", () => {
     expect(response.headers.get("content-type")).toBe("image/webp");
     expect(response.headers.get("cache-control")).toContain("immutable");
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(webp);
+  });
+});
+
+describe("Blindly Bunny image storage", () => {
+  const assetId = "9cd87ddd-5890-467d-8feb-17c83f432111";
+  const webp = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
+
+  it("selects Bunny before R2 and returns only a same-origin upload URL", async () => {
+    const bunny = {
+      getBunnyStorageConfiguration: () => ({ configured: true }),
+      buildObjectKey: ({ ownerId, assetId, extension }) => `users/${ownerId}/${assetId}.${extension}`,
+      buildPublicUrl: (key) => `https://blindly-media.b-cdn.net/${key}`,
+    };
+    const database = { mediaAsset: { create: vi.fn(async ({ data }) => data) } };
+    const response = await createUploadSignPost({ bunny, storage: configuredStorage, database })(
+      jsonRequest("POST", imageInput), { user: { id: "user-1" } },
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(payload).toMatchObject({
+      storageProvider: "BUNNY",
+      uploadUrl: expect.stringMatching(/^http:\/\/localhost\/api\/uploads\/.+\/data$/),
+      publicUrl: expect.stringMatching(/^https:\/\/blindly-media\.b-cdn\.net\/users\/user-1\//),
+    });
+    expect(JSON.stringify(payload)).not.toContain("AccessKey");
+  });
+
+  it("uploads verified bytes through the regional Bunny Storage API without exposing its key", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ status: 201 });
+    await uploadBunnyObject({
+      key: "users/user-1/asset.webp",
+      mimeType: "image/webp",
+      body: webp,
+      env: {
+        BUNNY_STORAGE_ZONE: "blindly-media",
+        BUNNY_STORAGE_ACCESS_KEY: "storage-secret",
+        BUNNY_STORAGE_HOSTNAME: "sg.storage.bunnycdn.com",
+        BUNNY_CDN_BASE_URL: "https://blindly-media.b-cdn.net",
+      },
+      fetchImpl,
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://sg.storage.bunnycdn.com/blindly-media/users/user-1/asset.webp",
+      expect.objectContaining({
+        method: "PUT",
+        headers: expect.objectContaining({
+          AccessKey: "storage-secret",
+          "Content-Type": "image/webp",
+          Checksum: expect.stringMatching(/^[A-F0-9]{64}$/),
+        }),
+      }),
+    );
+  });
+
+  it("proxies an owned image to Bunny and stores only its CDN URL in PostgreSQL", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const bunny = { uploadObject: vi.fn().mockResolvedValue({}) };
+    const database = { mediaAsset: {
+      findFirst: vi.fn().mockResolvedValue({
+        id: assetId,
+        key: `users/user-1/${assetId}.webp`,
+        bytes: webp.byteLength,
+        mimeType: "image/webp",
+        storageProvider: "BUNNY",
+      }),
+      updateMany,
+    } };
+    const response = await createUploadDataPut({ database, bunny })(
+      new Request(`http://localhost/api/uploads/${assetId}/data`, {
+        method: "PUT",
+        headers: { "content-type": "image/webp" },
+        body: webp,
+      }),
+      { user: { id: "user-1" }, params: Promise.resolve({ id: assetId }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(bunny.uploadObject).toHaveBeenCalledWith(expect.objectContaining({
+      key: `users/user-1/${assetId}.webp`,
+      mimeType: "image/webp",
+      body: expect.any(Uint8Array),
+    }));
+    expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: { verifiedAt: expect.any(Date) },
+    }));
+  });
+});
+
+describe("Blindly Bunny Stream video storage", () => {
+  const videoInput = {
+    fileName: "launch.mp4",
+    mimeType: "video/mp4",
+    bytes: 80 * 1024 * 1024,
+    kind: "post",
+  };
+
+  it("creates expiring TUS credentials without returning the Stream API key", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ guid: "video-guid-1" }),
+    });
+    const intent = await createVideoUploadIntent({
+      title: "launch.mp4",
+      env: { BUNNY_STREAM_LIBRARY_ID: "12345", BUNNY_STREAM_API_KEY: "stream-secret" },
+      now: () => 1_780_000_000_000,
+      fetchImpl,
+    });
+
+    expect(intent).toMatchObject({
+      videoId: "video-guid-1",
+      uploadUrl: "https://video.bunnycdn.com/tusupload",
+      uploadProtocol: "tus",
+      publicUrl: "https://iframe.mediadelivery.net/embed/12345/video-guid-1",
+      headers: {
+        LibraryId: "12345",
+        VideoId: "video-guid-1",
+        AuthorizationSignature: expect.stringMatching(/^[a-f0-9]{64}$/),
+      },
+    });
+    expect(JSON.stringify(intent)).not.toContain("stream-secret");
+  });
+
+  it("creates an owned Bunny Stream media asset for a large video", async () => {
+    const stream = {
+      getBunnyStreamConfiguration: () => ({ configured: true }),
+      createVideoUploadIntent: vi.fn().mockResolvedValue({
+        videoId: "video-guid-1",
+        uploadUrl: "https://video.bunnycdn.com/tusupload",
+        uploadProtocol: "tus",
+        publicUrl: "https://iframe.mediadelivery.net/embed/12345/video-guid-1",
+        headers: { AuthorizationSignature: "signature", AuthorizationExpire: "1780003600", LibraryId: "12345", VideoId: "video-guid-1" },
+      }),
+      deleteVideo: vi.fn(),
+    };
+    const database = { mediaAsset: { create: vi.fn(async ({ data }) => data) } };
+    const response = await createUploadSignPost({ stream, database })(
+      jsonRequest("POST", videoInput), { user: { id: "user-1" } },
+    );
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ uploadProtocol: "tus", storageProvider: "BUNNY_STREAM", videoId: "video-guid-1" });
+    expect(database.mediaAsset.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ storageProvider: "BUNNY_STREAM", mimeType: "video/mp4", bytes: videoInput.bytes }),
+    }));
+  });
+
+  it("verifies a completed Bunny Stream upload before it can become a post", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const stream = {
+      getBunnyStreamConfiguration: () => ({ configured: true }),
+      getVideo: vi.fn().mockResolvedValue({ status: 2 }),
+    };
+    const database = { mediaAsset: {
+      findFirst: vi.fn().mockResolvedValue({
+        id: "9cd87ddd-5890-467d-8feb-17c83f432111",
+        key: "bunny-stream/video-guid-1",
+        publicUrl: "https://iframe.mediadelivery.net/embed/12345/video-guid-1",
+        mimeType: "video/mp4",
+        bytes: videoInput.bytes,
+        verifiedAt: null,
+        storageProvider: "BUNNY_STREAM",
+      }),
+      updateMany,
+    } };
+    const response = await createUploadCompletePost({ stream, database })(
+      jsonRequest("POST", { assetId: "9cd87ddd-5890-467d-8feb-17c83f432111" }),
+      { user: { id: "user-1" } },
+    );
+
+    expect(response.status).toBe(200);
+    expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { verifiedAt: expect.any(Date) } }));
   });
 });
 

@@ -16,7 +16,7 @@ const createPostFromVerifiedMedia = async (database, user, data) => {
       WHERE "id" = ${data.mediaAssetId}
         AND "ownerId" = ${user.id}
         AND "kind" = 'post'
-        AND "mimeType" IN ('image/jpeg', 'image/png', 'image/webp')
+        AND "mimeType" IN ('image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime')
         AND "deletedAt" IS NULL
         AND "verifiedAt" IS NOT NULL
       FOR SHARE

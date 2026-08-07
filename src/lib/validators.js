@@ -209,12 +209,22 @@ export const deleteCommentSchema = z.object({
 
 export const uploadSignSchema = z.object({
   fileName: z.string().min(1).max(120),
-  mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
-  bytes: z.number().int().positive().max(4 * 1024 * 1024),
-  width: z.number().int().positive().max(2147483647),
-  height: z.number().int().positive().max(2147483647),
+  mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"]),
+  bytes: z.number().int().positive().max(2 * 1024 * 1024 * 1024),
+  width: z.number().int().positive().max(2147483647).optional(),
+  height: z.number().int().positive().max(2147483647).optional(),
   kind: z.enum(["avatar", "cover", "post"]),
-}).strict();
+}).strict().superRefine((value, context) => {
+  if (value.mimeType.startsWith("image/") && value.bytes > 4 * 1024 * 1024) {
+    context.addIssue({ code: "custom", path: ["bytes"], message: "Image must be 4 MiB or smaller" });
+  }
+  if (value.mimeType.startsWith("image/") && (!value.width || !value.height)) {
+    context.addIssue({ code: "custom", path: ["width"], message: "Image dimensions are required" });
+  }
+  if (value.mimeType.startsWith("video/") && value.kind !== "post") {
+    context.addIssue({ code: "custom", path: ["kind"], message: "Videos can only be uploaded to posts" });
+  }
+});
 
 export const uploadCompleteSchema = z.object({
   assetId: z.string().uuid(),

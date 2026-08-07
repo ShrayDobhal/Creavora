@@ -66,7 +66,26 @@ export function signImageUpload(input, { signal } = {}) {
   return request("/api/uploads/sign", { method: "POST", signal, body: input });
 }
 
-export async function uploadSignedImage({ uploadUrl, headers }, file, { signal, onProgress } = {}) {
+export async function uploadSignedImage({ uploadUrl, headers, uploadProtocol, metadata }, file, { signal, onProgress } = {}) {
+  if (uploadProtocol === "tus") {
+    const { Upload } = await import("tus-js-client");
+    return new Promise((resolve, reject) => {
+      const upload = new Upload(file, {
+        endpoint: uploadUrl,
+        headers: headers || {},
+        metadata: metadata || { filetype: file.type, title: file.name },
+        retryDelays: [0, 1000, 3000, 5000, 10000],
+        removeFingerprintOnSuccess: true,
+        onProgress(bytesUploaded, bytesTotal) {
+          if (bytesTotal > 0) onProgress?.(Math.round((bytesUploaded / bytesTotal) * 100));
+        },
+        onError(error) { reject(new Error(error?.message || "Video upload failed. Please try again.")); },
+        onSuccess() { resolve(); },
+      });
+      signal?.addEventListener("abort", () => { upload.abort(true); reject(new DOMException("Aborted", "AbortError")); }, { once: true });
+      upload.start();
+    });
+  }
   if (typeof XMLHttpRequest !== "undefined" && onProgress) {
     return new Promise((resolve, reject) => {
       const request = new XMLHttpRequest();
@@ -75,15 +94,15 @@ export async function uploadSignedImage({ uploadUrl, headers }, file, { signal, 
       request.upload.addEventListener("progress", (event) => {
         if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
       });
-      request.addEventListener("load", () => request.status >= 200 && request.status < 300 ? resolve() : reject(new Error("Image upload failed. Please try again.")));
-      request.addEventListener("error", () => reject(new Error("Image upload failed. Please try again.")));
+        request.addEventListener("load", () => request.status >= 200 && request.status < 300 ? resolve() : reject(new Error("Media upload failed. Please try again.")));
+        request.addEventListener("error", () => reject(new Error("Media upload failed. Please try again.")));
       request.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
       signal?.addEventListener("abort", () => request.abort(), { once: true });
       request.send(file);
     });
   }
   const response = await fetch(uploadUrl, { method: "PUT", headers, body: file, signal });
-  if (!response.ok) throw new Error("Image upload failed. Please try again.");
+    if (!response.ok) throw new Error("Media upload failed. Please try again.");
 }
 
 export function completeImageUpload(assetId, { signal } = {}) {

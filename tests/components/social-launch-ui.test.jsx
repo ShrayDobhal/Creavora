@@ -81,6 +81,10 @@ const webpFile = (name = "look.webp") => new File([
   new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]),
 ], name, { type: "image/webp" });
 
+const mp4File = (name = "reel.mp4") => new File([
+  new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]),
+], name, { type: "video/mp4" });
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -103,7 +107,7 @@ describe("social launch UI", () => {
     render(<PostComposer user={{ name: "Nisha" }} onPublished={onPublished} />);
     await user.type(screen.getByRole("textbox", { name: "Write a post" }), "New street-style look");
     await user.upload(
-      screen.getByLabelText("Add image"),
+      screen.getByLabelText("Add photo or video"),
       webpFile(),
     );
     await screen.findByAltText("Selected image preview");
@@ -124,11 +128,39 @@ describe("social launch UI", () => {
     expect(onPublished).toHaveBeenCalledOnce();
   });
 
+  it("previews and publishes a Bunny Stream video through a resumable upload intent", async () => {
+    const user = userEvent.setup();
+    signImageUpload.mockResolvedValue({
+      assetId: "video-asset-1",
+      uploadUrl: "https://video.bunnycdn.com/tusupload",
+      uploadProtocol: "tus",
+      headers: { LibraryId: "12345", VideoId: "video-guid-1" },
+      metadata: { filetype: "video/mp4", title: "reel.mp4" },
+    });
+    uploadSignedImage.mockResolvedValue(undefined);
+    completeImageUpload.mockResolvedValue({ assetId: "video-asset-1", verified: true, processing: true });
+    createPost.mockResolvedValue({ id: "video-post-1" });
+
+    render(<PostComposer user={{ name: "Nisha" }} onPublished={vi.fn()} />);
+    await user.type(screen.getByRole("textbox", { name: "Write a post" }), "My new reel");
+    await user.upload(screen.getByLabelText("Add photo or video"), mp4File());
+    expect(await screen.findByLabelText("Selected video preview")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Publish post" }));
+
+    expect(signImageUpload).toHaveBeenCalledWith(expect.objectContaining({
+      fileName: "reel.mp4",
+      mimeType: "video/mp4",
+      kind: "post",
+    }), expect.anything());
+    expect(uploadSignedImage).toHaveBeenCalledWith(expect.objectContaining({ uploadProtocol: "tus" }), expect.any(File), expect.anything());
+    expect(createPost).toHaveBeenCalledWith({ content: "My new reel", category: "Lifestyle", mediaAssetId: "video-asset-1" });
+  });
+
   it("previews the selected image in both post and profile-grid crops", async () => {
     const user = userEvent.setup();
     render(<PostComposer user={{ name: "Nisha" }} onPublished={vi.fn()} />);
 
-    await user.upload(screen.getByLabelText("Add image"), webpFile());
+    await user.upload(screen.getByLabelText("Add photo or video"), webpFile());
     expect(await screen.findByRole("region", { name: "Crop image" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Portrait 4:5" })).toBeVisible();
     expect(screen.getByRole("slider", { name: "Zoom" })).toBeVisible();
@@ -151,14 +183,14 @@ describe("social launch UI", () => {
     render(<PostComposer user={{ name: "Nisha" }} onPublished={vi.fn()} />);
     await user.type(screen.getByRole("textbox", { name: "Write a post" }), "A text-only update");
     await user.upload(
-      screen.getByLabelText("Add image"),
+      screen.getByLabelText("Add photo or video"),
       webpFile(),
     );
     await screen.findByAltText("Selected image preview");
     await user.click(screen.getByRole("button", { name: "Publish post" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Image uploads are not configured yet");
-    expect(screen.getByLabelText("Add image")).toBeDisabled();
+    expect(screen.getByLabelText("Add photo or video")).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Publish post" }));
     expect(createPost).toHaveBeenCalledWith({ content: "A text-only update", category: "Lifestyle" });
   });

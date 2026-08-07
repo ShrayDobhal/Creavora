@@ -1,6 +1,6 @@
 "use client";
 
-import { Crop, ImagePlus, LoaderCircle, X } from "lucide-react";
+import { Crop, ImagePlus, LoaderCircle, Video, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   completeImageUpload,
@@ -12,8 +12,10 @@ import { CATEGORY_OPTIONS } from "@/lib/consumer/constants";
 import ImageCropEditor from "./ImageCropEditor";
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 2 * 1024 * 1024 * 1024;
 const UNAVAILABLE_MESSAGE = "Image uploads are not configured yet";
 const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const videoTypes = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
 const canCreateObjectUrl = () => typeof URL !== "undefined" && typeof URL.createObjectURL === "function";
 
@@ -23,6 +25,16 @@ async function hasValidImageSignature(file) {
   if (file.type === "image/jpeg") return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   if (file.type === "image/png") return [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((byte, index) => bytes[index] === byte);
   if (file.type === "image/webp") return String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" && String.fromCharCode(...bytes.slice(8, 12)) === "WEBP";
+  return false;
+}
+
+async function hasValidVideoSignature(file) {
+  if (typeof file.slice !== "function") return false;
+  const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  if (file.type === "video/webm") return [0x1a, 0x45, 0xdf, 0xa3].every((byte, index) => bytes[index] === byte);
+  if (file.type === "video/mp4" || file.type === "video/quicktime") {
+    return String.fromCharCode(...bytes.slice(4, 8)) === "ftyp";
+  }
   return false;
 }
 
@@ -80,10 +92,30 @@ async function compressImage(file) {
   }
 }
 
+async function completeMediaUpload(assetId, { signal, isVideo }) {
+  const attempts = isVideo ? 5 : 1;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await completeImageUpload(assetId, { signal });
+    } catch (error) {
+      if (attempt === attempts - 1 || !error?.message?.includes("still finishing")) throw error;
+      await new Promise((resolve, reject) => {
+        const timeout = window.setTimeout(resolve, 750);
+        signal?.addEventListener("abort", () => {
+          window.clearTimeout(timeout);
+          reject(new DOMException("Aborted", "AbortError"));
+        }, { once: true });
+      });
+    }
+  }
+  throw new Error("Unable to verify media upload");
+}
+
 export function PostComposer({ user, onPublished }) {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("Lifestyle");
   const [image, setImage] = useState(null);
+  const [mediaKind, setMediaKind] = useState("image");
   const [sourceImage, setSourceImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
@@ -106,6 +138,7 @@ export function PostComposer({ user, onPublished }) {
 
   function clearImage() {
     setImage(null);
+    setMediaKind("image");
     setSourceImage(null);
     for (const url of new Set([previewUrlRef.current, sourceUrlRef.current])) {
       if (url) URL.revokeObjectURL?.(url);
@@ -123,9 +156,29 @@ export function PostComposer({ user, onPublished }) {
     const selected = event.target.files?.[0];
     if (!selected) return;
     setError("");
-    if (!imageTypes.has(selected.type)) {
+    if (!imageTypes.has(selected.type) && !videoTypes.has(selected.type)) {
       clearImage();
-      setError("Choose a JPEG, PNG, or WebP image");
+      setError("Choose a JPEG, PNG, WebP, MP4, WebM, or MOV file");
+      return;
+    }
+
+    if (videoTypes.has(selected.type)) {
+      if (!(await hasValidVideoSignature(selected))) {
+        clearImage();
+        setError("The selected file does not contain a valid video");
+        return;
+      }
+      if (selected.size > MAX_VIDEO_BYTES) {
+        clearImage();
+        setError("Video must be 2 GiB or smaller");
+        return;
+      }
+      clearImage();
+      const nextUrl = canCreateObjectUrl() ? URL.createObjectURL(selected) : "";
+      previewUrlRef.current = nextUrl;
+      setImage(selected);
+      setMediaKind("video");
+      setPreviewUrl(nextUrl);
       return;
     }
 
@@ -143,6 +196,7 @@ export function PostComposer({ user, onPublished }) {
 
     const dimensions = await imageDimensions(prepared);
     setImage(prepared);
+    setMediaKind("image");
     setSourceImage(prepared);
     setSourceAspect(dimensions.width / dimensions.height);
     for (const url of new Set([previewUrlRef.current, sourceUrlRef.current])) {
@@ -176,17 +230,16 @@ export function PostComposer({ user, onPublished }) {
     try {
       let mediaAssetId = null;
       if (image) {
-        const dimensions = await imageDimensions(image);
+        const dimensions = mediaKind === "image" ? await imageDimensions(image) : null;
         const intent = await signImageUpload({
           fileName: image.name,
           mimeType: image.type,
           bytes: image.size,
-          width: dimensions.width,
-          height: dimensions.height,
+          ...(dimensions ? { width: dimensions.width, height: dimensions.height } : {}),
           kind: "post",
         }, { signal: controller.signal });
         await uploadSignedImage(intent, image, { signal: controller.signal, onProgress: setUploadProgress });
-        const completed = await completeImageUpload(intent.assetId, { signal: controller.signal });
+        const completed = await completeMediaUpload(intent.assetId, { signal: controller.signal, isVideo: mediaKind === "video" });
         mediaAssetId = completed.assetId;
       }
       const post = await createPost({
@@ -232,7 +285,7 @@ export function PostComposer({ user, onPublished }) {
           {CATEGORY_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
         </select>
       </div>
-      {cropOpen && sourceImage && sourceUrl ? (
+      {mediaKind === "image" && cropOpen && sourceImage && sourceUrl ? (
         <div className="mt-3">
           <ImageCropEditor
             file={sourceImage}
@@ -250,15 +303,17 @@ export function PostComposer({ user, onPublished }) {
         </div>
       ) : previewUrl ? (
         <div className="relative mt-3">
-          <div className="mb-2 flex flex-wrap items-center gap-2" aria-label="Image preview style">
+          {mediaKind === "image" ? <div className="mb-2 flex flex-wrap items-center gap-2" aria-label="Image preview style">
             <button type="button" aria-pressed={previewMode === "post"} onClick={() => setPreviewMode("post")} className={`rounded-full px-3 py-1.5 text-xs font-bold ${previewMode === "post" ? "bg-brand-600 text-white" : "border border-line bg-white text-ink"}`}>Full post</button>
             <button type="button" aria-pressed={previewMode === "grid"} onClick={() => setPreviewMode("grid")} className={`rounded-full px-3 py-1.5 text-xs font-bold ${previewMode === "grid" ? "bg-brand-600 text-white" : "border border-line bg-white text-ink"}`}>Profile grid</button>
             <button type="button" onClick={() => setCropOpen(true)} className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-bold"><Crop size={13} /> Edit crop</button>
             <span className="text-xs text-muted">This is how your post will appear</span>
-          </div>
+          </div> : <div className="mb-2 flex items-center gap-2 text-xs font-bold text-muted"><Video size={14} /> Video preview</div>}
           <div className="grid min-h-48 overflow-hidden rounded-xl border border-line bg-canvas">
-            {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
-            <img src={previewUrl} alt="Selected image preview" className={previewMode === "grid" ? "aspect-square w-full object-cover" : "max-h-[560px] min-h-48 w-full object-contain"} />
+            {mediaKind === "video" ? <video src={previewUrl} controls preload="metadata" aria-label="Selected video preview" className="max-h-[560px] w-full bg-black" /> : <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
+              <img src={previewUrl} alt="Selected image preview" className={previewMode === "grid" ? "aspect-square w-full object-cover" : "max-h-[560px] min-h-48 w-full object-contain"} />
+            </>}
           </div>
           <button type="button" onClick={clearImage} className="absolute right-3 top-3 z-10 grid h-10 w-10 place-items-center rounded-full bg-black/75 text-white shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500" aria-label="Remove image">
             <X size={16} />
@@ -266,18 +321,18 @@ export function PostComposer({ user, onPublished }) {
         </div>
       ) : image ? <p className="mt-3 text-sm text-muted">{image.name}</p> : null}
       {error ? <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700" role="alert">{error}</p> : null}
-      {isPublishing && image ? <div className="mt-3" role="status" aria-label={`Upload ${uploadProgress} percent complete`}><div className="h-2 overflow-hidden rounded-full bg-brand-100"><div className="h-full rounded-full bg-brand-600 transition-[width]" style={{ width: `${Math.max(6, uploadProgress)}%` }} /></div><p className="mt-1 text-xs font-semibold text-muted">Uploading image {uploadProgress}%</p></div> : null}
+      {isPublishing && image ? <div className="mt-3" role="status" aria-label={`Upload ${uploadProgress} percent complete`}><div className="h-2 overflow-hidden rounded-full bg-brand-100"><div className="h-full rounded-full bg-brand-600 transition-[width]" style={{ width: `${Math.max(6, uploadProgress)}%` }} /></div><p className="mt-1 text-xs font-semibold text-muted">Uploading {mediaKind} {uploadProgress}%</p></div> : null}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
         <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-line px-3 text-sm font-bold text-ink hover:bg-canvas focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500">
-          <ImagePlus size={17} /> Add image
+          <ImagePlus size={17} /> Add photo or video
           <input
             ref={fileInput}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
             onChange={handleImageChange}
             disabled={imageUploadsUnavailable || isPublishing}
             className="sr-only"
-            aria-label="Add image"
+            aria-label="Add photo or video"
           />
         </label>
         <button type="submit" disabled={!content.trim() || isPublishing} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-bold text-white hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-60">
